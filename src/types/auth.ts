@@ -71,11 +71,11 @@ export const roleAccess: Record<AppRole, {
     canViewAllData: false,
     canEditData: false,
   },
-  // Nivel 0 - Doar vizualizare dashboard
+  // Nivel 0 - Doar calendar
   vizitator: {
     level: 0,
     label: 'Vizitator',
-    pages: ['/'],
+    pages: ['/production-calendar'],
     canManageUsers: false,
     canManageSettings: false,
     canViewAllData: false,
