@@ -91,7 +91,7 @@ export function DepartmentCard({ department, onEdit, onDelete }: DepartmentCardP
 
       {department.subDepartments && department.subDepartments.length > 0 && (
         <div className="mt-4 border-t border-border/50 pt-4">
-          <p className="text-xs font-medium text-muted-foreground mb-2">Subdepartamente:</p>
+          <p className="text-xs font-medium text-muted-foreground mb-2">Servicii:</p>
           <div className="flex flex-wrap gap-1.5">
             {department.subDepartments.map((sub) => (
               <span
