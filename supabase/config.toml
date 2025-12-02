@@ -1,1 +1,4 @@
 project_id = "mhhspfdruvqqitwxkkje"
+
+[functions.lookup-company]
+verify_jwt = false
