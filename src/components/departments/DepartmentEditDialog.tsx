@@ -1,7 +1,7 @@
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Department } from '@/types';
+import { Department, SubDepartment } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -27,13 +27,20 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
+
+const subDepartmentSchema = z.object({
+  id: z.string(),
+  name: z.string().min(2, 'Numele trebuie să aibă minim 2 caractere'),
+  employeeCount: z.coerce.number().min(0),
+});
 
 const departmentSchema = z.object({
   name: z.string().min(2, 'Numele trebuie să aibă minim 2 caractere').max(100),
   description: z.string().min(5, 'Descrierea trebuie să aibă minim 5 caractere').max(500),
   color: z.enum(['blue', 'teal', 'orange', 'green']),
   employeeCount: z.coerce.number().min(0, 'Numărul de angajați nu poate fi negativ'),
+  subDepartments: z.array(subDepartmentSchema).optional(),
 });
 
 type DepartmentFormData = z.infer<typeof departmentSchema>;
@@ -60,6 +67,8 @@ export function DepartmentEditDialog({
   onSave,
   isLoading = false,
 }: DepartmentEditDialogProps) {
+  const isProduction = department?.name === 'Producție';
+
   const form = useForm<DepartmentFormData>({
     resolver: zodResolver(departmentSchema),
     defaultValues: {
@@ -67,22 +76,33 @@ export function DepartmentEditDialog({
       description: department?.description ?? '',
       color: department?.color ?? 'blue',
       employeeCount: department?.employeeCount ?? 0,
+      subDepartments: department?.subDepartments ?? [],
     },
     values: department ? {
       name: department.name,
       description: department.description,
       color: department.color,
       employeeCount: department.employeeCount,
+      subDepartments: department.subDepartments ?? [],
     } : undefined,
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'subDepartments',
   });
 
   const handleSubmit = (data: DepartmentFormData) => {
     onSave(data);
   };
 
+  const addService = () => {
+    append({ id: crypto.randomUUID(), name: '', employeeCount: 0 });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {department ? 'Editează Departament' : 'Adaugă Departament'}
@@ -166,6 +186,71 @@ export function DepartmentEditDialog({
                 )}
               />
             </div>
+
+            {/* Services Section - Only for Production department */}
+            {isProduction && (
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <FormLabel className="text-base font-semibold">Servicii</FormLabel>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addService}
+                    className="gap-1"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Adaugă
+                  </Button>
+                </div>
+
+                {fields.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Nu există servicii. Adaugă primul serviciu.
+                  </p>
+                )}
+
+                <div className="space-y-2">
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                      <FormField
+                        control={form.control}
+                        name={`subDepartments.${index}.name`}
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormControl>
+                              <Input placeholder="Nume serviciu" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`subDepartments.${index}.employeeCount`}
+                        render={({ field }) => (
+                          <FormItem className="w-20">
+                            <FormControl>
+                              <Input type="number" min={0} placeholder="Nr." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => remove(index)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <DialogFooter className="pt-4">
               <Button

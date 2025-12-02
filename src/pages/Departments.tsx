@@ -28,7 +28,9 @@ const Departments = () => {
     if (editingDepartment) {
       setDepartmentList((prev) =>
         prev.map((dept) =>
-          dept.id === editingDepartment.id ? { ...dept, ...data } : dept
+          dept.id === editingDepartment.id 
+            ? { ...dept, ...data, subDepartments: data.subDepartments } 
+            : dept
         )
       );
       toast({
