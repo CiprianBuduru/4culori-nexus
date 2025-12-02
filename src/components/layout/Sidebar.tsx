@@ -100,10 +100,10 @@ export function Sidebar() {
           </Button>
           
           <div className="flex justify-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-primary" />
-            <div className="h-3 w-3 rounded-full bg-secondary" />
-            <div className="h-3 w-3 rounded-full bg-accent" />
-            <div className="h-3 w-3 rounded-full bg-success" />
+            <div className="h-3 w-3 rounded-full bg-brand-blue" />
+            <div className="h-3 w-3 rounded-full bg-brand-teal" />
+            <div className="h-3 w-3 rounded-full bg-brand-orange" />
+            <div className="h-3 w-3 rounded-full bg-brand-green" />
           </div>
           <p className="text-center text-xs text-sidebar-foreground/50">
             © 2024 4culori
