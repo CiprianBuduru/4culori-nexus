@@ -4,6 +4,8 @@ import { EmployeeCard } from '@/components/employees/EmployeeCard';
 import { EmployeeEditDialog } from '@/components/employees/EmployeeEditDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { Plus, Search } from 'lucide-react';
 import { employees as initialEmployees, departments } from '@/data/mockData';
 import { Employee } from '@/types';
@@ -14,14 +16,19 @@ const Employees = () => {
   const [employeeList, setEmployeeList] = useState<Employee[]>(initialEmployees);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [filterProtectedUnit, setFilterProtectedUnit] = useState(false);
   const { toast } = useToast();
 
-  const filteredEmployees = employeeList.filter(
-    (emp) =>
+  const filteredEmployees = employeeList.filter((emp) => {
+    const matchesSearch =
       emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.position.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      emp.position.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesProtectedFilter = !filterProtectedUnit || emp.isProtectedUnit === true;
+    
+    return matchesSearch && matchesProtectedFilter;
+  });
 
   const handleEdit = (employee: Employee) => {
     setEditingEmployee(employee);
@@ -87,15 +94,29 @@ const Employees = () => {
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Caută angajați..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+        {/* Search and Filters */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="relative max-w-md flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Caută angajați..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className={`flex items-center space-x-2 rounded-md border px-3 py-2 ${filterProtectedUnit ? 'bg-yellow-100 border-yellow-400 dark:bg-yellow-900/30 dark:border-yellow-600' : ''}`}>
+            <Checkbox
+              id="filter-protected"
+              checked={filterProtectedUnit}
+              onCheckedChange={(checked) => setFilterProtectedUnit(checked === true)}
+              className={filterProtectedUnit ? 'border-yellow-600 data-[state=checked]:bg-yellow-500 data-[state=checked]:text-yellow-950' : ''}
+            />
+            <Label htmlFor="filter-protected" className="cursor-pointer text-sm">
+              Unitate Protejată
+            </Label>
+          </div>
         </div>
 
         {/* Employees Grid */}
