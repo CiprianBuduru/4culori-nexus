@@ -52,13 +52,43 @@ const employeeSchema = z.object({
   accessLevel: z.coerce.number().min(0).max(4).optional(),
 });
 
-// Access level configuration
+// Access level configuration with detailed permissions
 const accessLevels = [
-  { level: 4, label: 'Administrator', color: 'bg-red-500' },
-  { level: 3, label: 'Director', color: 'bg-orange-500' },
-  { level: 2, label: 'Șef Producție', color: 'bg-yellow-500' },
-  { level: 1, label: 'Operator', color: 'bg-blue-500' },
-  { level: 0, label: 'Vizitator', color: 'bg-gray-500' },
+  { 
+    level: 4, 
+    label: 'Administrator', 
+    color: 'bg-red-500',
+    access: ['Dashboard', 'Calendar', 'Clienți', 'Comenzi', 'Angajați', 'Departamente', 'Produse', 'Calculator', 'Setări'],
+    permissions: 'Acces complet + gestionare utilizatori'
+  },
+  { 
+    level: 3, 
+    label: 'Director', 
+    color: 'bg-orange-500',
+    access: ['Dashboard', 'Calendar', 'Clienți', 'Comenzi', 'Angajați', 'Departamente', 'Produse', 'Calculator'],
+    permissions: 'Vizualizare/editare completă'
+  },
+  { 
+    level: 2, 
+    label: 'Șef Producție', 
+    color: 'bg-yellow-500',
+    access: ['Dashboard', 'Calendar', 'Clienți', 'Comenzi', 'Angajați', 'Produse'],
+    permissions: 'Editare date producție'
+  },
+  { 
+    level: 1, 
+    label: 'Operator', 
+    color: 'bg-blue-500',
+    access: ['Dashboard', 'Calendar'],
+    permissions: 'Doar vizualizare task-uri proprii'
+  },
+  { 
+    level: 0, 
+    label: 'Vizitator', 
+    color: 'bg-gray-500',
+    access: ['Dashboard'],
+    permissions: 'Fără acces la date'
+  },
 ];
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
@@ -482,29 +512,41 @@ export function EmployeeEditDialog({
                           return (
                             <div 
                               key={level.level} 
-                              className={`flex items-center space-x-3 rounded-md border p-3 ${
+                              className={`rounded-md border p-3 ${
                                 field.value === level.level 
                                   ? 'border-primary bg-primary/5' 
                                   : 'border-border'
                               } ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                             >
-                              <RadioGroupItem 
-                                value={level.level.toString()} 
-                                id={`level-${level.level}`}
-                                disabled={isDisabled}
-                              />
-                              <label 
-                                htmlFor={`level-${level.level}`} 
-                                className={`text-sm font-medium flex items-center gap-3 flex-1 ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                              >
-                                <span className={`w-6 h-6 rounded-full ${level.color} text-white flex items-center justify-center text-xs font-bold`}>
-                                  {level.level}
-                                </span>
-                                <span>{level.label}</span>
-                                {level.level === 4 && !canBeAdmin && (
-                                  <span className="text-xs text-muted-foreground ml-auto">(doar pentru Ciprian)</span>
-                                )}
-                              </label>
+                              <div className="flex items-center space-x-3">
+                                <RadioGroupItem 
+                                  value={level.level.toString()} 
+                                  id={`level-${level.level}`}
+                                  disabled={isDisabled}
+                                />
+                                <label 
+                                  htmlFor={`level-${level.level}`} 
+                                  className={`text-sm font-medium flex items-center gap-3 flex-1 ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                                >
+                                  <span className={`w-6 h-6 rounded-full ${level.color} text-white flex items-center justify-center text-xs font-bold shrink-0`}>
+                                    {level.level}
+                                  </span>
+                                  <span className="font-semibold">{level.label}</span>
+                                  {level.level === 4 && !canBeAdmin && (
+                                    <span className="text-xs text-muted-foreground ml-auto">(doar Ciprian)</span>
+                                  )}
+                                </label>
+                              </div>
+                              <div className="ml-9 mt-2 space-y-1">
+                                <div className="flex flex-wrap gap-1">
+                                  {level.access.map((page) => (
+                                    <span key={page} className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1.5 py-0.5 rounded">
+                                      ✓ {page}
+                                    </span>
+                                  ))}
+                                </div>
+                                <p className="text-xs text-muted-foreground italic">{level.permissions}</p>
+                              </div>
                             </div>
                           );
                         })}
