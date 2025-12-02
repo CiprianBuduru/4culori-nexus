@@ -72,6 +72,9 @@ interface EmployeeEditDialogProps {
   isLoading?: boolean;
 }
 
+// Development mode bypass
+const DEV_BYPASS_AUTH = true;
+
 export function EmployeeEditDialog({
   employee,
   departments,
@@ -82,7 +85,7 @@ export function EmployeeEditDialog({
 }: EmployeeEditDialogProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const { userRole } = useAuth();
-  const isAdmin = userRole?.role === 'administrator';
+  const isAdmin = DEV_BYPASS_AUTH || userRole?.role === 'administrator';
 
   const form = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
