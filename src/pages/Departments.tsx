@@ -1,30 +1,65 @@
+import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { DepartmentCard } from '@/components/departments/DepartmentCard';
+import { DepartmentEditDialog } from '@/components/departments/DepartmentEditDialog';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { departments } from '@/data/mockData';
+import { departments as initialDepartments } from '@/data/mockData';
 import { Department } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
 const Departments = () => {
+  const [departmentList, setDepartmentList] = useState<Department[]>(initialDepartments);
+  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const handleEdit = (department: Department) => {
-    toast({
-      title: 'Editare departament',
-      description: `Deschide formularul de editare pentru ${department.name}`,
-    });
+    setEditingDepartment(department);
+    setIsDialogOpen(true);
+  };
+
+  const handleAddNew = () => {
+    setEditingDepartment(null);
+    setIsDialogOpen(true);
+  };
+
+  const handleSave = (data: Omit<Department, 'id' | 'managerId'>) => {
+    if (editingDepartment) {
+      setDepartmentList((prev) =>
+        prev.map((dept) =>
+          dept.id === editingDepartment.id ? { ...dept, ...data } : dept
+        )
+      );
+      toast({
+        title: 'Departament actualizat',
+        description: `${data.name} a fost actualizat cu succes`,
+      });
+    } else {
+      const newDepartment: Department = {
+        id: crypto.randomUUID(),
+        ...data,
+      };
+      setDepartmentList((prev) => [...prev, newDepartment]);
+      toast({
+        title: 'Departament adăugat',
+        description: `${data.name} a fost adăugat cu succes`,
+      });
+    }
+    setIsDialogOpen(false);
+    setEditingDepartment(null);
   };
 
   const handleDelete = (department: Department) => {
+    setDepartmentList((prev) => prev.filter((dept) => dept.id !== department.id));
     toast({
-      title: 'Ștergere departament',
+      title: 'Departament șters',
       description: `${department.name} a fost șters`,
       variant: 'destructive',
     });
   };
 
-  const totalEmployees = departments.reduce((acc, d) => acc + d.employeeCount, 0);
+  const totalEmployees = departmentList.reduce((acc, d) => acc + d.employeeCount, 0);
 
   return (
     <MainLayout>
@@ -34,10 +69,10 @@ const Departments = () => {
           <div>
             <h1 className="text-3xl font-bold text-foreground">Departamente</h1>
             <p className="mt-1 text-muted-foreground">
-              {departments.length} departamente cu {totalEmployees} angajați
+              {departmentList.length} departamente cu {totalEmployees} angajați
             </p>
           </div>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={handleAddNew}>
             <Plus className="h-4 w-4" />
             Adaugă Departament
           </Button>
@@ -45,7 +80,7 @@ const Departments = () => {
 
         {/* Departments Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {departments.map((department) => (
+          {departmentList.map((department) => (
             <DepartmentCard
               key={department.id}
               department={department}
@@ -55,6 +90,13 @@ const Departments = () => {
           ))}
         </div>
       </div>
+
+      <DepartmentEditDialog
+        department={editingDepartment}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSave={handleSave}
+      />
     </MainLayout>
   );
 };
