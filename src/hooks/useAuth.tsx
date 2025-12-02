@@ -107,17 +107,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserRole(null);
   };
 
+  // Development mode bypass constant
+  const DEV_MODE = true;
+
   const hasAccess = (page: string): boolean => {
+    if (DEV_MODE) return true; // Full access in dev mode
     if (!userRole) return false;
     const access = roleAccess[userRole.role as AppRole];
     return access?.pages.includes(page) ?? false;
   };
 
-  const canManageUsers = userRole ? roleAccess[userRole.role as AppRole]?.canManageUsers ?? false : false;
-  const canManageSettings = userRole ? roleAccess[userRole.role as AppRole]?.canManageSettings ?? false : false;
-  const canViewAllData = userRole ? roleAccess[userRole.role as AppRole]?.canViewAllData ?? false : false;
-  const canEditData = userRole ? roleAccess[userRole.role as AppRole]?.canEditData ?? false : false;
-  const accessLevel = userRole ? roleAccess[userRole.role as AppRole]?.level ?? 0 : 0;
+  // Development mode bypass - full admin access
+  const DEV_BYPASS_AUTH = true;
+  
+  const canManageUsers = DEV_BYPASS_AUTH ? true : (userRole ? roleAccess[userRole.role as AppRole]?.canManageUsers ?? false : false);
+  const canManageSettings = DEV_BYPASS_AUTH ? true : (userRole ? roleAccess[userRole.role as AppRole]?.canManageSettings ?? false : false);
+  const canViewAllData = DEV_BYPASS_AUTH ? true : (userRole ? roleAccess[userRole.role as AppRole]?.canViewAllData ?? false : false);
+  const canEditData = DEV_BYPASS_AUTH ? true : (userRole ? roleAccess[userRole.role as AppRole]?.canEditData ?? false : false);
+  const accessLevel = DEV_BYPASS_AUTH ? 4 : (userRole ? roleAccess[userRole.role as AppRole]?.level ?? 0 : 0);
 
   const getUserDepartments = (): string[] => {
     return userRole?.departments ?? [];
