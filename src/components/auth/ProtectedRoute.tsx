@@ -7,9 +7,17 @@ interface ProtectedRouteProps {
   children: ReactNode;
 }
 
+// Development mode bypass - set to true to skip authentication
+const DEV_BYPASS_AUTH = true;
+
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading, hasAccess } = useAuth();
   const location = useLocation();
+
+  // Skip auth check in development mode
+  if (DEV_BYPASS_AUTH) {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (
