@@ -46,7 +46,11 @@ export function EmployeeCard({ employee, department, onEdit, onDelete }: Employe
                 : 'ring-border'
           }`}>
             {employee.avatar && (
-              <AvatarImage src={employee.avatar} alt={employee.name} />
+              <AvatarImage 
+                src={employee.avatar} 
+                alt={employee.name}
+                className="object-cover object-top"
+              />
             )}
             <AvatarFallback className="bg-primary/10 text-primary font-semibold">
               {initials}

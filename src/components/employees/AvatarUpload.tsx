@@ -82,7 +82,11 @@ export function AvatarUpload({ value, onChange, employeeName }: AvatarUploadProp
       <div className="relative">
         <Avatar className="h-24 w-24">
           {value ? (
-            <AvatarImage src={value} alt={employeeName || 'Avatar'} />
+            <AvatarImage 
+              src={value} 
+              alt={employeeName || 'Avatar'}
+              className="object-cover object-top"
+            />
           ) : null}
           <AvatarFallback className="text-lg bg-muted">
             {getInitials(employeeName)}
