@@ -36,6 +36,20 @@ export const departments: Department[] = [
     color: 'green',
     employeeCount: 4,
   },
+  {
+    id: '5',
+    name: 'Management',
+    description: 'Departamentul de management și conducere',
+    color: 'blue',
+    employeeCount: 3,
+  },
+  {
+    id: '6',
+    name: 'DTP',
+    description: 'Departamentul de prepress și design grafic',
+    color: 'orange',
+    employeeCount: 4,
+  },
 ];
 
 export const employees: Employee[] = [
