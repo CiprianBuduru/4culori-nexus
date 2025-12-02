@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,8 +29,10 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Search, Loader2 } from 'lucide-react';
 
 const clientSchema = z.object({
+  cui: z.string().optional(),
   name: z.string().min(1, 'Numele este obligatoriu'),
   email: z.string().email('Email invalid').optional().or(z.literal('')),
   phone: z.string().optional(),
@@ -44,6 +46,7 @@ type ClientFormData = z.infer<typeof clientSchema>;
 
 interface Client {
   id: string;
+  cui?: string | null;
   name: string;
   email: string | null;
   phone: string | null;
@@ -62,10 +65,12 @@ interface ClientEditDialogProps {
 export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isLookingUp, setIsLookingUp] = useState(false);
 
   const form = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
+      cui: '',
       name: '',
       email: '',
       phone: '',
@@ -79,6 +84,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
   useEffect(() => {
     if (client) {
       form.reset({
+        cui: client.cui || '',
         name: client.name,
         email: client.email || '',
         phone: client.phone || '',
@@ -89,6 +95,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       });
     } else {
       form.reset({
+        cui: '',
         name: '',
         email: '',
         phone: '',
@@ -100,9 +107,55 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
     }
   }, [client, form]);
 
+  const lookupCompany = async () => {
+    const cui = form.getValues('cui');
+    if (!cui) {
+      toast({ title: 'Introduceți CUI-ul', variant: 'destructive' });
+      return;
+    }
+
+    setIsLookingUp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('lookup-company', {
+        body: { cui }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.error) {
+        toast({ title: data.error, variant: 'destructive' });
+        return;
+      }
+
+      form.setValue('name', data.name || form.getValues('name'));
+      form.setValue('company', data.name || form.getValues('company'));
+      form.setValue('address', data.address || form.getValues('address'));
+      if (data.phone) {
+        form.setValue('phone', data.phone);
+      }
+
+      toast({ 
+        title: 'Date preluate cu succes',
+        description: data.platitorTva ? 'Plătitor TVA' : 'Neplătitor TVA'
+      });
+    } catch (error) {
+      console.error('Lookup error:', error);
+      toast({ 
+        title: 'Eroare la preluarea datelor', 
+        description: 'Verificați CUI-ul și încercați din nou',
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
+
   const mutation = useMutation({
     mutationFn: async (data: ClientFormData) => {
       const payload = {
+        cui: data.cui || null,
         name: data.name,
         email: data.email || null,
         phone: data.phone || null,
@@ -128,8 +181,12 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       toast({ title: client ? 'Client actualizat' : 'Client adăugat' });
       onOpenChange(false);
     },
-    onError: () => {
-      toast({ title: 'Eroare la salvarea clientului', variant: 'destructive' });
+    onError: (error: any) => {
+      if (error.code === '23505' && error.message?.includes('cui')) {
+        toast({ title: 'CUI-ul există deja în baza de date', variant: 'destructive' });
+      } else {
+        toast({ title: 'Eroare la salvarea clientului', variant: 'destructive' });
+      }
     },
   });
 
@@ -139,7 +196,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{client ? 'Editează Client' : 'Client Nou'}</DialogTitle>
         </DialogHeader>
@@ -148,12 +205,40 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
+              name="cui"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CUI / Cod Fiscal</FormLabel>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input {...field} placeholder="RO12345678 sau 12345678" />
+                    </FormControl>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={lookupCompany}
+                      disabled={isLookingUp}
+                    >
+                      {isLookingUp ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Search className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nume *</FormLabel>
+                  <FormLabel>Nume / Denumire *</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Nume complet" />
+                    <Input {...field} placeholder="Nume complet sau denumire firmă" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -211,7 +296,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                 <FormItem>
                   <FormLabel>Adresă</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Adresa completă" />
+                    <Textarea {...field} placeholder="Adresa completă" rows={2} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -225,7 +310,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                 <FormItem>
                   <FormLabel>Note</FormLabel>
                   <FormControl>
-                    <Textarea {...field} placeholder="Note adiționale..." rows={3} />
+                    <Textarea {...field} placeholder="Note adiționale..." rows={2} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
