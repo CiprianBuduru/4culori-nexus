@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
 interface EmployeeCardProps {
@@ -45,6 +45,9 @@ export function EmployeeCard({ employee, department, onEdit, onDelete }: Employe
                 ? 'ring-red-500' 
                 : 'ring-border'
           }`}>
+            {employee.avatar && (
+              <AvatarImage src={employee.avatar} alt={employee.name} />
+            )}
             <AvatarFallback className="bg-primary/10 text-primary font-semibold">
               {initials}
             </AvatarFallback>

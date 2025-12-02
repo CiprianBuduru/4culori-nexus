@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,6 +30,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { AvatarUpload } from './AvatarUpload';
 
 const employeeSchema = z.object({
   name: z.string().min(2, 'Numele trebuie să aibă minim 2 caractere').max(100),
@@ -43,6 +44,7 @@ const employeeSchema = z.object({
   vacationDays: z.coerce.number().min(0).max(365).optional(),
   status: z.enum(['active', 'inactive']),
   company: z.enum(['LMG', 'EQS']).optional(),
+  avatar: z.string().optional(),
 });
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
@@ -64,6 +66,8 @@ export function EmployeeEditDialog({
   onSave,
   isLoading = false,
 }: EmployeeEditDialogProps) {
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
+
   const form = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
@@ -78,6 +82,7 @@ export function EmployeeEditDialog({
       vacationDays: 21,
       status: 'active',
       company: undefined,
+      avatar: undefined,
     },
   });
 
@@ -97,7 +102,9 @@ export function EmployeeEditDialog({
           vacationDays: employee.vacationDays ?? 21,
           status: employee.status,
           company: employee.company,
+          avatar: employee.avatar,
         });
+        setAvatarUrl(employee.avatar);
       } else {
         form.reset({
           name: '',
@@ -111,7 +118,9 @@ export function EmployeeEditDialog({
           vacationDays: 21,
           status: 'active',
           company: undefined,
+          avatar: undefined,
         });
+        setAvatarUrl(undefined);
       }
     }
   }, [open, employee, form]);
@@ -123,11 +132,19 @@ export function EmployeeEditDialog({
   const isProductionDepartment = watchedDepartmentId === productionDept?.id;
   const availableServices = productionDept?.subDepartments ?? [];
 
+  const watchedName = form.watch('name');
+
+  const handleAvatarChange = (url: string | undefined) => {
+    setAvatarUrl(url);
+    form.setValue('avatar', url);
+  };
+
   const handleSubmit = (data: EmployeeFormData) => {
     // Clear serviceIds if not in Production department
     if (!isProductionDepartment) {
       data.serviceIds = [];
     }
+    data.avatar = avatarUrl;
     onSave(data);
   };
 
@@ -142,6 +159,15 @@ export function EmployeeEditDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            {/* Avatar Upload */}
+            <div className="flex justify-center pb-2">
+              <AvatarUpload
+                value={avatarUrl}
+                onChange={handleAvatarChange}
+                employeeName={watchedName}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="name"
