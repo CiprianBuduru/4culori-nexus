@@ -29,7 +29,8 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Loader2 } from 'lucide-react';
+import { ToastAction } from '@/components/ui/toast';
+import { Search, Loader2, ExternalLink } from 'lucide-react';
 
 const clientSchema = z.object({
   cui: z.string().optional(),
@@ -114,10 +115,12 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       return;
     }
 
+    const cleanCui = cui.replace(/^RO/i, '').replace(/\s/g, '').trim();
+
     setIsLookingUp(true);
     try {
       const { data, error } = await supabase.functions.invoke('lookup-company', {
-        body: { cui }
+        body: { cui: cleanCui }
       });
 
       if (error) {
@@ -125,10 +128,19 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       }
 
       if (data.error) {
+        // Open mfinante in new tab for manual lookup
         toast({ 
-          title: data.error, 
-          description: data.suggestion || undefined,
-          variant: 'destructive' 
+          title: 'Serviciul ANAF nu este disponibil',
+          description: 'Verificați manual și completați datele.',
+          variant: 'destructive',
+          action: (
+            <ToastAction 
+              altText="Verifică pe MFinanțe"
+              onClick={() => window.open('https://mfinante.gov.ro/infocodfiscal', '_blank')}
+            >
+              Verifică manual
+            </ToastAction>
+          ),
         });
         return;
       }
