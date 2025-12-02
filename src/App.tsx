@@ -8,6 +8,7 @@ import Employees from "./pages/Employees";
 import Departments from "./pages/Departments";
 import Products from "./pages/Products";
 import PriceCalculator from "./pages/PriceCalculator";
+import ProductionCalendar from "./pages/ProductionCalendar";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -21,6 +22,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/production-calendar" element={<ProductionCalendar />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/departments" element={<Departments />} />
           <Route path="/products" element={<Products />} />
