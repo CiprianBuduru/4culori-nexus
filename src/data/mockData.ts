@@ -52,51 +52,7 @@ export const departments: Department[] = [
   },
 ];
 
-export const employees: Employee[] = [
-  // Management (dept id: 5)
-  {
-    id: '1',
-    name: 'Ciprian Buduru',
-    email: 'ciprian@4culori.ro',
-    phone: '+40 721 000 001',
-    position: 'Administrator',
-    departmentId: '5',
-    hireDate: '2015-01-01',
-    status: 'active',
-  },
-  {
-    id: '2',
-    name: 'Nicoleta Buduru',
-    email: 'nicol@4culori.ro',
-    phone: '+40 721 000 002',
-    position: 'Director',
-    departmentId: '5',
-    hireDate: '2015-01-01',
-    status: 'active',
-  },
-  // Producție (dept id: 2)
-  {
-    id: '3',
-    name: 'Gabi Dinescu',
-    email: 'gabi@4culori.ro',
-    phone: '+40 727 111 111',
-    position: 'Șef Producție',
-    departmentId: '2',
-    hireDate: '2018-06-01',
-    status: 'active',
-  },
-  {
-    id: '4',
-    name: 'Alex Ciuraru',
-    email: 'alex@4culori.ro',
-    phone: '+40 727 222 222',
-    position: 'Operator',
-    departmentId: '2',
-    serviceId: 'sub-1', // Print 3D
-    hireDate: '2021-03-10',
-    status: 'active',
-  },
-];
+export const employees: Employee[] = [];
 
 export const products: Product[] = [
   {
