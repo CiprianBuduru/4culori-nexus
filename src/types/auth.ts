@@ -1,4 +1,4 @@
-export type AppRole = 'administrator' | 'director' | 'sef_productie' | 'operator';
+export type AppRole = 'administrator' | 'director' | 'sef_productie' | 'operator' | 'vizitator';
 
 export interface UserProfile {
   id: string;
@@ -21,41 +21,65 @@ export interface AuthUser {
   role: UserRole | null;
 }
 
-// Role-based access configuration
+// Role-based access configuration - 5 levels (4 = highest, 0 = lowest)
 export const roleAccess: Record<AppRole, {
+  level: number;
   label: string;
   pages: string[];
   canManageUsers: boolean;
   canManageSettings: boolean;
   canViewAllData: boolean;
+  canEditData: boolean;
 }> = {
+  // Nivel 4 - Acces complet
   administrator: {
+    level: 4,
     label: 'Administrator',
     pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar', '/settings', '/clients', '/orders'],
     canManageUsers: true,
     canManageSettings: true,
     canViewAllData: true,
+    canEditData: true,
   },
+  // Nivel 3 - Acces extins (fără setări)
   director: {
+    level: 3,
     label: 'Director',
     pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar', '/clients', '/orders'],
     canManageUsers: false,
     canManageSettings: false,
     canViewAllData: true,
+    canEditData: true,
   },
+  // Nivel 2 - Acces producție
   sef_productie: {
+    level: 2,
     label: 'Șef Producție',
     pages: ['/', '/employees', '/products', '/production-calendar', '/clients', '/orders'],
     canManageUsers: false,
     canManageSettings: false,
     canViewAllData: false,
+    canEditData: true,
   },
+  // Nivel 1 - Acces limitat la departamente proprii
   operator: {
+    level: 1,
     label: 'Operator',
     pages: ['/', '/production-calendar'],
     canManageUsers: false,
     canManageSettings: false,
     canViewAllData: false,
+    canEditData: false,
+  },
+  // Nivel 0 - Doar vizualizare dashboard
+  vizitator: {
+    level: 0,
+    label: 'Vizitator',
+    pages: ['/'],
+    canManageUsers: false,
+    canManageSettings: false,
+    canViewAllData: false,
+    canEditData: false,
   },
 };
 
