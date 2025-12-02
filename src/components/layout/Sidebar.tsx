@@ -7,9 +7,13 @@ import {
   Settings,
   Palette,
   Calculator,
-  CalendarDays
+  CalendarDays,
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { roleAccess } from '@/types/auth';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -23,6 +27,16 @@ const navigation = [
 
 export function Sidebar() {
   const location = useLocation();
+  const { profile, userRole, signOut, hasAccess } = useAuth();
+
+  // Filter navigation based on user role
+  const filteredNavigation = navigation.filter(item => hasAccess(item.href));
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const roleLabel = userRole ? roleAccess[userRole.role]?.label : '';
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar">
@@ -38,9 +52,21 @@ export function Sidebar() {
           </div>
         </div>
 
+        {/* User Info */}
+        {profile && (
+          <div className="border-b border-sidebar-border px-4 py-3">
+            <p className="text-sm font-medium text-sidebar-foreground truncate">
+              {profile.name}
+            </p>
+            <p className="text-xs text-sidebar-foreground/60">
+              {roleLabel}
+            </p>
+          </div>
+        )}
+
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {navigation.map((item) => {
+        <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
+          {filteredNavigation.map((item) => {
             const isActive = location.pathname === item.href;
             return (
               <Link
@@ -58,15 +84,24 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* Brand Colors Footer */}
-        <div className="border-t border-sidebar-border p-4">
+        {/* Logout & Brand Colors Footer */}
+        <div className="border-t border-sidebar-border p-4 space-y-4">
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+            onClick={handleSignOut}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Deconectare
+          </Button>
+          
           <div className="flex justify-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-brand-blue" />
-            <div className="h-3 w-3 rounded-full bg-brand-teal" />
-            <div className="h-3 w-3 rounded-full bg-brand-orange" />
-            <div className="h-3 w-3 rounded-full bg-brand-green" />
+            <div className="h-3 w-3 rounded-full bg-primary" />
+            <div className="h-3 w-3 rounded-full bg-secondary" />
+            <div className="h-3 w-3 rounded-full bg-accent" />
+            <div className="h-3 w-3 rounded-full bg-success" />
           </div>
-          <p className="mt-2 text-center text-xs text-sidebar-foreground/50">
+          <p className="text-center text-xs text-sidebar-foreground/50">
             © 2024 4culori
           </p>
         </div>
