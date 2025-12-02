@@ -28,7 +28,13 @@ export function EmployeeCard({ employee, department, onEdit, onDelete }: Employe
     <div className="group rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:shadow-md">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <Avatar className="h-12 w-12 border-2 border-primary/20">
+          <Avatar className={`h-12 w-12 ring-2 ring-offset-2 ring-offset-background ${
+            employee.company === 'LMG' 
+              ? 'ring-blue-500' 
+              : employee.company === 'EQS' 
+                ? 'ring-red-500' 
+                : 'ring-border'
+          }`}>
             <AvatarFallback className="bg-primary/10 text-primary font-semibold">
               {initials}
             </AvatarFallback>
