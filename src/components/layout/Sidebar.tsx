@@ -6,12 +6,14 @@ import {
   Package, 
   Settings,
   Palette,
-  Calculator
+  Calculator,
+  CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Calendar Producție', href: '/production-calendar', icon: CalendarDays },
   { name: 'Angajați', href: '/employees', icon: Users },
   { name: 'Departamente', href: '/departments', icon: Building2 },
   { name: 'Produse', href: '/products', icon: Package },
