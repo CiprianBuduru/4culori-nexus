@@ -8,6 +8,7 @@ export interface Employee {
   hireDate: string;
   status: 'active' | 'inactive';
   avatar?: string;
+  company?: 'LMG' | 'EQS';
 }
 
 export interface Department {

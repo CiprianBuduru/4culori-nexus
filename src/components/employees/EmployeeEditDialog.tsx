@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
@@ -36,6 +37,7 @@ const employeeSchema = z.object({
   departmentId: z.string().min(1, 'Selectează un departament'),
   hireDate: z.string().min(1, 'Selectează data angajării'),
   status: z.enum(['active', 'inactive']),
+  company: z.enum(['LMG', 'EQS']).optional(),
 });
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
@@ -67,6 +69,7 @@ export function EmployeeEditDialog({
       departmentId: employee?.departmentId ?? '',
       hireDate: employee?.hireDate ?? '',
       status: employee?.status ?? 'active',
+      company: employee?.company ?? undefined,
     },
     values: employee ? {
       name: employee.name,
@@ -76,6 +79,7 @@ export function EmployeeEditDialog({
       departmentId: employee.departmentId,
       hireDate: employee.hireDate,
       status: employee.status,
+      company: employee.company,
     } : undefined,
   });
 
@@ -216,6 +220,39 @@ export function EmployeeEditDialog({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="company"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Firmă</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="flex gap-6"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="LMG" id="company-lmg" />
+                        <label htmlFor="company-lmg" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-blue-500" />
+                          LMG
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="EQS" id="company-eqs" />
+                        <label htmlFor="company-eqs" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-red-500" />
+                          EQS
+                        </label>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <DialogFooter className="pt-4">
               <Button
