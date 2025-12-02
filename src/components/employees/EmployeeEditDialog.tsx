@@ -49,7 +49,17 @@ const employeeSchema = z.object({
   isProtectedUnit: z.boolean().optional(),
   salariuBrut: z.coerce.number().min(0).optional(),
   salariuNet: z.coerce.number().min(0).optional(),
+  accessLevel: z.coerce.number().min(0).max(4).optional(),
 });
+
+// Access level configuration
+const accessLevels = [
+  { level: 4, label: 'Administrator', color: 'bg-red-500' },
+  { level: 3, label: 'Director', color: 'bg-orange-500' },
+  { level: 2, label: 'Șef Producție', color: 'bg-yellow-500' },
+  { level: 1, label: 'Operator', color: 'bg-blue-500' },
+  { level: 0, label: 'Vizitator', color: 'bg-gray-500' },
+];
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
 
@@ -92,6 +102,7 @@ export function EmployeeEditDialog({
       isProtectedUnit: false,
       salariuBrut: undefined,
       salariuNet: undefined,
+      accessLevel: 1, // Default to Operator
     },
   });
 
@@ -115,6 +126,7 @@ export function EmployeeEditDialog({
           isProtectedUnit: employee.isProtectedUnit ?? false,
           salariuBrut: employee.salariuBrut,
           salariuNet: employee.salariuNet,
+          accessLevel: employee.accessLevel ?? 1,
         });
         setAvatarUrl(employee.avatar);
       } else {
@@ -134,6 +146,7 @@ export function EmployeeEditDialog({
           isProtectedUnit: false,
           salariuBrut: undefined,
           salariuNet: undefined,
+          accessLevel: 1,
         });
         setAvatarUrl(undefined);
       }
@@ -142,6 +155,7 @@ export function EmployeeEditDialog({
 
   const watchedDepartmentId = form.watch('departmentId');
   const watchedCompany = form.watch('company');
+  const watchedEmail = form.watch('email');
   
   // Find the Production department and its services
   const productionDept = departments.find(d => d.name === 'Producție');
@@ -150,6 +164,9 @@ export function EmployeeEditDialog({
   
   // Show salary fields only for LMG employees and admin users
   const showSalaryFields = isAdmin && watchedCompany === 'LMG';
+  
+  // Only ciprian@4culori.ro can have Administrator level
+  const canBeAdmin = watchedEmail?.toLowerCase() === 'ciprian@4culori.ro';
 
   const watchedName = form.watch('name');
 
@@ -441,6 +458,60 @@ export function EmployeeEditDialog({
                 </FormItem>
               )}
             />
+
+            {/* Access Level - only visible to admin */}
+            {isAdmin && (
+              <FormField
+                control={form.control}
+                name="accessLevel"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Nivel de Acces</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={(val) => field.onChange(parseInt(val))}
+                        value={field.value?.toString()}
+                        className="flex flex-col gap-2"
+                      >
+                        {accessLevels.map((level) => {
+                          // Administrator only for ciprian@4culori.ro
+                          const isDisabled = level.level === 4 && !canBeAdmin;
+                          return (
+                            <div 
+                              key={level.level} 
+                              className={`flex items-center space-x-3 rounded-md border p-3 ${
+                                field.value === level.level 
+                                  ? 'border-primary bg-primary/5' 
+                                  : 'border-border'
+                              } ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            >
+                              <RadioGroupItem 
+                                value={level.level.toString()} 
+                                id={`level-${level.level}`}
+                                disabled={isDisabled}
+                              />
+                              <label 
+                                htmlFor={`level-${level.level}`} 
+                                className={`text-sm font-medium flex items-center gap-3 flex-1 ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                              >
+                                <span className={`w-6 h-6 rounded-full ${level.color} text-white flex items-center justify-center text-xs font-bold`}>
+                                  {level.level}
+                                </span>
+                                <span>{level.label}</span>
+                                {level.level === 4 && !canBeAdmin && (
+                                  <span className="text-xs text-muted-foreground ml-auto">(doar pentru Ciprian)</span>
+                                )}
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Salary fields - only for LMG employees and admin */}
             {showSalaryFields && (
