@@ -13,6 +13,8 @@ export interface Employee {
   avatar?: string;
   company?: 'LMG' | 'EQS';
   isProtectedUnit?: boolean;
+  salariuBrut?: number;
+  salariuNet?: number;
 }
 
 export interface SubDepartment {

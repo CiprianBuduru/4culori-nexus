@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Employee, Department } from '@/types';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,8 @@ const employeeSchema = z.object({
   company: z.enum(['LMG', 'EQS']).optional(),
   avatar: z.string().optional(),
   isProtectedUnit: z.boolean().optional(),
+  salariuBrut: z.coerce.number().min(0).optional(),
+  salariuNet: z.coerce.number().min(0).optional(),
 });
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
@@ -68,6 +71,8 @@ export function EmployeeEditDialog({
   isLoading = false,
 }: EmployeeEditDialogProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
+  const { userRole } = useAuth();
+  const isAdmin = userRole?.role === 'administrator';
 
   const form = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
@@ -85,6 +90,8 @@ export function EmployeeEditDialog({
       company: undefined,
       avatar: undefined,
       isProtectedUnit: false,
+      salariuBrut: undefined,
+      salariuNet: undefined,
     },
   });
 
@@ -106,6 +113,8 @@ export function EmployeeEditDialog({
           company: employee.company,
           avatar: employee.avatar,
           isProtectedUnit: employee.isProtectedUnit ?? false,
+          salariuBrut: employee.salariuBrut,
+          salariuNet: employee.salariuNet,
         });
         setAvatarUrl(employee.avatar);
       } else {
@@ -123,6 +132,8 @@ export function EmployeeEditDialog({
           company: undefined,
           avatar: undefined,
           isProtectedUnit: false,
+          salariuBrut: undefined,
+          salariuNet: undefined,
         });
         setAvatarUrl(undefined);
       }
@@ -130,11 +141,15 @@ export function EmployeeEditDialog({
   }, [open, employee, form]);
 
   const watchedDepartmentId = form.watch('departmentId');
+  const watchedCompany = form.watch('company');
   
   // Find the Production department and its services
   const productionDept = departments.find(d => d.name === 'Producție');
   const isProductionDepartment = watchedDepartmentId === productionDept?.id;
   const availableServices = productionDept?.subDepartments ?? [];
+  
+  // Show salary fields only for LMG employees and admin users
+  const showSalaryFields = isAdmin && watchedCompany === 'LMG';
 
   const watchedName = form.watch('name');
 
@@ -426,6 +441,51 @@ export function EmployeeEditDialog({
                 </FormItem>
               )}
             />
+
+            {/* Salary fields - only for LMG employees and admin */}
+            {showSalaryFields && (
+              <div className="grid grid-cols-2 gap-4 rounded-md border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
+                <FormField
+                  control={form.control}
+                  name="salariuBrut"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Salariu Brut (RON)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min={0} 
+                          placeholder="0" 
+                          {...field} 
+                          value={field.value ?? ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="salariuNet"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Salariu Net (RON)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min={0} 
+                          placeholder="0" 
+                          {...field} 
+                          value={field.value ?? ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             <DialogFooter className="pt-4">
               <Button
