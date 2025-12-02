@@ -2,11 +2,25 @@ import { Employee, Department, Product } from '@/types';
 
 export const departments: Department[] = [
   {
+    id: '5',
+    name: 'Management',
+    description: 'Departamentul de management și conducere',
+    color: 'green',
+    employeeCount: 3,
+  },
+  {
     id: '1',
     name: 'Vânzări',
     description: 'Departamentul de vânzări și relații clienți',
     color: 'blue',
     employeeCount: 8,
+  },
+  {
+    id: '6',
+    name: 'DTP',
+    description: 'Departamentul de prepress și design grafic',
+    color: 'orange',
+    employeeCount: 4,
   },
   {
     id: '2',
@@ -34,20 +48,6 @@ export const departments: Department[] = [
     name: 'Financiar',
     description: 'Departamentul financiar-contabil',
     color: 'purple',
-    employeeCount: 4,
-  },
-  {
-    id: '5',
-    name: 'Management',
-    description: 'Departamentul de management și conducere',
-    color: 'green',
-    employeeCount: 3,
-  },
-  {
-    id: '6',
-    name: 'DTP',
-    description: 'Departamentul de prepress și design grafic',
-    color: 'orange',
     employeeCount: 4,
   },
 ];
