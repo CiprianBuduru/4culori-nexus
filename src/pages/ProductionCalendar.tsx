@@ -329,7 +329,7 @@ export default function ProductionCalendar() {
               <h3 className="text-sm font-medium text-muted-foreground mb-3">
                 Restul lunii {monthName}
               </h3>
-              <div className="grid grid-cols-7 sm:grid-cols-10 lg:grid-cols-14 gap-2">
+              <div className="grid grid-cols-7 gap-2">
                 {remainingDays
                   .filter(date => isCurrentMonth(date))
                   .map((date) => (
