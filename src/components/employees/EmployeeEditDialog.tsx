@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
@@ -35,6 +36,7 @@ const employeeSchema = z.object({
   phone: z.string().min(10, 'Numărul de telefon trebuie să aibă minim 10 caractere'),
   position: z.string().min(2, 'Poziția trebuie să aibă minim 2 caractere'),
   departmentId: z.string().min(1, 'Selectează un departament'),
+  serviceIds: z.array(z.string()).optional(),
   hireDate: z.string().min(1, 'Selectează data angajării'),
   status: z.enum(['active', 'inactive']),
   company: z.enum(['LMG', 'EQS']).optional(),
@@ -67,6 +69,7 @@ export function EmployeeEditDialog({
       phone: employee?.phone ?? '',
       position: employee?.position ?? '',
       departmentId: employee?.departmentId ?? '',
+      serviceIds: employee?.serviceIds ?? [],
       hireDate: employee?.hireDate ?? '',
       status: employee?.status ?? 'active',
       company: employee?.company ?? undefined,
@@ -77,19 +80,31 @@ export function EmployeeEditDialog({
       phone: employee.phone,
       position: employee.position,
       departmentId: employee.departmentId,
+      serviceIds: employee.serviceIds ?? [],
       hireDate: employee.hireDate,
       status: employee.status,
       company: employee.company,
     } : undefined,
   });
 
+  const watchedDepartmentId = form.watch('departmentId');
+  
+  // Find the Production department and its services
+  const productionDept = departments.find(d => d.name === 'Producție');
+  const isProductionDepartment = watchedDepartmentId === productionDept?.id;
+  const availableServices = productionDept?.subDepartments ?? [];
+
   const handleSubmit = (data: EmployeeFormData) => {
+    // Clear serviceIds if not in Production department
+    if (!isProductionDepartment) {
+      data.serviceIds = [];
+    }
     onSave(data);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {employee ? 'Editează Angajat' : 'Adaugă Angajat'}
@@ -182,6 +197,54 @@ export function EmployeeEditDialog({
                 )}
               />
             </div>
+
+            {/* Services multi-select - only for Production department */}
+            {isProductionDepartment && availableServices.length > 0 && (
+              <FormField
+                control={form.control}
+                name="serviceIds"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Servicii (poate efectua)</FormLabel>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      {availableServices.map((service) => (
+                        <FormField
+                          key={service.id}
+                          control={form.control}
+                          name="serviceIds"
+                          render={({ field }) => {
+                            return (
+                              <FormItem
+                                key={service.id}
+                                className="flex flex-row items-center space-x-2 space-y-0"
+                              >
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(service.id)}
+                                    onCheckedChange={(checked) => {
+                                      const currentValue = field.value ?? [];
+                                      return checked
+                                        ? field.onChange([...currentValue, service.id])
+                                        : field.onChange(
+                                            currentValue.filter((value) => value !== service.id)
+                                          );
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-normal cursor-pointer">
+                                  {service.name}
+                                </FormLabel>
+                              </FormItem>
+                            );
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

@@ -23,7 +23,7 @@ const Departments = () => {
       // Calculate service counts if subdepartments exist
       const subDepartments = dept.subDepartments?.map((sub) => ({
         ...sub,
-        employeeCount: deptEmployees.filter((emp) => emp.serviceId === sub.id).length,
+        employeeCount: deptEmployees.filter((emp) => emp.serviceIds?.includes(sub.id)).length,
       }));
 
       return {
