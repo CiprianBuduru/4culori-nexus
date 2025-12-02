@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -66,32 +67,54 @@ export function EmployeeEditDialog({
   const form = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
-      name: employee?.name ?? '',
-      email: employee?.email ?? '',
-      phone: employee?.phone ?? '',
-      position: employee?.position ?? '',
-      departmentId: employee?.departmentId ?? '',
-      serviceIds: employee?.serviceIds ?? [],
-      hireDate: employee?.hireDate ?? '',
-      birthDate: employee?.birthDate ?? '',
-      vacationDays: employee?.vacationDays ?? 21,
-      status: employee?.status ?? 'active',
-      company: employee?.company ?? undefined,
+      name: '',
+      email: '',
+      phone: '',
+      position: '',
+      departmentId: '',
+      serviceIds: [],
+      hireDate: '',
+      birthDate: '',
+      vacationDays: 21,
+      status: 'active',
+      company: undefined,
     },
-    values: employee ? {
-      name: employee.name,
-      email: employee.email,
-      phone: employee.phone,
-      position: employee.position,
-      departmentId: employee.departmentId,
-      serviceIds: employee.serviceIds ?? [],
-      hireDate: employee.hireDate,
-      birthDate: employee.birthDate ?? '',
-      vacationDays: employee.vacationDays ?? 21,
-      status: employee.status,
-      company: employee.company,
-    } : undefined,
   });
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      if (employee) {
+        form.reset({
+          name: employee.name,
+          email: employee.email,
+          phone: employee.phone,
+          position: employee.position,
+          departmentId: employee.departmentId,
+          serviceIds: employee.serviceIds ?? [],
+          hireDate: employee.hireDate,
+          birthDate: employee.birthDate ?? '',
+          vacationDays: employee.vacationDays ?? 21,
+          status: employee.status,
+          company: employee.company,
+        });
+      } else {
+        form.reset({
+          name: '',
+          email: '',
+          phone: '',
+          position: '',
+          departmentId: '',
+          serviceIds: [],
+          hireDate: '',
+          birthDate: '',
+          vacationDays: 21,
+          status: 'active',
+          company: undefined,
+        });
+      }
+    }
+  }, [open, employee, form]);
 
   const watchedDepartmentId = form.watch('departmentId');
   
