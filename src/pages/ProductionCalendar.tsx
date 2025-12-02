@@ -29,17 +29,21 @@ import {
 } from '@/components/ui/dialog';
 
 const departmentColors: Record<string, string> = {
-  '1': 'bg-brand-blue',
-  '2': 'bg-brand-teal',
-  '3': 'bg-brand-orange',
-  '4': 'bg-brand-green',
+  '1': 'bg-brand-blue',    // Vânzări
+  '2': 'bg-brand-teal',    // Producție
+  '3': 'bg-brand-pink',    // Marketing
+  '4': 'bg-brand-purple',  // Financiar
+  '5': 'bg-brand-green',   // Management
+  '6': 'bg-brand-orange',  // DTP
 };
 
 const departmentBorderColors: Record<string, string> = {
   '1': 'border-l-brand-blue',
   '2': 'border-l-brand-teal',
-  '3': 'border-l-brand-orange',
-  '4': 'border-l-brand-green',
+  '3': 'border-l-brand-pink',
+  '4': 'border-l-brand-purple',
+  '5': 'border-l-brand-green',
+  '6': 'border-l-brand-orange',
 };
 
 export default function ProductionCalendar() {
