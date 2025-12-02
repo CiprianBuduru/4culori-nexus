@@ -15,6 +15,7 @@ export interface Employee {
   isProtectedUnit?: boolean;
   salariuBrut?: number;
   salariuNet?: number;
+  accessLevel?: number; // 0-4, where 4=Administrator
 }
 
 export interface SubDepartment {
