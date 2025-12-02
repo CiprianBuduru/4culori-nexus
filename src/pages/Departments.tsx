@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { DepartmentCard } from '@/components/departments/DepartmentCard';
 import { DepartmentEditDialog } from '@/components/departments/DepartmentEditDialog';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { departments as initialDepartments } from '@/data/mockData';
+import { departments as initialDepartments, employees } from '@/data/mockData';
 import { Department } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,6 +13,26 @@ const Departments = () => {
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  // Calculate employee counts dynamically
+  const departmentsWithCounts = useMemo(() => {
+    return departmentList.map((dept) => {
+      const deptEmployees = employees.filter((emp) => emp.departmentId === dept.id);
+      const employeeCount = deptEmployees.length;
+
+      // Calculate service counts if subdepartments exist
+      const subDepartments = dept.subDepartments?.map((sub) => ({
+        ...sub,
+        employeeCount: deptEmployees.filter((emp) => emp.serviceId === sub.id).length,
+      }));
+
+      return {
+        ...dept,
+        employeeCount,
+        subDepartments,
+      };
+    });
+  }, [departmentList]);
 
   const handleEdit = (department: Department) => {
     setEditingDepartment(department);
@@ -61,7 +81,7 @@ const Departments = () => {
     });
   };
 
-  const totalEmployees = departmentList.reduce((acc, d) => acc + d.employeeCount, 0);
+  const totalEmployees = employees.length;
 
   return (
     <MainLayout>
@@ -82,7 +102,7 @@ const Departments = () => {
 
         {/* Departments Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {departmentList.map((department) => (
+          {departmentsWithCounts.map((department) => (
             <DepartmentCard
               key={department.id}
               department={department}
