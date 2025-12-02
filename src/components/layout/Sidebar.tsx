@@ -5,7 +5,8 @@ import {
   Building2, 
   Package, 
   Settings,
-  Palette
+  Palette,
+  Calculator
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +15,7 @@ const navigation = [
   { name: 'Angajați', href: '/employees', icon: Users },
   { name: 'Departamente', href: '/departments', icon: Building2 },
   { name: 'Produse', href: '/products', icon: Package },
+  { name: 'Calculator Prețuri', href: '/price-calculator', icon: Calculator },
   { name: 'Setări', href: '/settings', icon: Settings },
 ];
 
