@@ -125,7 +125,11 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       }
 
       if (data.error) {
-        toast({ title: data.error, variant: 'destructive' });
+        toast({ 
+          title: data.error, 
+          description: data.suggestion || undefined,
+          variant: 'destructive' 
+        });
         return;
       }
 

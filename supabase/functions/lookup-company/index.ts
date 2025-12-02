@@ -5,6 +5,47 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+async function fetchFromANAF(cuiNumber: number, date: string): Promise<any> {
+  const requestBody = [{ cui: cuiNumber, data: date }];
+  
+  const response = await fetch('https://webservicesp.anaf.ro/PlatitorTvaRest/api/v8/ws/tva', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!response.ok) {
+    throw new Error(`ANAF status: ${response.status}`);
+  }
+
+  const text = await response.text();
+  if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+    throw new Error('ANAF returned HTML instead of JSON');
+  }
+
+  return JSON.parse(text);
+}
+
+async function fetchFromMfinante(cui: string): Promise<any> {
+  // Alternative: Try mfinante.gov.ro API
+  const response = await fetch(`https://mfinante.gov.ro/static/10/Mfp/info-formulare/json/codF_${cui}.json`, {
+    headers: {
+      'Accept': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`MFinante status: ${response.status}`);
+  }
+  
+  return response.json();
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -20,7 +61,6 @@ serve(async (req) => {
       );
     }
 
-    // Clean CUI - remove RO prefix if present and any spaces
     const cleanCui = cui.toString().replace(/^RO/i, '').replace(/\s/g, '').trim();
     const cuiNumber = parseInt(cleanCui, 10);
     
@@ -32,93 +72,79 @@ serve(async (req) => {
     }
     
     console.log(`Looking up company with CUI: ${cuiNumber}`);
-
-    // Get current date in required format YYYY-MM-DD
     const today = new Date().toISOString().split('T')[0];
-    
-    const requestBody = [
-      {
-        cui: cuiNumber,
-        data: today
-      }
-    ];
-    
-    console.log('Request body:', JSON.stringify(requestBody));
 
-    // Call ANAF API
-    const anafResponse = await fetch('https://webservicesp.anaf.ro/PlatitorTvaRest/api/v8/ws/tva', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    });
+    let result: any = null;
+    let errorMsg = '';
 
-    console.log('ANAF response status:', anafResponse.status);
-    
-    const responseText = await anafResponse.text();
-    console.log('ANAF response body:', responseText);
-
-    if (!anafResponse.ok) {
-      console.error(`ANAF API error: ${anafResponse.status} - ${responseText}`);
-      return new Response(
-        JSON.stringify({ error: `Eroare API ANAF: ${anafResponse.status}` }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    let anafData;
+    // Try ANAF first
     try {
-      anafData = JSON.parse(responseText);
-    } catch (e) {
-      console.error('Failed to parse ANAF response:', e);
+      const anafData = await fetchFromANAF(cuiNumber, today);
+      console.log('ANAF response:', JSON.stringify(anafData));
+      
+      if (anafData.cod === 200 && anafData.found && anafData.found.length > 0) {
+        const companyInfo = anafData.found[0];
+        const dateGenerale = companyInfo.date_generale || {};
+        const inregistrareScopTva = companyInfo.inregistrare_scop_Tva || {};
+
+        result = {
+          cui: cleanCui,
+          name: dateGenerale.denumire || '',
+          address: dateGenerale.adresa || '',
+          phone: dateGenerale.telefon || '',
+          platitorTva: inregistrareScopTva.scpTVA || false,
+          statusInactiv: companyInfo.stare_inactiv?.statusInactivi || false,
+        };
+      } else if (anafData.notfound && anafData.notfound.length > 0) {
+        errorMsg = 'CUI-ul nu a fost găsit în baza de date ANAF';
+      }
+    } catch (anafError) {
+      console.log('ANAF error:', anafError);
+      errorMsg = 'Serviciul ANAF nu este disponibil momentan';
+    }
+
+    // If ANAF failed, try MFinante
+    if (!result) {
+      try {
+        const mfData = await fetchFromMfinante(cleanCui);
+        console.log('MFinante response:', JSON.stringify(mfData));
+        
+        if (mfData && mfData.denumire) {
+          result = {
+            cui: cleanCui,
+            name: mfData.denumire || '',
+            address: mfData.adresa || '',
+            phone: '',
+            platitorTva: false,
+            statusInactiv: false,
+          };
+        }
+      } catch (mfError) {
+        console.log('MFinante error:', mfError);
+      }
+    }
+
+    if (result) {
+      console.log('Returning company data:', JSON.stringify(result));
       return new Response(
-        JSON.stringify({ error: 'Răspuns invalid de la ANAF' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify(result),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('ANAF parsed data:', JSON.stringify(anafData));
-
-    if (anafData.cod !== 200) {
-      return new Response(
-        JSON.stringify({ error: anafData.message || 'Eroare ANAF' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!anafData.found || anafData.found.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'CUI-ul nu a fost găsit în baza de date ANAF' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const companyInfo = anafData.found[0];
-    const dateGenerale = companyInfo.date_generale || {};
-    const inregistrareScopTva = companyInfo.inregistrare_scop_Tva || {};
-
-    const result = {
-      cui: cleanCui,
-      name: dateGenerale.denumire || '',
-      address: dateGenerale.adresa || '',
-      phone: dateGenerale.telefon || '',
-      platitorTva: inregistrareScopTva.scpTVA || false,
-      statusInactiv: companyInfo.stare_inactiv?.statusInactivi || false,
-    };
-
-    console.log('Returning company data:', JSON.stringify(result));
-
+    // All sources failed
     return new Response(
-      JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        error: errorMsg || 'Nu s-au putut prelua datele. API-ul ANAF poate fi temporar indisponibil.',
+        suggestion: 'Încercați manual pe: https://mfinante.gov.ro/infocodfiscal'
+      }),
+      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Error in lookup-company:', error);
     return new Response(
-      JSON.stringify({ error: 'Eroare la preluarea datelor: ' + (error instanceof Error ? error.message : 'Unknown') }),
+      JSON.stringify({ error: 'Eroare la preluarea datelor' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
