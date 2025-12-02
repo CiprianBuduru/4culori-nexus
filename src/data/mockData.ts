@@ -26,14 +26,14 @@ export const departments: Department[] = [
     id: '3',
     name: 'Marketing',
     description: 'Departamentul de marketing și comunicare',
-    color: 'orange',
+    color: 'pink',
     employeeCount: 5,
   },
   {
     id: '4',
     name: 'Financiar',
     description: 'Departamentul financiar-contabil',
-    color: 'green',
+    color: 'purple',
     employeeCount: 4,
   },
   {
