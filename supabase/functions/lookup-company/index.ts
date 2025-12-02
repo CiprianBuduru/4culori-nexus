@@ -6,7 +6,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -23,36 +22,71 @@ serve(async (req) => {
 
     // Clean CUI - remove RO prefix if present and any spaces
     const cleanCui = cui.toString().replace(/^RO/i, '').replace(/\s/g, '').trim();
+    const cuiNumber = parseInt(cleanCui, 10);
     
-    console.log(`Looking up company with CUI: ${cleanCui}`);
+    if (isNaN(cuiNumber)) {
+      return new Response(
+        JSON.stringify({ error: 'CUI invalid - trebuie să conțină doar cifre' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    console.log(`Looking up company with CUI: ${cuiNumber}`);
 
-    // Get current date in required format
+    // Get current date in required format YYYY-MM-DD
     const today = new Date().toISOString().split('T')[0];
+    
+    const requestBody = [
+      {
+        cui: cuiNumber,
+        data: today
+      }
+    ];
+    
+    console.log('Request body:', JSON.stringify(requestBody));
 
     // Call ANAF API
     const anafResponse = await fetch('https://webservicesp.anaf.ro/PlatitorTvaRest/api/v8/ws/tva', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
-      body: JSON.stringify([
-        {
-          cui: parseInt(cleanCui),
-          data: today
-        }
-      ])
+      body: JSON.stringify(requestBody)
     });
 
+    console.log('ANAF response status:', anafResponse.status);
+    
+    const responseText = await anafResponse.text();
+    console.log('ANAF response body:', responseText);
+
     if (!anafResponse.ok) {
-      console.error(`ANAF API error: ${anafResponse.status}`);
+      console.error(`ANAF API error: ${anafResponse.status} - ${responseText}`);
       return new Response(
-        JSON.stringify({ error: 'Nu s-au putut prelua datele de la ANAF' }),
+        JSON.stringify({ error: `Eroare API ANAF: ${anafResponse.status}` }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const anafData = await anafResponse.json();
-    console.log('ANAF response:', JSON.stringify(anafData));
+    let anafData;
+    try {
+      anafData = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Failed to parse ANAF response:', e);
+      return new Response(
+        JSON.stringify({ error: 'Răspuns invalid de la ANAF' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('ANAF parsed data:', JSON.stringify(anafData));
+
+    if (anafData.cod !== 200) {
+      return new Response(
+        JSON.stringify({ error: anafData.message || 'Eroare ANAF' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (!anafData.found || anafData.found.length === 0) {
       return new Response(
@@ -61,27 +95,17 @@ serve(async (req) => {
       );
     }
 
-    const companyData = anafData.found[0];
-    
-    // Extract and format address
-    const addressParts = [];
-    if (companyData.adresa_sediu_social) {
-      addressParts.push(companyData.adresa_sediu_social);
-    } else {
-      if (companyData.sdenumire_Strada) addressParts.push(companyData.sdenumire_Strada);
-      if (companyData.snumar_Strada) addressParts.push(`Nr. ${companyData.snumar_Strada}`);
-      if (companyData.sdenumire_Localitate) addressParts.push(companyData.sdenumire_Localitate);
-      if (companyData.sdenumire_Judet) addressParts.push(`Jud. ${companyData.sdenumire_Judet}`);
-    }
+    const companyInfo = anafData.found[0];
+    const dateGenerale = companyInfo.date_generale || {};
+    const inregistrareScopTva = companyInfo.inregistrare_scop_Tva || {};
 
     const result = {
       cui: cleanCui,
-      name: companyData.denumire || '',
-      address: companyData.adresa || addressParts.join(', ') || '',
-      phone: companyData.telefon || '',
-      platitorTva: companyData.scpTVA || false,
-      statusInactiv: companyData.statusInactivi || false,
-      dataInregistrare: companyData.data_inregistrare || null,
+      name: dateGenerale.denumire || '',
+      address: dateGenerale.adresa || '',
+      phone: dateGenerale.telefon || '',
+      platitorTva: inregistrareScopTva.scpTVA || false,
+      statusInactiv: companyInfo.stare_inactiv?.statusInactivi || false,
     };
 
     console.log('Returning company data:', JSON.stringify(result));
@@ -94,7 +118,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in lookup-company:', error);
     return new Response(
-      JSON.stringify({ error: 'Eroare la preluarea datelor' }),
+      JSON.stringify({ error: 'Eroare la preluarea datelor: ' + (error instanceof Error ? error.message : 'Unknown') }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
