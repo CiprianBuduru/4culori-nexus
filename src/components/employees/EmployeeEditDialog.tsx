@@ -86,8 +86,8 @@ const accessLevels = [
     level: 0, 
     label: 'Vizitator', 
     color: 'bg-gray-500',
-    access: ['Dashboard'],
-    permissions: 'Fără acces la date'
+    access: ['Calendar'],
+    permissions: 'Doar vizualizare calendar'
   },
 ];
 
