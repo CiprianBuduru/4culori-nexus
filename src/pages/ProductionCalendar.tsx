@@ -84,15 +84,18 @@ export default function ProductionCalendar() {
       secondary.push(d);
     }
 
-    // Remaining days of the current month (excluding primary and secondary)
+    // Remaining days: starting from day 6 onwards (after primary + secondary)
     const remaining: Date[] = [];
-    const usedDates = new Set([...primary, ...secondary].map(d => d.toDateString()));
+    const startDate = new Date(todayDate);
+    startDate.setDate(todayDate.getDate() + 5); // Day 6 onwards
     
-    for (let day = 1; day <= daysInMonth; day++) {
-      const d = new Date(year, month, day);
-      if (!usedDates.has(d.toDateString())) {
-        remaining.push(d);
-      }
+    // Continue until end of month
+    const endOfMonth = new Date(year, month + 1, 0);
+    const currentDay = new Date(startDate);
+    
+    while (currentDay <= endOfMonth) {
+      remaining.push(new Date(currentDay));
+      currentDay.setDate(currentDay.getDate() + 1);
     }
 
     return {
