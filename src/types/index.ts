@@ -5,6 +5,7 @@ export interface Employee {
   phone: string;
   position: string;
   departmentId: string;
+  serviceId?: string; // For subdepartment/service assignment
   hireDate: string;
   status: 'active' | 'inactive';
   avatar?: string;
