@@ -13,6 +13,8 @@ import Products from "./pages/Products";
 import PriceCalculator from "./pages/PriceCalculator";
 import ProductionCalendar from "./pages/ProductionCalendar";
 import Settings from "./pages/Settings";
+import Clients from "./pages/Clients";
+import Orders from "./pages/Orders";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +30,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/production-calendar" element={<ProtectedRoute><ProductionCalendar /></ProtectedRoute>} />
+            <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
+            <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/employees" element={<ProtectedRoute><Employees /></ProtectedRoute>} />
             <Route path="/departments" element={<ProtectedRoute><Departments /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />

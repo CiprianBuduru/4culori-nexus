@@ -8,7 +8,9 @@ import {
   Palette,
   Calculator,
   CalendarDays,
-  LogOut
+  LogOut,
+  UserCircle,
+  ShoppingCart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +20,8 @@ import { roleAccess } from '@/types/auth';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Calendar Producție', href: '/production-calendar', icon: CalendarDays },
+  { name: 'Clienți', href: '/clients', icon: UserCircle },
+  { name: 'Comenzi', href: '/orders', icon: ShoppingCart },
   { name: 'Angajați', href: '/employees', icon: Users },
   { name: 'Departamente', href: '/departments', icon: Building2 },
   { name: 'Produse', href: '/products', icon: Package },
