@@ -38,6 +38,8 @@ const employeeSchema = z.object({
   departmentId: z.string().min(1, 'Selectează un departament'),
   serviceIds: z.array(z.string()).optional(),
   hireDate: z.string().min(1, 'Selectează data angajării'),
+  birthDate: z.string().optional(),
+  vacationDays: z.coerce.number().min(0).max(365).optional(),
   status: z.enum(['active', 'inactive']),
   company: z.enum(['LMG', 'EQS']).optional(),
 });
@@ -71,6 +73,8 @@ export function EmployeeEditDialog({
       departmentId: employee?.departmentId ?? '',
       serviceIds: employee?.serviceIds ?? [],
       hireDate: employee?.hireDate ?? '',
+      birthDate: employee?.birthDate ?? '',
+      vacationDays: employee?.vacationDays ?? 21,
       status: employee?.status ?? 'active',
       company: employee?.company ?? undefined,
     },
@@ -82,6 +86,8 @@ export function EmployeeEditDialog({
       departmentId: employee.departmentId,
       serviceIds: employee.serviceIds ?? [],
       hireDate: employee.hireDate,
+      birthDate: employee.birthDate ?? '',
+      vacationDays: employee.vacationDays ?? 21,
       status: employee.status,
       company: employee.company,
     } : undefined,
@@ -255,6 +261,36 @@ export function EmployeeEditDialog({
                     <FormLabel>Data angajării</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="birthDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data nașterii</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="vacationDays"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Zile concediu / an</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} max={365} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
