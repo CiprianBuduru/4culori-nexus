@@ -127,18 +127,19 @@ serve(async (req) => {
     if (result) {
       console.log('Returning company data:', JSON.stringify(result));
       return new Response(
-        JSON.stringify(result),
+        JSON.stringify({ success: true, ...result }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // All sources failed
+    // All sources failed - return 200 with error flag for better client handling
     return new Response(
       JSON.stringify({ 
+        success: false,
         error: errorMsg || 'Nu s-au putut prelua datele. API-ul ANAF poate fi temporar indisponibil.',
-        suggestion: 'Încercați manual pe: https://mfinante.gov.ro/infocodfiscal'
+        suggestion: 'https://mfinante.gov.ro/infocodfiscal'
       }),
-      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
