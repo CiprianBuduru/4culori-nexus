@@ -127,8 +127,8 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         throw new Error(error.message);
       }
 
-      if (data.error) {
-        // Open mfinante in new tab for manual lookup
+      if (!data.success) {
+        // ANAF unavailable - show toast with link to check manually
         toast({ 
           title: 'Serviciul ANAF nu este disponibil',
           description: 'Verificați manual și completați datele.',
@@ -136,7 +136,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
           action: (
             <ToastAction 
               altText="Verifică pe MFinanțe"
-              onClick={() => window.open('https://mfinante.gov.ro/infocodfiscal', '_blank')}
+              onClick={() => window.open(data.suggestion || 'https://mfinante.gov.ro/infocodfiscal', '_blank')}
             >
               Verifică manual
             </ToastAction>
@@ -161,7 +161,15 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       toast({ 
         title: 'Eroare la preluarea datelor', 
         description: 'Verificați CUI-ul și încercați din nou',
-        variant: 'destructive' 
+        variant: 'destructive',
+        action: (
+          <ToastAction 
+            altText="Verifică pe MFinanțe"
+            onClick={() => window.open('https://mfinante.gov.ro/infocodfiscal', '_blank')}
+          >
+            Verifică manual
+          </ToastAction>
+        ),
       });
     } finally {
       setIsLookingUp(false);
