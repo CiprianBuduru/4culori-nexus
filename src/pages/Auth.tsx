@@ -125,17 +125,7 @@ const Auth = () => {
         variant: 'destructive',
       });
     } else if (data.user) {
-      // Assign role
-      const { error: roleError } = await supabase.from('user_roles').insert({
-        user_id: data.user.id,
-        role: predefinedEmployee.role as AppRole,
-        departments: predefinedEmployee.departments,
-      });
-
-      if (roleError) {
-        console.error('Error assigning role:', roleError);
-      }
-
+      // Rolul este asignat automat de trigger-ul din baza de date
       toast({
         title: 'Cont creat cu succes',
         description: 'Te poți conecta acum',
