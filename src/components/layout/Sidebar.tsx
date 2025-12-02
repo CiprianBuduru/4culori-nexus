@@ -29,12 +29,17 @@ const navigation = [
   { name: 'Setări', href: '/settings', icon: Settings },
 ];
 
+// Development mode bypass - set to true to skip authentication
+const DEV_BYPASS_AUTH = true;
+
 export function Sidebar() {
   const location = useLocation();
   const { profile, userRole, signOut, hasAccess } = useAuth();
 
-  // Filter navigation based on user role
-  const filteredNavigation = navigation.filter(item => hasAccess(item.href));
+  // Filter navigation based on user role (show all in dev mode)
+  const filteredNavigation = DEV_BYPASS_AUTH 
+    ? navigation 
+    : navigation.filter(item => hasAccess(item.href));
 
   const handleSignOut = async () => {
     await signOut();
