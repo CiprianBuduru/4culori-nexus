@@ -29,10 +29,10 @@ import {
 } from '@/components/ui/dialog';
 
 const departmentColors: Record<string, string> = {
-  '1': 'bg-brand-blue', // Vânzări
-  '2': 'bg-brand-teal', // Producție
-  '3': 'bg-brand-orange', // Marketing
-  '4': 'bg-brand-green', // Financiar
+  '1': 'bg-brand-blue',
+  '2': 'bg-brand-teal',
+  '3': 'bg-brand-orange',
+  '4': 'bg-brand-green',
 };
 
 const departmentBorderColors: Record<string, string> = {
@@ -47,16 +47,58 @@ export default function ProductionCalendar() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
 
-  // Get current month's days
-  const { daysInMonth, firstDayOfMonth, monthName, year } = useMemo(() => {
-    const year = currentDate.getFullYear();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Get days for the smart layout
+  const { 
+    primaryDays, 
+    secondaryDays, 
+    remainingDays, 
+    monthName, 
+    year 
+  } = useMemo(() => {
     const month = currentDate.getMonth();
+    const year = currentDate.getFullYear();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+
+    // Calculate days relative to today
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
     
+    // Primary days: today, tomorrow, day after tomorrow
+    const primary: Date[] = [];
+    for (let i = 0; i < 3; i++) {
+      const d = new Date(todayDate);
+      d.setDate(todayDate.getDate() + i);
+      primary.push(d);
+    }
+
+    // Secondary days: next 2 days after primary
+    const secondary: Date[] = [];
+    for (let i = 3; i < 5; i++) {
+      const d = new Date(todayDate);
+      d.setDate(todayDate.getDate() + i);
+      secondary.push(d);
+    }
+
+    // Remaining days of the current month (excluding primary and secondary)
+    const remaining: Date[] = [];
+    const usedDates = new Set([...primary, ...secondary].map(d => d.toDateString()));
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const d = new Date(year, month, day);
+      if (!usedDates.has(d.toDateString())) {
+        remaining.push(d);
+      }
+    }
+
     return {
-      daysInMonth: lastDay.getDate(),
-      firstDayOfMonth: firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1, // Monday = 0
+      primaryDays: primary,
+      secondaryDays: secondary,
+      remainingDays: remaining,
       monthName: firstDay.toLocaleDateString('ro-RO', { month: 'long' }),
       year,
     };
@@ -69,10 +111,9 @@ export default function ProductionCalendar() {
     );
   }, [selectedDepartment]);
 
-  // Get tasks for a specific day
-  const getTasksForDay = (day: number): ProductionTask[] => {
-    const dateStr = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
-      .toISOString().split('T')[0];
+  // Get tasks for a specific date
+  const getTasksForDate = (date: Date): ProductionTask[] => {
+    const dateStr = date.toISOString().split('T')[0];
     
     return filteredTasks.filter(task => {
       const start = new Date(task.startDate);
@@ -95,29 +136,114 @@ export default function ProductionCalendar() {
     setCurrentDate(new Date());
   };
 
-  // Check if day is today
-  const isToday = (day: number) => {
-    const today = new Date();
-    return (
-      day === today.getDate() &&
-      currentDate.getMonth() === today.getMonth() &&
-      currentDate.getFullYear() === today.getFullYear()
-    );
+  // Check if date is today
+  const isToday = (date: Date) => {
+    return date.toDateString() === today.toDateString();
   };
 
-  const weekDays = ['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm', 'Dum'];
-
-  // Generate calendar grid
-  const calendarDays = [];
-  for (let i = 0; i < firstDayOfMonth; i++) {
-    calendarDays.push(null);
-  }
-  for (let day = 1; day <= daysInMonth; day++) {
-    calendarDays.push(day);
-  }
+  // Check if date is in current month
+  const isCurrentMonth = (date: Date) => {
+    return date.getMonth() === currentDate.getMonth() && 
+           date.getFullYear() === currentDate.getFullYear();
+  };
 
   const getDepartmentName = (deptId: string) => {
     return departments.find(d => d.id === deptId)?.name || 'Necunoscut';
+  };
+
+  const formatDayName = (date: Date) => {
+    return date.toLocaleDateString('ro-RO', { weekday: 'short' });
+  };
+
+  const formatFullDate = (date: Date) => {
+    return date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
+  };
+
+  // Render task item
+  const TaskItem = ({ task, compact = false }: { task: ProductionTask; compact?: boolean }) => (
+    <button
+      onClick={() => setSelectedTask(task)}
+      className={`
+        w-full text-left p-2 rounded-lg border-l-4 ${departmentBorderColors[task.departmentId]}
+        bg-muted/50 hover:bg-muted transition-colors
+        ${compact ? 'text-xs' : 'text-sm'}
+      `}
+    >
+      <div className="font-medium truncate">{task.title}</div>
+      {!compact && (
+        <div className="flex items-center gap-2 mt-1 text-muted-foreground text-xs">
+          <Badge className={`${productionStatusColors[task.status]} text-[10px] px-1.5 py-0`}>
+            {productionStatusLabels[task.status]}
+          </Badge>
+          {task.clientName && <span className="truncate">{task.clientName}</span>}
+        </div>
+      )}
+    </button>
+  );
+
+  // Render day column
+  const DayColumn = ({ 
+    date, 
+    size = 'large' 
+  }: { 
+    date: Date; 
+    size?: 'large' | 'medium' | 'small' 
+  }) => {
+    const tasks = getTasksForDate(date);
+    const inCurrentMonth = isCurrentMonth(date);
+    const dayIsToday = isToday(date);
+
+    const maxTasks = size === 'large' ? Infinity : size === 'medium' ? 5 : 2;
+    const visibleTasks = tasks.slice(0, maxTasks);
+    const hiddenCount = tasks.length - visibleTasks.length;
+
+    return (
+      <div
+        className={`
+          rounded-xl border bg-card p-3 flex flex-col
+          ${dayIsToday ? 'ring-2 ring-primary shadow-lg' : ''}
+          ${!inCurrentMonth ? 'opacity-50' : ''}
+          ${size === 'large' ? 'min-h-[400px]' : size === 'medium' ? 'min-h-[200px]' : 'min-h-[80px]'}
+        `}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className={`text-xs uppercase font-medium ${dayIsToday ? 'text-primary' : 'text-muted-foreground'}`}>
+              {formatDayName(date)}
+            </div>
+            <div className={`text-2xl font-bold ${dayIsToday ? 'text-primary' : 'text-foreground'}`}>
+              {date.getDate()}
+            </div>
+            {size !== 'small' && (
+              <div className="text-xs text-muted-foreground">
+                {formatFullDate(date)}
+              </div>
+            )}
+          </div>
+          {tasks.length > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {tasks.length} {tasks.length === 1 ? 'lucrare' : 'lucrări'}
+            </Badge>
+          )}
+        </div>
+
+        <div className={`flex-1 space-y-2 overflow-y-auto ${size === 'small' ? 'space-y-1' : ''}`}>
+          {visibleTasks.map(task => (
+            <TaskItem key={task.id} task={task} compact={size === 'small'} />
+          ))}
+          {hiddenCount > 0 && (
+            <div className="text-xs text-muted-foreground text-center py-1">
+              +{hiddenCount} altele
+            </div>
+          )}
+          {tasks.length === 0 && size !== 'small' && (
+            <div className="text-sm text-muted-foreground text-center py-4">
+              Nicio lucrare
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -162,7 +288,7 @@ export default function ProductionCalendar() {
           ))}
         </div>
 
-        {/* Calendar */}
+        {/* Month Navigation */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-4">
             <div className="flex items-center gap-4">
@@ -181,66 +307,35 @@ export default function ProductionCalendar() {
               Astăzi
             </Button>
           </CardHeader>
-          <CardContent>
-            {/* Week days header */}
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {weekDays.map(day => (
-                <div 
-                  key={day} 
-                  className="text-center text-sm font-medium text-muted-foreground py-2"
-                >
-                  {day}
+          <CardContent className="space-y-4">
+            {/* Primary Row: Today + Tomorrow + Day after (large) + Next 2 days (medium) */}
+            <div className="grid grid-cols-5 gap-4">
+              {/* 3 Primary days - larger */}
+              {primaryDays.map((date, idx) => (
+                <div key={date.toISOString()} className={idx < 3 ? 'col-span-1' : ''}>
+                  <DayColumn date={date} size="large" />
+                </div>
+              ))}
+              {/* 2 Secondary days - medium height */}
+              {secondaryDays.map((date) => (
+                <div key={date.toISOString()} className="col-span-1">
+                  <DayColumn date={date} size="medium" />
                 </div>
               ))}
             </div>
 
-            {/* Calendar grid */}
-            <div className="grid grid-cols-7 gap-1">
-              {calendarDays.map((day, index) => {
-                const dayTasks = day ? getTasksForDay(day) : [];
-                
-                return (
-                  <div
-                    key={index}
-                    className={`
-                      min-h-[100px] p-1 border rounded-lg
-                      ${day ? 'bg-card' : 'bg-muted/30'}
-                      ${isToday(day || 0) ? 'ring-2 ring-primary' : ''}
-                    `}
-                  >
-                    {day && (
-                      <>
-                        <div className={`
-                          text-sm font-medium mb-1 px-1
-                          ${isToday(day) ? 'text-primary' : 'text-foreground'}
-                        `}>
-                          {day}
-                        </div>
-                        <div className="space-y-1">
-                          {dayTasks.slice(0, 3).map(task => (
-                            <button
-                              key={task.id}
-                              onClick={() => setSelectedTask(task)}
-                              className={`
-                                w-full text-left text-xs p-1 rounded truncate
-                                border-l-2 ${departmentBorderColors[task.departmentId]}
-                                bg-muted/50 hover:bg-muted transition-colors
-                              `}
-                            >
-                              {task.title}
-                            </button>
-                          ))}
-                          {dayTasks.length > 3 && (
-                            <div className="text-xs text-muted-foreground px-1">
-                              +{dayTasks.length - 3} altele
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+            {/* Remaining days of month - compact grid */}
+            <div className="pt-4 border-t">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                Restul lunii {monthName}
+              </h3>
+              <div className="grid grid-cols-7 sm:grid-cols-10 lg:grid-cols-14 gap-2">
+                {remainingDays
+                  .filter(date => isCurrentMonth(date))
+                  .map((date) => (
+                    <DayColumn key={date.toISOString()} date={date} size="small" />
+                  ))}
+              </div>
             </div>
           </CardContent>
         </Card>
