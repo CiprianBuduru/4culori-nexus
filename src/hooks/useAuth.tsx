@@ -15,6 +15,8 @@ interface AuthContextType {
   canManageUsers: boolean;
   canManageSettings: boolean;
   canViewAllData: boolean;
+  canEditData: boolean;
+  accessLevel: number;
   getUserDepartments: () => string[];
 }
 
@@ -114,6 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const canManageUsers = userRole ? roleAccess[userRole.role as AppRole]?.canManageUsers ?? false : false;
   const canManageSettings = userRole ? roleAccess[userRole.role as AppRole]?.canManageSettings ?? false : false;
   const canViewAllData = userRole ? roleAccess[userRole.role as AppRole]?.canViewAllData ?? false : false;
+  const canEditData = userRole ? roleAccess[userRole.role as AppRole]?.canEditData ?? false : false;
+  const accessLevel = userRole ? roleAccess[userRole.role as AppRole]?.level ?? 0 : 0;
 
   const getUserDepartments = (): string[] => {
     return userRole?.departments ?? [];
@@ -133,6 +137,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         canManageUsers,
         canManageSettings,
         canViewAllData,
+        canEditData,
+        accessLevel,
         getUserDepartments,
       }}
     >
