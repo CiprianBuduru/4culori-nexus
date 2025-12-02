@@ -45,6 +45,7 @@ const employeeSchema = z.object({
   status: z.enum(['active', 'inactive']),
   company: z.enum(['LMG', 'EQS']).optional(),
   avatar: z.string().optional(),
+  isProtectedUnit: z.boolean().optional(),
 });
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
@@ -83,6 +84,7 @@ export function EmployeeEditDialog({
       status: 'active',
       company: undefined,
       avatar: undefined,
+      isProtectedUnit: false,
     },
   });
 
@@ -103,6 +105,7 @@ export function EmployeeEditDialog({
           status: employee.status,
           company: employee.company,
           avatar: employee.avatar,
+          isProtectedUnit: employee.isProtectedUnit ?? false,
         });
         setAvatarUrl(employee.avatar);
       } else {
@@ -119,6 +122,7 @@ export function EmployeeEditDialog({
           status: 'active',
           company: undefined,
           avatar: undefined,
+          isProtectedUnit: false,
         });
         setAvatarUrl(undefined);
       }
@@ -398,6 +402,27 @@ export function EmployeeEditDialog({
                     </RadioGroup>
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="isProtectedUnit"
+              render={({ field }) => (
+                <FormItem className={`flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 ${field.value ? 'bg-yellow-100 border-yellow-400 dark:bg-yellow-900/30 dark:border-yellow-600' : ''}`}>
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className={field.value ? 'border-yellow-600 data-[state=checked]:bg-yellow-500 data-[state=checked]:text-yellow-950' : ''}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="cursor-pointer">
+                      Unitate Protejată
+                    </FormLabel>
+                  </div>
                 </FormItem>
               )}
             />
