@@ -53,6 +53,8 @@
     --brand-teal: 349 70% 58%;    /* Living Coral - Pantone 16-1546 */
     --brand-orange: 50 100% 50%;  /* Illuminating Yellow - Pantone 13-0647 */
     --brand-green: 268 68% 64%;   /* Very Peri - Pantone 17-3938 */
+    --brand-purple: 280 65% 45%;  /* Purple */
+    --brand-pink: 330 70% 55%;    /* Pink */
 
     /* Gradients */
     --gradient-brand: linear-gradient(135deg, hsl(var(--brand-blue)), hsl(var(--brand-teal)));

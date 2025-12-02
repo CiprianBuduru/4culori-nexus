@@ -40,14 +40,14 @@ export const departments: Department[] = [
     id: '5',
     name: 'Management',
     description: 'Departamentul de management și conducere',
-    color: 'green',
+    color: 'purple',
     employeeCount: 3,
   },
   {
     id: '6',
     name: 'DTP',
     description: 'Departamentul de prepress și design grafic',
-    color: 'teal',
+    color: 'pink',
     employeeCount: 4,
   },
 ];

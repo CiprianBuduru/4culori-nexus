@@ -40,6 +40,18 @@ const colorClasses = {
     border: 'border-brand-green/30',
     icon: 'bg-brand-green',
   },
+  purple: {
+    bg: 'bg-brand-purple/10',
+    text: 'text-brand-purple',
+    border: 'border-brand-purple/30',
+    icon: 'bg-brand-purple',
+  },
+  pink: {
+    bg: 'bg-brand-pink/10',
+    text: 'text-brand-pink',
+    border: 'border-brand-pink/30',
+    icon: 'bg-brand-pink',
+  },
 };
 
 export function DepartmentCard({ department, onEdit, onDelete }: DepartmentCardProps) {
