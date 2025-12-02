@@ -17,6 +17,8 @@ const Employees = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filterProtectedUnit, setFilterProtectedUnit] = useState(false);
+  const [filterLMG, setFilterLMG] = useState(false);
+  const [filterEQS, setFilterEQS] = useState(false);
   const { toast } = useToast();
 
   const filteredEmployees = employeeList.filter((emp) => {
@@ -27,7 +29,13 @@ const Employees = () => {
     
     const matchesProtectedFilter = !filterProtectedUnit || emp.isProtectedUnit === true;
     
-    return matchesSearch && matchesProtectedFilter;
+    // Company filter: if both or neither are selected, show all; otherwise filter by selected
+    const companyFilterActive = filterLMG || filterEQS;
+    const matchesCompanyFilter = !companyFilterActive || 
+      (filterLMG && emp.company === 'LMG') || 
+      (filterEQS && emp.company === 'EQS');
+    
+    return matchesSearch && matchesProtectedFilter && matchesCompanyFilter;
   });
 
   const handleEdit = (employee: Employee) => {
@@ -115,6 +123,32 @@ const Employees = () => {
             />
             <Label htmlFor="filter-protected" className="cursor-pointer text-sm">
               Unitate Protejată
+            </Label>
+          </div>
+
+          <div className={`flex items-center space-x-2 rounded-md border px-3 py-2 ${filterLMG ? 'bg-blue-100 border-blue-400 dark:bg-blue-900/30 dark:border-blue-600' : ''}`}>
+            <Checkbox
+              id="filter-lmg"
+              checked={filterLMG}
+              onCheckedChange={(checked) => setFilterLMG(checked === true)}
+              className={filterLMG ? 'border-blue-600 data-[state=checked]:bg-blue-500 data-[state=checked]:text-white' : ''}
+            />
+            <Label htmlFor="filter-lmg" className="cursor-pointer text-sm flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-blue-500" />
+              LMG
+            </Label>
+          </div>
+
+          <div className={`flex items-center space-x-2 rounded-md border px-3 py-2 ${filterEQS ? 'bg-red-100 border-red-400 dark:bg-red-900/30 dark:border-red-600' : ''}`}>
+            <Checkbox
+              id="filter-eqs"
+              checked={filterEQS}
+              onCheckedChange={(checked) => setFilterEQS(checked === true)}
+              className={filterEQS ? 'border-red-600 data-[state=checked]:bg-red-500 data-[state=checked]:text-white' : ''}
+            />
+            <Label htmlFor="filter-eqs" className="cursor-pointer text-sm flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-red-500" />
+              EQS
             </Label>
           </div>
         </div>
