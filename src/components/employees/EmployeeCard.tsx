@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
 
 interface EmployeeCardProps {
   employee: Employee;
@@ -16,6 +17,15 @@ interface EmployeeCardProps {
   onEdit?: (employee: Employee) => void;
   onDelete?: (employee: Employee) => void;
 }
+
+const departmentColorClasses: Record<string, string> = {
+  blue: 'bg-brand-blue/10 text-brand-blue border-brand-blue/30',
+  teal: 'bg-brand-teal/10 text-brand-teal border-brand-teal/30',
+  orange: 'bg-brand-orange/10 text-brand-orange border-brand-orange/30',
+  green: 'bg-brand-green/10 text-brand-green border-brand-green/30',
+  purple: 'bg-brand-purple/10 text-brand-purple border-brand-purple/30',
+  pink: 'bg-brand-pink/10 text-brand-pink border-brand-pink/30',
+};
 
 export function EmployeeCard({ employee, department, onEdit, onDelete }: EmployeeCardProps) {
   const initials = employee.name
@@ -81,7 +91,13 @@ export function EmployeeCard({ employee, department, onEdit, onDelete }: Employe
 
       <div className="mt-4 flex items-center justify-between">
         {department && (
-          <Badge variant="secondary" className="font-medium">
+          <Badge 
+            variant="outline" 
+            className={cn(
+              'font-medium border',
+              departmentColorClasses[department.color] || 'bg-secondary text-secondary-foreground'
+            )}
+          >
             {department.name}
           </Badge>
         )}
