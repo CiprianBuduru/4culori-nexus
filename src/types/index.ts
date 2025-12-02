@@ -22,7 +22,7 @@ export interface Department {
   name: string;
   description: string;
   managerId?: string;
-  color: 'blue' | 'teal' | 'orange' | 'green';
+  color: 'blue' | 'teal' | 'orange' | 'green' | 'purple' | 'pink';
   employeeCount: number;
   subDepartments?: SubDepartment[];
 }

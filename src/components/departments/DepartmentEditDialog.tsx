@@ -38,7 +38,7 @@ const subDepartmentSchema = z.object({
 const departmentSchema = z.object({
   name: z.string().min(2, 'Numele trebuie să aibă minim 2 caractere').max(100),
   description: z.string().min(5, 'Descrierea trebuie să aibă minim 5 caractere').max(500),
-  color: z.enum(['blue', 'teal', 'orange', 'green']),
+  color: z.enum(['blue', 'teal', 'orange', 'green', 'purple', 'pink']),
   employeeCount: z.coerce.number().min(0, 'Numărul de angajați nu poate fi negativ'),
   subDepartments: z.array(subDepartmentSchema).optional(),
 });
@@ -58,6 +58,8 @@ const colorOptions = [
   { value: 'teal', label: 'Living Coral', className: 'bg-brand-teal' },
   { value: 'orange', label: 'Illuminating', className: 'bg-brand-orange' },
   { value: 'green', label: 'Very Peri', className: 'bg-brand-green' },
+  { value: 'purple', label: 'Purple', className: 'bg-brand-purple' },
+  { value: 'pink', label: 'Pink', className: 'bg-brand-pink' },
 ];
 
 export function DepartmentEditDialog({
