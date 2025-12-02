@@ -47,10 +47,10 @@ interface DepartmentEditDialogProps {
 }
 
 const colorOptions = [
-  { value: 'blue', label: 'Albastru', className: 'bg-brand-blue' },
-  { value: 'teal', label: 'Turcoaz', className: 'bg-brand-teal' },
-  { value: 'orange', label: 'Portocaliu', className: 'bg-brand-orange' },
-  { value: 'green', label: 'Verde', className: 'bg-brand-green' },
+  { value: 'blue', label: 'Classic Blue', className: 'bg-brand-blue' },
+  { value: 'teal', label: 'Living Coral', className: 'bg-brand-teal' },
+  { value: 'orange', label: 'Illuminating', className: 'bg-brand-orange' },
+  { value: 'green', label: 'Very Peri', className: 'bg-brand-green' },
 ];
 
 export function DepartmentEditDialog({
