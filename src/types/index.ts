@@ -12,6 +12,7 @@ export interface Employee {
   status: 'active' | 'inactive';
   avatar?: string;
   company?: 'LMG' | 'EQS';
+  isProtectedUnit?: boolean;
 }
 
 export interface SubDepartment {
