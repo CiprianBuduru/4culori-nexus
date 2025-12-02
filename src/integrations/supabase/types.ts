@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      authorized_employees: {
+        Row: {
+          created_at: string | null
+          departments: string[] | null
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string | null
+          departments?: string[] | null
+          email: string
+          id?: string
+          name: string
+          phone?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string | null
+          departments?: string[] | null
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
