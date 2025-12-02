@@ -8,7 +8,7 @@ import { Calculator, RotateCcw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { RecipeSelector } from '@/components/calculator/RecipeSelector';
 import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorItem';
-import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory } from '@/types/recipes';
+import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
 
 export default function PriceCalculator() {
   const [calculations, setCalculations] = useState<RecipeCalculation[]>([]);
@@ -55,10 +55,9 @@ export default function PriceCalculator() {
     setDiscount(0);
   };
 
-  const recipes = calculations.map(calc => {
-    const { defaultRecipes } = require('@/types/recipes');
-    return defaultRecipes.find((r: Recipe) => r.id === calc.recipeId);
-  });
+  const getRecipeById = (recipeId: string) => {
+    return defaultRecipes.find(r => r.id === recipeId);
+  };
 
   return (
     <MainLayout>
@@ -87,8 +86,8 @@ export default function PriceCalculator() {
             {calculations.length > 0 && (
               <div className="space-y-3">
                 <h3 className="font-semibold text-lg">Produse adăugate ({calculations.length})</h3>
-                {calculations.map((calc, index) => {
-                  const recipe = recipes[index];
+              {calculations.map((calc) => {
+                  const recipe = getRecipeById(calc.recipeId);
                   if (!recipe) return null;
                   return (
                     <RecipeCalculatorItem
