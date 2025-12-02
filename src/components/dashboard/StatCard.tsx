@@ -9,7 +9,7 @@ interface StatCardProps {
     value: number;
     isPositive: boolean;
   };
-  color: 'blue' | 'teal' | 'orange' | 'green';
+  color: 'blue' | 'teal' | 'orange' | 'green' | 'purple' | 'pink';
 }
 
 const colorClasses = {
@@ -17,6 +17,8 @@ const colorClasses = {
   teal: 'bg-brand-teal/10 text-brand-teal',
   orange: 'bg-brand-orange/10 text-brand-orange',
   green: 'bg-brand-green/10 text-brand-green',
+  purple: 'bg-brand-purple/10 text-brand-purple',
+  pink: 'bg-brand-pink/10 text-brand-pink',
 };
 
 const borderColors = {
@@ -24,6 +26,8 @@ const borderColors = {
   teal: 'border-l-brand-teal',
   orange: 'border-l-brand-orange',
   green: 'border-l-brand-green',
+  purple: 'border-l-brand-purple',
+  pink: 'border-l-brand-pink',
 };
 
 export function StatCard({ title, value, icon, trend, color }: StatCardProps) {
