@@ -7,6 +7,8 @@ export interface Employee {
   departmentId: string;
   serviceIds?: string[]; // Multiple services for Production employees
   hireDate: string;
+  birthDate?: string;
+  vacationDays?: number; // Resets at start of new year
   status: 'active' | 'inactive';
   avatar?: string;
   company?: 'LMG' | 'EQS';
