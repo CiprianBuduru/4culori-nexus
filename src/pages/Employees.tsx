@@ -1,18 +1,22 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { EmployeeCard } from '@/components/employees/EmployeeCard';
+import { EmployeeEditDialog } from '@/components/employees/EmployeeEditDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search } from 'lucide-react';
-import { employees, departments } from '@/data/mockData';
+import { employees as initialEmployees, departments } from '@/data/mockData';
 import { Employee } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
 const Employees = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [employeeList, setEmployeeList] = useState<Employee[]>(initialEmployees);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const filteredEmployees = employees.filter(
+  const filteredEmployees = employeeList.filter(
     (emp) =>
       emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -20,15 +24,47 @@ const Employees = () => {
   );
 
   const handleEdit = (employee: Employee) => {
-    toast({
-      title: 'Editare angajat',
-      description: `Deschide formularul de editare pentru ${employee.name}`,
-    });
+    setEditingEmployee(employee);
+    setIsDialogOpen(true);
+  };
+
+  const handleAddNew = () => {
+    setEditingEmployee(null);
+    setIsDialogOpen(true);
+  };
+
+  const handleSave = (data: Omit<Employee, 'id' | 'avatar'>) => {
+    if (editingEmployee) {
+      // Update existing employee
+      setEmployeeList((prev) =>
+        prev.map((emp) =>
+          emp.id === editingEmployee.id ? { ...emp, ...data } : emp
+        )
+      );
+      toast({
+        title: 'Angajat actualizat',
+        description: `${data.name} a fost actualizat cu succes`,
+      });
+    } else {
+      // Add new employee
+      const newEmployee: Employee = {
+        id: crypto.randomUUID(),
+        ...data,
+      };
+      setEmployeeList((prev) => [...prev, newEmployee]);
+      toast({
+        title: 'Angajat adăugat',
+        description: `${data.name} a fost adăugat cu succes`,
+      });
+    }
+    setIsDialogOpen(false);
+    setEditingEmployee(null);
   };
 
   const handleDelete = (employee: Employee) => {
+    setEmployeeList((prev) => prev.filter((emp) => emp.id !== employee.id));
     toast({
-      title: 'Ștergere angajat',
+      title: 'Angajat șters',
       description: `${employee.name} a fost șters`,
       variant: 'destructive',
     });
@@ -42,10 +78,10 @@ const Employees = () => {
           <div>
             <h1 className="text-3xl font-bold text-foreground">Angajați</h1>
             <p className="mt-1 text-muted-foreground">
-              Gestionează echipa ta de {employees.length} angajați
+              Gestionează echipa ta de {employeeList.length} angajați
             </p>
           </div>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={handleAddNew}>
             <Plus className="h-4 w-4" />
             Adaugă Angajat
           </Button>
@@ -86,6 +122,14 @@ const Employees = () => {
           </div>
         )}
       </div>
+
+      <EmployeeEditDialog
+        employee={editingEmployee}
+        departments={departments}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSave={handleSave}
+      />
     </MainLayout>
   );
 };
