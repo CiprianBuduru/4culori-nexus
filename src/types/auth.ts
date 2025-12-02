@@ -31,21 +31,21 @@ export const roleAccess: Record<AppRole, {
 }> = {
   administrator: {
     label: 'Administrator',
-    pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar', '/settings'],
+    pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar', '/settings', '/clients', '/orders'],
     canManageUsers: true,
     canManageSettings: true,
     canViewAllData: true,
   },
   director: {
     label: 'Director',
-    pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar'],
+    pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar', '/clients', '/orders'],
     canManageUsers: false,
     canManageSettings: false,
     canViewAllData: true,
   },
   sef_productie: {
     label: 'Șef Producție',
-    pages: ['/', '/employees', '/products', '/production-calendar'],
+    pages: ['/', '/employees', '/products', '/production-calendar', '/clients', '/orders'],
     canManageUsers: false,
     canManageSettings: false,
     canViewAllData: false,
