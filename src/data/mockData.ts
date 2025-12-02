@@ -14,6 +14,13 @@ export const departments: Department[] = [
     description: 'Departamentul de producție și manufacturing',
     color: 'teal',
     employeeCount: 15,
+    subDepartments: [
+      { id: 'sub-1', name: 'Print 3D', employeeCount: 2 },
+      { id: 'sub-2', name: 'Gravură', employeeCount: 3 },
+      { id: 'sub-3', name: 'DTF-UV', employeeCount: 4 },
+      { id: 'sub-4', name: 'Broderie', employeeCount: 3 },
+      { id: 'sub-5', name: 'Tipografie', employeeCount: 3 },
+    ],
   },
   {
     id: '3',

@@ -11,6 +11,12 @@ export interface Employee {
   company?: 'LMG' | 'EQS';
 }
 
+export interface SubDepartment {
+  id: string;
+  name: string;
+  employeeCount: number;
+}
+
 export interface Department {
   id: string;
   name: string;
@@ -18,6 +24,7 @@ export interface Department {
   managerId?: string;
   color: 'blue' | 'teal' | 'orange' | 'green';
   employeeCount: number;
+  subDepartments?: SubDepartment[];
 }
 
 export interface Product {
