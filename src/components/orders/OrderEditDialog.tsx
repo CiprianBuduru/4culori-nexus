@@ -26,10 +26,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, Image, X } from 'lucide-react';
+import { Upload, FileText, X, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
+
+// Production operations list
+const PRODUCTION_OPERATIONS = [
+  { id: 'print-3d', name: 'Print 3D' },
+  { id: 'gravura', name: 'Gravură' },
+  { id: 'dtf-uv', name: 'DTF-UV' },
+  { id: 'broderie', name: 'Broderie' },
+  { id: 'tipografie', name: 'Tipografie' },
+];
 
 const orderSchema = z.object({
   order_number: z.string().min(1, 'Numărul comenzii este obligatoriu'),
@@ -51,6 +61,7 @@ interface Order {
   notes: string | null;
   due_date: string | null;
   attachment_url?: string | null;
+  production_operations?: string[] | null;
 }
 
 interface OrderEditDialogProps {
@@ -66,6 +77,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [existingAttachment, setExistingAttachment] = useState<string | null>(null);
+  const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-select'],
@@ -103,6 +115,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
         due_date: order.due_date || '',
       });
       setExistingAttachment(order.attachment_url || null);
+      setSelectedOperations(order.production_operations || []);
     } else {
       const nextOrderNumber = `CMD-${Date.now().toString().slice(-6)}`;
       form.reset({
@@ -114,6 +127,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
         due_date: '',
       });
       setExistingAttachment(null);
+      setSelectedOperations([]);
     }
     setAttachmentFile(null);
     setAttachmentPreview(null);
@@ -168,6 +182,26 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
     return publicUrl;
   };
 
+  // Operation handling
+  const toggleOperation = (opId: string) => {
+    setSelectedOperations(prev => {
+      if (prev.includes(opId)) {
+        return prev.filter(id => id !== opId);
+      } else {
+        return [...prev, opId];
+      }
+    });
+  };
+
+  const moveOperation = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= selectedOperations.length) return;
+    
+    const newOps = [...selectedOperations];
+    [newOps[index], newOps[newIndex]] = [newOps[newIndex], newOps[index]];
+    setSelectedOperations(newOps);
+  };
+
   const mutation = useMutation({
     mutationFn: async (data: OrderFormData) => {
       const payload = {
@@ -177,6 +211,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
         total_amount: data.total_amount || 0,
         notes: data.notes || null,
         due_date: data.due_date || null,
+        production_operations: selectedOperations,
       };
 
       let orderId: string;
@@ -222,6 +257,8 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
   };
 
   const isPdf = (url: string) => url.toLowerCase().endsWith('.pdf');
+
+  const getOperationName = (id: string) => PRODUCTION_OPERATIONS.find(op => op.id === id)?.name || id;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -326,6 +363,84 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
                 </FormItem>
               )}
             />
+
+            {/* Production Operations Section */}
+            <div className="space-y-3">
+              <FormLabel>Operațiuni Producție</FormLabel>
+              
+              {/* Available operations to select */}
+              <div className="border rounded-lg p-3 space-y-2 bg-muted/20">
+                <p className="text-xs text-muted-foreground mb-2">Selectează operațiunile necesare:</p>
+                <div className="flex flex-wrap gap-2">
+                  {PRODUCTION_OPERATIONS.map((op) => (
+                    <label
+                      key={op.id}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors text-sm ${
+                        selectedOperations.includes(op.id)
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background hover:bg-muted border-border'
+                      }`}
+                    >
+                      <Checkbox
+                        checked={selectedOperations.includes(op.id)}
+                        onCheckedChange={() => toggleOperation(op.id)}
+                        className="hidden"
+                      />
+                      {op.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Selected operations with ordering */}
+              {selectedOperations.length > 0 && (
+                <div className="border rounded-lg p-3 space-y-1 bg-background">
+                  <p className="text-xs text-muted-foreground mb-2">Ordinea operațiunilor:</p>
+                  {selectedOperations.map((opId, index) => (
+                    <div
+                      key={opId}
+                      className="flex items-center gap-2 p-2 rounded bg-muted/30 border"
+                    >
+                      <GripVertical className="h-4 w-4 text-muted-foreground" />
+                      <span className="flex-1 text-sm font-medium">
+                        {index + 1}. {getOperationName(opId)}
+                      </span>
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => moveOperation(index, 'up')}
+                          disabled={index === 0}
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => moveOperation(index, 'down')}
+                          disabled={index === selectedOperations.length - 1}
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-destructive hover:text-destructive"
+                          onClick={() => toggleOperation(opId)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <FormField
               control={form.control}

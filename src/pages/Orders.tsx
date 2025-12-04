@@ -22,6 +22,7 @@ interface Order {
   due_date: string | null;
   created_at: string;
   attachment_url: string | null;
+  production_operations: string[] | null;
   clients?: { name: string } | null;
 }
 
@@ -52,7 +53,8 @@ export default function Orders() {
       if (error) throw error;
       return data.map(order => ({
         ...order,
-        attachment_url: order.attachment_url || null
+        attachment_url: order.attachment_url || null,
+        production_operations: order.production_operations || null
       })) as Order[];
       
       if (error) throw error;
