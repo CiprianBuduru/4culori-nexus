@@ -31,15 +31,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, X, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
+import { departments } from '@/data/mockData';
 
-// Production operations list - matches subDepartments from mockData.ts
-const PRODUCTION_OPERATIONS = [
-  { id: 'sub-1', name: 'Print 3D' },
-  { id: 'sub-2', name: 'Gravură' },
-  { id: 'sub-3', name: 'DTF-UV' },
-  { id: 'sub-4', name: 'Broderie' },
-  { id: 'sub-5', name: 'Tipografie' },
-];
+// Get production operations from the Production department's subDepartments
+const productionDept = departments.find(d => d.name === 'Producție');
+const PRODUCTION_OPERATIONS = productionDept?.subDepartments?.map(sub => ({
+  id: sub.id,
+  name: sub.name,
+})) || [];
 
 const orderSchema = z.object({
   order_number: z.string().min(1, 'Numărul comenzii este obligatoriu'),
