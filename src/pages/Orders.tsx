@@ -28,10 +28,13 @@ interface Order {
 }
 
 const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pending: { label: 'În așteptare', variant: 'secondary' },
-  dtp: { label: 'DTP', variant: 'default' },
-  waiting_bt: { label: 'În așteptare BT', variant: 'outline' },
-  in_progress: { label: 'În lucru', variant: 'default' },
+  pending: { label: 'Comandă Nouă', variant: 'secondary' },
+  dtp: { label: 'La DTP', variant: 'default' },
+  waiting_bt: { label: 'Așteptare BT', variant: 'outline' },
+  bt_approved: { label: 'BT Aprobat', variant: 'default' },
+  production: { label: 'În Producție', variant: 'default' },
+  ready_for_delivery: { label: 'Gata de Livrare', variant: 'secondary' },
+  delivered: { label: 'Livrată', variant: 'outline' },
   completed: { label: 'Finalizată', variant: 'outline' },
   cancelled: { label: 'Anulată', variant: 'destructive' },
 };

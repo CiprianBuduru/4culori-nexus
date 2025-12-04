@@ -15,6 +15,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,16 +31,33 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, X, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
+import { Upload, FileText, X, ChevronUp, ChevronDown, GripVertical, ArrowRight } from 'lucide-react';
 import { useDepartments } from '@/hooks/useDepartments';
+import { Badge } from '@/components/ui/badge';
+
+// Order workflow statuses in order
+const ORDER_STATUSES = [
+  { value: 'pending', label: 'Comandă Nouă', description: 'Comanda a fost creată' },
+  { value: 'dtp', label: 'La DTP', description: 'În lucru la DTP' },
+  { value: 'waiting_bt', label: 'Așteptare BT', description: 'Așteaptă Bun de Tipar de la client' },
+  { value: 'bt_approved', label: 'BT Aprobat', description: 'Clientul a aprobat, gata pentru producție' },
+  { value: 'production', label: 'În Producție', description: 'În lucru în producție' },
+  { value: 'ready_for_delivery', label: 'Gata de Livrare', description: 'Producția finalizată' },
+  { value: 'delivered', label: 'Livrată', description: 'Predată clientului' },
+  { value: 'completed', label: 'Finalizată', description: 'Comandă închisă' },
+  { value: 'cancelled', label: 'Anulată', description: 'Comandă anulată' },
+] as const;
+
+type OrderStatus = typeof ORDER_STATUSES[number]['value'];
 
 const orderSchema = z.object({
   order_number: z.string().min(1, 'Numărul comenzii este obligatoriu'),
   client_id: z.string().optional(),
-  status: z.enum(['pending', 'dtp', 'waiting_bt', 'in_progress', 'completed', 'cancelled']),
+  status: z.enum(['pending', 'dtp', 'waiting_bt', 'bt_approved', 'production', 'ready_for_delivery', 'delivered', 'completed', 'cancelled']),
   total_amount: z.coerce.number().min(0).optional(),
   notes: z.string().optional(),
   due_date: z.string().optional(),
+  needs_dtp: z.boolean().optional(),
 });
 
 type OrderFormData = z.infer<typeof orderSchema>;
@@ -54,6 +72,7 @@ interface Order {
   due_date: string | null;
   attachment_url?: string | null;
   production_operations?: string[] | null;
+  needs_dtp?: boolean | null;
 }
 
 interface OrderEditDialogProps {
@@ -94,18 +113,23 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
       total_amount: 0,
       notes: '',
       due_date: '',
+      needs_dtp: false,
     },
   });
+
+  const currentStatus = form.watch('status');
+  const needsDtp = form.watch('needs_dtp');
 
   useEffect(() => {
     if (order) {
       form.reset({
         order_number: order.order_number,
         client_id: order.client_id || '',
-        status: order.status as 'pending' | 'dtp' | 'waiting_bt' | 'in_progress' | 'completed' | 'cancelled',
+        status: order.status as OrderStatus,
         total_amount: order.total_amount || 0,
         notes: order.notes || '',
         due_date: order.due_date || '',
+        needs_dtp: order.needs_dtp || false,
       });
       setExistingAttachment(order.attachment_url || null);
       setSelectedOperations(order.production_operations || []);
@@ -118,6 +142,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
         total_amount: 0,
         notes: '',
         due_date: '',
+        needs_dtp: false,
       });
       setExistingAttachment(null);
       setSelectedOperations([]);
@@ -205,6 +230,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
         notes: data.notes || null,
         due_date: data.due_date || null,
         production_operations: selectedOperations,
+        needs_dtp: data.needs_dtp || false,
       };
 
       let orderId: string;
@@ -253,15 +279,50 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
 
   const getOperationName = (id: string) => productionOperations.find(op => op.id === id)?.name || id;
 
+  // Show production operations only when in production phase or later
+  const showProductionOperations = ['bt_approved', 'production', 'ready_for_delivery', 'delivered', 'completed'].includes(currentStatus);
+
+  // Get current status index for workflow display
+  const getCurrentStatusIndex = () => ORDER_STATUSES.findIndex(s => s.value === currentStatus);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{order ? 'Editează Comandă' : 'Comandă Nouă'}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Workflow Progress Indicator */}
+            {order && (
+              <div className="p-3 bg-muted/30 rounded-lg border">
+                <p className="text-xs text-muted-foreground mb-2">Progres comandă:</p>
+                <div className="flex flex-wrap items-center gap-1">
+                  {ORDER_STATUSES.filter(s => s.value !== 'cancelled').slice(0, -1).map((status, index) => {
+                    const currentIndex = getCurrentStatusIndex();
+                    const isActive = status.value === currentStatus;
+                    const isPast = index < currentIndex;
+                    const isCancelled = currentStatus === 'cancelled';
+                    
+                    return (
+                      <div key={status.value} className="flex items-center">
+                        <Badge 
+                          variant={isActive ? 'default' : isPast ? 'secondary' : 'outline'}
+                          className={`text-xs ${isActive ? '' : isPast ? 'opacity-70' : 'opacity-40'} ${isCancelled ? 'opacity-30' : ''}`}
+                        >
+                          {status.label}
+                        </Badge>
+                        {index < 7 && (
+                          <ArrowRight className={`h-3 w-3 mx-0.5 ${isPast ? 'text-muted-foreground' : 'text-muted-foreground/30'}`} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <FormField
               control={form.control}
               name="order_number"
@@ -304,32 +365,6 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="pending">În așteptare</SelectItem>
-                        <SelectItem value="dtp">DTP</SelectItem>
-                        <SelectItem value="waiting_bt">În așteptare BT</SelectItem>
-                        <SelectItem value="in_progress">În lucru</SelectItem>
-                        <SelectItem value="completed">Finalizată</SelectItem>
-                        <SelectItem value="cancelled">Anulată</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
                 name="total_amount"
                 render={({ field }) => (
                   <FormItem>
@@ -341,99 +376,156 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="due_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Termen Livrare</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="date" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
+
+            {/* Needs DTP Checkbox - only for new orders or early statuses */}
+            {['pending', 'dtp', 'waiting_bt'].includes(currentStatus) && (
+              <FormField
+                control={form.control}
+                name="needs_dtp"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Necesită DTP</FormLabel>
+                      <FormDescription>
+                        Bifează dacă comanda trebuie să treacă prin departamentul DTP înainte de producție
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
-              name="due_date"
+              name="status"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Termen Livrare</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="date" />
-                  </FormControl>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {ORDER_STATUSES.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          <div className="flex flex-col">
+                            <span>{status.label}</span>
+                            <span className="text-xs text-muted-foreground">{status.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            {/* Production Operations Section */}
-            <div className="space-y-3">
-              <FormLabel>Operațiuni Producție</FormLabel>
-              
-              {/* Available operations to select */}
-              <div className="border rounded-lg p-3 space-y-2 bg-muted/20">
-                <p className="text-xs text-muted-foreground mb-2">Selectează operațiunile necesare:</p>
-                <div className="flex flex-wrap gap-2">
-                  {productionOperations.map((op) => (
-                    <label
-                      key={op.id}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors text-sm ${
-                        selectedOperations.includes(op.id)
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-background hover:bg-muted border-border'
-                      }`}
-                    >
-                      <Checkbox
-                        checked={selectedOperations.includes(op.id)}
-                        onCheckedChange={() => toggleOperation(op.id)}
-                        className="hidden"
-                      />
-                      {op.name}
-                    </label>
-                  ))}
+            {/* Production Operations Section - only shown after BT approved */}
+            {showProductionOperations && (
+              <div className="space-y-3">
+                <FormLabel>Operațiuni Producție</FormLabel>
+                <p className="text-xs text-muted-foreground">
+                  Directorul de producție selectează operațiunile necesare după aprobarea BT
+                </p>
+                
+                {/* Available operations to select */}
+                <div className="border rounded-lg p-3 space-y-2 bg-muted/20">
+                  <p className="text-xs text-muted-foreground mb-2">Selectează operațiunile necesare:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {productionOperations.map((op) => (
+                      <label
+                        key={op.id}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors text-sm ${
+                          selectedOperations.includes(op.id)
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background hover:bg-muted border-border'
+                        }`}
+                      >
+                        <Checkbox
+                          checked={selectedOperations.includes(op.id)}
+                          onCheckedChange={() => toggleOperation(op.id)}
+                          className="hidden"
+                        />
+                        {op.name}
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Selected operations with ordering */}
-              {selectedOperations.length > 0 && (
-                <div className="border rounded-lg p-3 space-y-1 bg-background">
-                  <p className="text-xs text-muted-foreground mb-2">Ordinea operațiunilor:</p>
-                  {selectedOperations.map((opId, index) => (
-                    <div
-                      key={opId}
-                      className="flex items-center gap-2 p-2 rounded bg-muted/30 border"
-                    >
-                      <GripVertical className="h-4 w-4 text-muted-foreground" />
-                      <span className="flex-1 text-sm font-medium">
-                        {index + 1}. {getOperationName(opId)}
-                      </span>
-                      <div className="flex gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => moveOperation(index, 'up')}
-                          disabled={index === 0}
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => moveOperation(index, 'down')}
-                          disabled={index === selectedOperations.length - 1}
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-destructive hover:text-destructive"
-                          onClick={() => toggleOperation(opId)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                {/* Selected operations with ordering */}
+                {selectedOperations.length > 0 && (
+                  <div className="border rounded-lg p-3 space-y-1 bg-background">
+                    <p className="text-xs text-muted-foreground mb-2">Ordinea operațiunilor:</p>
+                    {selectedOperations.map((opId, index) => (
+                      <div
+                        key={opId}
+                        className="flex items-center gap-2 p-2 rounded bg-muted/30 border"
+                      >
+                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                        <span className="flex-1 text-sm font-medium">
+                          {index + 1}. {getOperationName(opId)}
+                        </span>
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => moveOperation(index, 'up')}
+                            disabled={index === 0}
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => moveOperation(index, 'down')}
+                            disabled={index === selectedOperations.length - 1}
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive hover:text-destructive"
+                            onClick={() => toggleOperation(opId)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <FormField
               control={form.control}
@@ -492,11 +584,13 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
                   className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Click pentru a încărca PDF sau imagine
+                  <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Click pentru a încărca
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">Max 10MB</p>
+                  <p className="text-xs text-muted-foreground">
+                    PDF sau imagine (max 10MB)
+                  </p>
                 </div>
               )}
               
@@ -509,12 +603,12 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
               />
             </div>
 
-            <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Anulează
               </Button>
-              <Button type="submit" disabled={mutation.isPending} className="flex-1">
-                {mutation.isPending ? 'Se salvează...' : 'Salvează'}
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? 'Se salvează...' : order ? 'Salvează' : 'Adaugă'}
               </Button>
             </div>
           </form>
