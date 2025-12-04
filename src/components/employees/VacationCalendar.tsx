@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
+import { Progress } from '@/components/ui/progress';
 import {
   Dialog,
   DialogContent,
@@ -22,9 +23,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { format, eachDayOfInterval, isSameDay, isWithinInterval, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { format, eachDayOfInterval, isSameDay, isWithinInterval, startOfMonth, endOfMonth, addMonths, subMonths, isWeekend, startOfYear, endOfYear } from 'date-fns';
 import { ro } from 'date-fns/locale';
-import { Plus, ChevronLeft, ChevronRight, Trash2, User, CalendarDays } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Trash2, User, CalendarDays, Users } from 'lucide-react';
 import { Employee } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -44,11 +45,17 @@ interface VacationCalendarProps {
 }
 
 const vacationTypes = [
-  { id: 'concediu', name: 'Concediu de odihnă', color: 'bg-blue-500' },
-  { id: 'medical', name: 'Concediu medical', color: 'bg-red-500' },
-  { id: 'personal', name: 'Zile personale', color: 'bg-orange-500' },
-  { id: 'fara_plata', name: 'Concediu fără plată', color: 'bg-gray-500' },
+  { id: 'concediu', name: 'Concediu de odihnă', color: 'bg-blue-500', countsAgainstAllocation: true },
+  { id: 'medical', name: 'Concediu medical', color: 'bg-red-500', countsAgainstAllocation: false },
+  { id: 'personal', name: 'Zile personale', color: 'bg-orange-500', countsAgainstAllocation: true },
+  { id: 'fara_plata', name: 'Concediu fără plată', color: 'bg-gray-500', countsAgainstAllocation: false },
 ];
+
+// Calculate business days (excluding weekends)
+const getBusinessDays = (startDate: Date, endDate: Date): number => {
+  const days = eachDayOfInterval({ start: startDate, end: endDate });
+  return days.filter(day => !isWeekend(day)).length;
+};
 
 export function VacationCalendar({ employees }: VacationCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -76,6 +83,47 @@ export function VacationCalendar({ employees }: VacationCalendarProps) {
       return data as Vacation[];
     },
   });
+
+  // Calculate used vacation days per employee for current year
+  const employeeVacationStats = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const yearStart = startOfYear(new Date());
+    const yearEnd = endOfYear(new Date());
+
+    return employees.map(emp => {
+      // Filter vacations for this employee that count against allocation
+      const empVacations = vacations.filter(v => 
+        v.employee_id === emp.id && 
+        vacationTypes.find(t => t.id === v.type)?.countsAgainstAllocation
+      );
+
+      // Calculate total used days
+      let usedDays = 0;
+      empVacations.forEach(v => {
+        const start = new Date(v.start_date);
+        const end = new Date(v.end_date);
+        
+        // Only count days within current year
+        const effectiveStart = start < yearStart ? yearStart : start;
+        const effectiveEnd = end > yearEnd ? yearEnd : end;
+        
+        if (effectiveStart <= effectiveEnd) {
+          usedDays += getBusinessDays(effectiveStart, effectiveEnd);
+        }
+      });
+
+      const allocated = emp.vacationDays || 21; // Default 21 days if not set
+      const remaining = Math.max(0, allocated - usedDays);
+
+      return {
+        employee: emp,
+        allocated,
+        used: usedDays,
+        remaining,
+        percentage: allocated > 0 ? Math.min(100, (usedDays / allocated) * 100) : 0,
+      };
+    }).filter(stat => stat.employee.status === 'active').sort((a, b) => b.percentage - a.percentage);
+  }, [employees, vacations]);
 
   const addVacation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -183,6 +231,39 @@ export function VacationCalendar({ employees }: VacationCalendarProps) {
           </div>
         ))}
       </div>
+
+      {/* Employee Vacation Stats */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Zile Concediu {new Date().getFullYear()}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {employeeVacationStats.length === 0 ? (
+              <p className="text-sm text-muted-foreground col-span-full">Niciun angajat cu zile de concediu alocate</p>
+            ) : (
+              employeeVacationStats.map(stat => (
+                <div key={stat.employee.id} className="p-3 rounded-lg border bg-card">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-sm truncate">{stat.employee.name}</span>
+                    <Badge variant={stat.remaining > 5 ? 'outline' : stat.remaining > 0 ? 'secondary' : 'destructive'}>
+                      {stat.remaining} zile
+                    </Badge>
+                  </div>
+                  <Progress value={stat.percentage} className="h-2 mb-1" />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Folosite: {stat.used}</span>
+                    <span>Total: {stat.allocated}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Calendar with vacations list */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -300,9 +381,21 @@ export function VacationCalendar({ employees }: VacationCalendarProps) {
                   <SelectValue placeholder="Selectează angajat" />
                 </SelectTrigger>
                 <SelectContent>
-                  {employees.map(emp => (
-                    <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
-                  ))}
+                  {employees.filter(e => e.status === 'active').map(emp => {
+                    const stat = employeeVacationStats.find(s => s.employee.id === emp.id);
+                    return (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        <div className="flex items-center justify-between gap-4 w-full">
+                          <span>{emp.name}</span>
+                          {stat && (
+                            <span className="text-xs text-muted-foreground">
+                              ({stat.remaining} zile rămase)
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -398,6 +491,13 @@ export function VacationCalendar({ employees }: VacationCalendarProps) {
                   <p className="text-muted-foreground">Data sfârșit</p>
                   <p className="font-medium">{format(new Date(selectedVacation.end_date), 'd MMMM yyyy', { locale: ro })}</p>
                 </div>
+              </div>
+
+              <div className="text-sm">
+                <p className="text-muted-foreground">Zile lucrătoare</p>
+                <p className="font-medium">
+                  {getBusinessDays(new Date(selectedVacation.start_date), new Date(selectedVacation.end_date))} zile
+                </p>
               </div>
 
               {selectedVacation.notes && (
