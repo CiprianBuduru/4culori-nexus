@@ -351,7 +351,10 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input {...field} placeholder="Telefon" />
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input {...field} placeholder="Telefon" className="pl-9" />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -364,7 +367,10 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Input {...field} type="email" placeholder="Email" />
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input {...field} type="email" placeholder="Email" className="pl-9" />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
