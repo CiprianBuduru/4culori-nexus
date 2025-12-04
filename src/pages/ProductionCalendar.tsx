@@ -12,10 +12,12 @@ import {
   Clock,
   User,
   Package,
-  Trash2
+  Trash2,
+  UserCheck
 } from 'lucide-react';
 import { useDepartments } from '@/hooks/useDepartments';
 import { useProductionTasks, ProductionTask } from '@/hooks/useProductionTasks';
+import { useEmployees } from '@/hooks/useEmployees';
 import { 
   productionStatusLabels, 
   productionStatusColors,
@@ -28,6 +30,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Label } from '@/components/ui/label';
 
 const departmentColors: Record<string, string> = {
   '1': 'bg-brand-blue',    // Vânzări
@@ -49,14 +53,28 @@ const departmentBorderColors: Record<string, string> = {
 
 export default function ProductionCalendar() {
   const { departments } = useDepartments();
-  const { tasks: productionTasks, isLoading, deleteTask } = useProductionTasks();
+  const { tasks: productionTasks, isLoading, deleteTask, updateTask } = useProductionTasks();
+  const { employees } = useEmployees();
   
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
+  const [editingAssignee, setEditingAssignee] = useState(false);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // Get employee name by ID
+  const getEmployeeName = (employeeId: string | null) => {
+    if (!employeeId) return null;
+    const employee = employees.find(e => e.id === employeeId);
+    return employee?.name || null;
+  };
+
+  const getEmployee = (employeeId: string | null) => {
+    if (!employeeId) return null;
+    return employees.find(e => e.id === employeeId) || null;
+  };
 
   // Get days for the smart layout
   const { 
@@ -175,6 +193,23 @@ export default function ProductionCalendar() {
       await deleteTask.mutateAsync(selectedTask.id);
       setSelectedTask(null);
     }
+  };
+
+  const handleAssigneeChange = async (employeeId: string) => {
+    if (selectedTask) {
+      await updateTask.mutateAsync({
+        id: selectedTask.id,
+        assigned_to: employeeId || null,
+      });
+      setSelectedTask({ ...selectedTask, assigned_to: employeeId || null });
+      setEditingAssignee(false);
+    }
+  };
+
+  // Get employees for the selected task's department
+  const getTaskDepartmentEmployees = () => {
+    if (!selectedTask) return employees;
+    return employees.filter(e => e.departmentId === selectedTask.department_id);
   };
 
   const formatDayName = (date: Date) => {
@@ -422,9 +457,19 @@ export default function ProductionCalendar() {
                         )}
                       </div>
                     </div>
-                    <div className="text-sm text-muted-foreground text-right">
-                      <div>{new Date(task.start_date).toLocaleDateString('ro-RO')}</div>
-                      <div>→ {new Date(task.end_date).toLocaleDateString('ro-RO')}</div>
+                    <div className="flex items-center gap-3">
+                      {task.assigned_to && (
+                        <Avatar className="h-8 w-8 border-2 border-background">
+                          <AvatarImage src={getEmployee(task.assigned_to)?.avatar} />
+                          <AvatarFallback className="text-xs">
+                            {getEmployeeName(task.assigned_to)?.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div className="text-sm text-muted-foreground text-right">
+                        <div>{new Date(task.start_date).toLocaleDateString('ro-RO')}</div>
+                        <div>→ {new Date(task.end_date).toLocaleDateString('ro-RO')}</div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -434,8 +479,8 @@ export default function ProductionCalendar() {
       </div>
 
       {/* Task Detail Dialog */}
-      <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
-        <DialogContent>
+      <Dialog open={!!selectedTask} onOpenChange={() => { setSelectedTask(null); setEditingAssignee(false); }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <span className={`w-3 h-3 rounded-full ${getDepartmentColor(selectedTask?.department_id || '')}`} />
@@ -444,7 +489,69 @@ export default function ProductionCalendar() {
           </DialogHeader>
           {selectedTask && (
             <div className="space-y-4">
-              <p className="text-muted-foreground">{selectedTask.description}</p>
+              {selectedTask.description && (
+                <p className="text-muted-foreground">{selectedTask.description}</p>
+              )}
+              
+              {/* Assigned Employee Section */}
+              <div className="p-3 rounded-lg bg-muted/30 border">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2 text-muted-foreground">
+                    <UserCheck className="h-4 w-4" />
+                    Responsabil
+                  </Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setEditingAssignee(!editingAssignee)}
+                  >
+                    {editingAssignee ? 'Anulează' : 'Modifică'}
+                  </Button>
+                </div>
+                
+                {editingAssignee ? (
+                  <Select 
+                    value={selectedTask.assigned_to || ''} 
+                    onValueChange={handleAssigneeChange}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Selectează angajat" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Neasignat</SelectItem>
+                      {getTaskDepartmentEmployees().map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          <span className="flex items-center gap-2">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage src={emp.avatar} />
+                              <AvatarFallback className="text-[10px]">
+                                {emp.name.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            {emp.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="mt-2">
+                    {selectedTask.assigned_to ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={getEmployee(selectedTask.assigned_to)?.avatar} />
+                          <AvatarFallback>
+                            {getEmployeeName(selectedTask.assigned_to)?.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{getEmployeeName(selectedTask.assigned_to)}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground italic">Neasignat</span>
+                    )}
+                  </div>
+                )}
+              </div>
               
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
