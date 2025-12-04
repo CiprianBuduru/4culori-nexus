@@ -11,12 +11,12 @@ import {
   Filter,
   Clock,
   User,
-  Package
+  Package,
+  Trash2
 } from 'lucide-react';
-import { departments } from '@/data/mockData';
-import { productionTasks } from '@/data/productionData';
+import { useDepartments } from '@/hooks/useDepartments';
+import { useProductionTasks, ProductionTask } from '@/hooks/useProductionTasks';
 import { 
-  ProductionTask, 
   productionStatusLabels, 
   productionStatusColors,
   priorityLabels 
@@ -26,6 +26,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 
 const departmentColors: Record<string, string> = {
@@ -47,6 +48,9 @@ const departmentBorderColors: Record<string, string> = {
 };
 
 export default function ProductionCalendar() {
+  const { departments } = useDepartments();
+  const { tasks: productionTasks, isLoading, deleteTask } = useProductionTasks();
+  
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
@@ -114,17 +118,17 @@ export default function ProductionCalendar() {
   // Filter tasks
   const filteredTasks = useMemo(() => {
     return productionTasks.filter(task => 
-      selectedDepartment === 'all' || task.departmentId === selectedDepartment
+      selectedDepartment === 'all' || task.department_id === selectedDepartment
     );
-  }, [selectedDepartment]);
+  }, [selectedDepartment, productionTasks]);
 
   // Get tasks for a specific date
   const getTasksForDate = (date: Date): ProductionTask[] => {
     const dateStr = date.toISOString().split('T')[0];
     
     return filteredTasks.filter(task => {
-      const start = new Date(task.startDate);
-      const end = new Date(task.endDate);
+      const start = new Date(task.start_date);
+      const end = new Date(task.end_date);
       const current = new Date(dateStr);
       return current >= start && current <= end;
     });
@@ -158,6 +162,21 @@ export default function ProductionCalendar() {
     return departments.find(d => d.id === deptId)?.name || 'Necunoscut';
   };
 
+  const getDepartmentColor = (deptId: string) => {
+    return departmentColors[deptId] || 'bg-muted';
+  };
+
+  const getDepartmentBorderColor = (deptId: string) => {
+    return departmentBorderColors[deptId] || 'border-l-muted';
+  };
+
+  const handleDeleteTask = async () => {
+    if (selectedTask) {
+      await deleteTask.mutateAsync(selectedTask.id);
+      setSelectedTask(null);
+    }
+  };
+
   const formatDayName = (date: Date) => {
     return date.toLocaleDateString('ro-RO', { weekday: 'short' });
   };
@@ -171,7 +190,7 @@ export default function ProductionCalendar() {
     <button
       onClick={() => setSelectedTask(task)}
       className={`
-        w-full text-left p-2 rounded-lg border-l-4 ${departmentBorderColors[task.departmentId]}
+        w-full text-left p-2 rounded-lg border-l-4 ${getDepartmentBorderColor(task.department_id)}
         bg-muted/50 hover:bg-muted transition-colors
         ${compact ? 'text-xs' : 'text-sm'}
       `}
@@ -182,7 +201,8 @@ export default function ProductionCalendar() {
           <Badge className={`${productionStatusColors[task.status]} text-[10px] px-1.5 py-0`}>
             {productionStatusLabels[task.status]}
           </Badge>
-          {task.clientName && <span className="truncate">{task.clientName}</span>}
+          {task.client_name && <span className="truncate">{task.client_name}</span>}
+          {task.operation_name && <span className="truncate text-primary">• {task.operation_name}</span>}
         </div>
       )}
     </button>
@@ -275,7 +295,7 @@ export default function ProductionCalendar() {
                 {departments.map(dept => (
                   <SelectItem key={dept.id} value={dept.id}>
                     <span className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${departmentColors[dept.id]}`} />
+                      <span className={`w-2 h-2 rounded-full ${getDepartmentColor(dept.id)}`} />
                       {dept.name}
                     </span>
                   </SelectItem>
@@ -289,7 +309,7 @@ export default function ProductionCalendar() {
         <div className="flex flex-wrap gap-4">
           {departments.map(dept => (
             <div key={dept.id} className="flex items-center gap-2 text-sm">
-              <span className={`w-3 h-3 rounded-full ${departmentColors[dept.id]}`} />
+              <span className={`w-3 h-3 rounded-full ${getDepartmentColor(dept.id)}`} />
               <span>{dept.name}</span>
             </div>
           ))}
@@ -359,7 +379,7 @@ export default function ProductionCalendar() {
             <div className="space-y-3">
               {filteredTasks
                 .filter(t => t.status !== 'completed')
-                .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+                .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
                 .slice(0, 10)
                 .map(task => (
                   <div
@@ -367,7 +387,7 @@ export default function ProductionCalendar() {
                     onClick={() => setSelectedTask(task)}
                     className={`
                       flex items-center justify-between p-3 rounded-lg border cursor-pointer
-                      border-l-4 ${departmentBorderColors[task.departmentId]}
+                      border-l-4 ${getDepartmentBorderColor(task.department_id)}
                       hover:bg-muted/50 transition-colors
                     `}
                   >
@@ -377,16 +397,21 @@ export default function ProductionCalendar() {
                         <Badge className={productionStatusColors[task.status]}>
                           {productionStatusLabels[task.status]}
                         </Badge>
+                        {task.operation_name && (
+                          <Badge variant="outline" className="text-xs">
+                            {task.operation_name}
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          <span className={`w-2 h-2 rounded-full ${departmentColors[task.departmentId]}`} />
-                          {getDepartmentName(task.departmentId)}
+                          <span className={`w-2 h-2 rounded-full ${getDepartmentColor(task.department_id)}`} />
+                          {getDepartmentName(task.department_id)}
                         </span>
-                        {task.clientName && (
+                        {task.client_name && (
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
-                            {task.clientName}
+                            {task.client_name}
                           </span>
                         )}
                         {task.quantity && (
@@ -398,8 +423,8 @@ export default function ProductionCalendar() {
                       </div>
                     </div>
                     <div className="text-sm text-muted-foreground text-right">
-                      <div>{new Date(task.startDate).toLocaleDateString('ro-RO')}</div>
-                      <div>→ {new Date(task.endDate).toLocaleDateString('ro-RO')}</div>
+                      <div>{new Date(task.start_date).toLocaleDateString('ro-RO')}</div>
+                      <div>→ {new Date(task.end_date).toLocaleDateString('ro-RO')}</div>
                     </div>
                   </div>
                 ))}
@@ -413,7 +438,7 @@ export default function ProductionCalendar() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <span className={`w-3 h-3 rounded-full ${departmentColors[selectedTask?.departmentId || '1']}`} />
+              <span className={`w-3 h-3 rounded-full ${getDepartmentColor(selectedTask?.department_id || '')}`} />
               {selectedTask?.title}
             </DialogTitle>
           </DialogHeader>
@@ -424,7 +449,7 @@ export default function ProductionCalendar() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Departament:</span>
-                  <p className="font-medium">{getDepartmentName(selectedTask.departmentId)}</p>
+                  <p className="font-medium">{getDepartmentName(selectedTask.department_id)}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Status:</span>
@@ -435,23 +460,29 @@ export default function ProductionCalendar() {
                 <div>
                   <span className="text-muted-foreground">Perioadă:</span>
                   <p className="font-medium">
-                    {new Date(selectedTask.startDate).toLocaleDateString('ro-RO')} - {new Date(selectedTask.endDate).toLocaleDateString('ro-RO')}
+                    {new Date(selectedTask.start_date).toLocaleDateString('ro-RO')} - {new Date(selectedTask.end_date).toLocaleDateString('ro-RO')}
                   </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Prioritate:</span>
                   <p className="font-medium">{priorityLabels[selectedTask.priority]}</p>
                 </div>
-                {selectedTask.clientName && (
+                {selectedTask.client_name && (
                   <div>
                     <span className="text-muted-foreground">Client:</span>
-                    <p className="font-medium">{selectedTask.clientName}</p>
+                    <p className="font-medium">{selectedTask.client_name}</p>
                   </div>
                 )}
                 {selectedTask.quantity && (
                   <div>
                     <span className="text-muted-foreground">Cantitate:</span>
                     <p className="font-medium">{selectedTask.quantity} bucăți</p>
+                  </div>
+                )}
+                {selectedTask.operation_name && (
+                  <div>
+                    <span className="text-muted-foreground">Operațiune:</span>
+                    <p className="font-medium">{selectedTask.operation_name}</p>
                   </div>
                 )}
               </div>
@@ -464,6 +495,17 @@ export default function ProductionCalendar() {
               )}
             </div>
           )}
+          <DialogFooter>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={handleDeleteTask}
+              disabled={deleteTask.isPending}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Șterge Task
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </MainLayout>

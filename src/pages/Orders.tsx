@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, ShoppingCart, Calendar, User, Edit, Trash2, Paperclip } from 'lucide-react';
+import { Plus, Search, ShoppingCart, Calendar, User, Edit, Trash2, Paperclip, PlayCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { OrderEditDialog } from '@/components/orders/OrderEditDialog';
+import { TakeOrderDialog } from '@/components/orders/TakeOrderDialog';
 import { format } from 'date-fns';
 import { ro } from 'date-fns/locale';
 
@@ -39,6 +40,8 @@ export default function Orders() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [takeOrderDialogOpen, setTakeOrderDialogOpen] = useState(false);
+  const [orderToTake, setOrderToTake] = useState<Order | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -89,6 +92,11 @@ export default function Orders() {
   const handleEdit = (order: Order) => {
     setEditingOrder(order);
     setIsDialogOpen(true);
+  };
+
+  const handleTakeOrder = (order: Order) => {
+    setOrderToTake(order);
+    setTakeOrderDialogOpen(true);
   };
 
   return (
@@ -178,7 +186,16 @@ export default function Orders() {
                         {order.notes}
                       </p>
                     )}
-                    <div className="flex gap-2 pt-3 border-t mt-3">
+                    <div className="flex flex-wrap gap-2 pt-3 border-t mt-3">
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        onClick={() => handleTakeOrder(order)}
+                        disabled={order.status === 'completed' || order.status === 'cancelled'}
+                      >
+                        <PlayCircle className="h-4 w-4 mr-1" />
+                        Preia
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => handleEdit(order)}>
                         <Edit className="h-4 w-4 mr-1" />
                         Editează
@@ -205,6 +222,12 @@ export default function Orders() {
         order={editingOrder}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
+      />
+
+      <TakeOrderDialog
+        order={orderToTake}
+        open={takeOrderDialogOpen}
+        onOpenChange={setTakeOrderDialogOpen}
       />
     </MainLayout>
   );
