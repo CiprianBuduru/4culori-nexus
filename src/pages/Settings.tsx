@@ -12,6 +12,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Plus, Pencil, Trash2, Check, X, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { MaterialsSettings } from '@/components/settings/MaterialsSettings';
+import { ServiceTariffsSettings } from '@/components/settings/ServiceTariffsSettings';
+import { RecipesSettings } from '@/components/settings/RecipesSettings';
 
 interface CompanySettings {
   companyName: string;
@@ -412,6 +415,15 @@ const Settings = () => {
             </div>
           )}
         </div>
+
+        {/* Materials Settings */}
+        <MaterialsSettings />
+
+        {/* Service Tariffs Settings */}
+        <ServiceTariffsSettings />
+
+        {/* Recipes Settings */}
+        <RecipesSettings />
 
         {/* Company Info */}
         <div className="rounded-xl border border-border bg-card p-6">
