@@ -18,6 +18,8 @@ import {
 import { useDepartments } from '@/hooks/useDepartments';
 import { useProductionTasks, ProductionTask } from '@/hooks/useProductionTasks';
 import { useEmployees } from '@/hooks/useEmployees';
+import { sendTaskNotification } from '@/hooks/useNotifications';
+import { useToast } from '@/hooks/use-toast';
 import { 
   productionStatusLabels, 
   productionStatusColors,
@@ -55,6 +57,7 @@ export default function ProductionCalendar() {
   const { departments } = useDepartments();
   const { tasks: productionTasks, isLoading, deleteTask, updateTask } = useProductionTasks();
   const { employees } = useEmployees();
+  const { toast } = useToast();
   
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
@@ -197,12 +200,37 @@ export default function ProductionCalendar() {
 
   const handleAssigneeChange = async (employeeId: string) => {
     if (selectedTask) {
+      const previousAssignee = selectedTask.assigned_to;
+      
       await updateTask.mutateAsync({
         id: selectedTask.id,
         assigned_to: employeeId || null,
       });
       setSelectedTask({ ...selectedTask, assigned_to: employeeId || null });
       setEditingAssignee(false);
+
+      // Send notification if assigning to a new employee
+      if (employeeId && employeeId !== previousAssignee) {
+        const employee = employees.find(e => e.id === employeeId);
+        if (employee) {
+          toast({
+            title: "Task asignat",
+            description: `${employee.name} a fost notificat despre task-ul "${selectedTask.title}"`,
+          });
+
+          await sendTaskNotification({
+            employeeId: employee.id,
+            employeeName: employee.name,
+            employeeEmail: employee.email,
+            taskTitle: selectedTask.title,
+            taskId: selectedTask.id,
+            startDate: selectedTask.start_date,
+            endDate: selectedTask.end_date,
+            clientName: selectedTask.client_name || undefined,
+            operationName: selectedTask.operation_name || undefined,
+          });
+        }
+      }
     }
   };
 
