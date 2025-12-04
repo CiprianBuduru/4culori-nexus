@@ -6,6 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
 
 interface CompanySettings {
   companyName: string;
@@ -14,6 +17,13 @@ interface CompanySettings {
   companyAddress: string;
   emailNotifications: boolean;
   weeklyReports: boolean;
+}
+
+interface OrderTypeDefault {
+  id: string;
+  order_type: string;
+  order_type_label: string;
+  default_production_days: number;
 }
 
 const defaultSettings: CompanySettings = {
@@ -29,8 +39,37 @@ const STORAGE_KEY = '4culori-settings';
 
 const Settings = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [settings, setSettings] = useState<CompanySettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
+  const [orderTypeEdits, setOrderTypeEdits] = useState<Record<string, number>>({});
+
+  // Fetch order type defaults
+  const { data: orderTypeDefaults, isLoading: isLoadingOrderTypes } = useQuery({
+    queryKey: ['order_type_defaults'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('order_type_defaults')
+        .select('*')
+        .order('order_type_label');
+      if (error) throw error;
+      return data as OrderTypeDefault[];
+    },
+  });
+
+  // Mutation for updating order type defaults
+  const updateOrderTypeMutation = useMutation({
+    mutationFn: async ({ id, days }: { id: string; days: number }) => {
+      const { error } = await supabase
+        .from('order_type_defaults')
+        .update({ default_production_days: days })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['order_type_defaults'] });
+    },
+  });
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -53,13 +92,39 @@ const Settings = () => {
     setHasChanges(true);
   };
 
-  const handleSave = () => {
+  const handleOrderTypeDaysChange = (id: string, days: number) => {
+    setOrderTypeEdits(prev => ({ ...prev, [id]: days }));
+    setHasChanges(true);
+  };
+
+  const handleSave = async () => {
+    // Save company settings to localStorage
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    setHasChanges(false);
-    toast({
-      title: 'Setări salvate',
-      description: 'Modificările au fost salvate cu succes',
-    });
+    
+    // Save order type defaults to database
+    const updatePromises = Object.entries(orderTypeEdits).map(([id, days]) =>
+      updateOrderTypeMutation.mutateAsync({ id, days })
+    );
+    
+    try {
+      await Promise.all(updatePromises);
+      setOrderTypeEdits({});
+      setHasChanges(false);
+      toast({
+        title: 'Setări salvate',
+        description: 'Modificările au fost salvate cu succes',
+      });
+    } catch (error) {
+      toast({
+        title: 'Eroare',
+        description: 'Nu s-au putut salva setările',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getDisplayDays = (item: OrderTypeDefault) => {
+    return orderTypeEdits[item.id] ?? item.default_production_days;
   };
 
   return (
@@ -71,6 +136,42 @@ const Settings = () => {
           <p className="mt-1 text-muted-foreground">
             Configurează aplicația după preferințele tale
           </p>
+        </div>
+
+        {/* Order Type Production Days */}
+        <div className="rounded-xl border border-border bg-card p-6">
+          <h2 className="text-lg font-semibold text-foreground">Zile Producție per Tip Comandă</h2>
+          <p className="text-sm text-muted-foreground">
+            Configurează numărul implicit de zile de producție pentru fiecare tip de comandă
+          </p>
+          <Separator className="my-4" />
+          {isLoadingOrderTypes ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {orderTypeDefaults?.map((item) => (
+                <div key={item.id} className="flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">{item.order_type_label}</p>
+                    <p className="text-sm text-muted-foreground">{item.order_type}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={365}
+                      className="w-20 text-center"
+                      value={getDisplayDays(item)}
+                      onChange={(e) => handleOrderTypeDaysChange(item.id, parseInt(e.target.value) || 1)}
+                    />
+                    <span className="text-sm text-muted-foreground">zile</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Company Info */}
@@ -162,8 +263,11 @@ const Settings = () => {
           <Button 
             onClick={handleSave} 
             className="px-8"
-            disabled={!hasChanges}
+            disabled={!hasChanges || updateOrderTypeMutation.isPending}
           >
+            {updateOrderTypeMutation.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
             Salvează Modificările
           </Button>
         </div>
