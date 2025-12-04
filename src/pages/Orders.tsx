@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, ShoppingCart, Calendar, User, Edit, Trash2, Paperclip, PlayCircle, FileText, Filter } from 'lucide-react';
+import { Plus, Search, ShoppingCart, Calendar, User, Edit, Trash2, Paperclip, PlayCircle, FileText, Filter, ArrowRightLeft } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -89,6 +89,28 @@ export default function Orders() {
     },
     onError: () => {
       toast({ title: 'Eroare la ștergere', variant: 'destructive' });
+    },
+  });
+
+  const convertToOrder = useMutation({
+    mutationFn: async (id: string) => {
+      // Generate new order number with CMD prefix
+      const newOrderNumber = `CMD-${Date.now().toString().slice(-6)}`;
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          document_type: 'comanda',
+          order_number: newOrderNumber
+        })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast({ title: 'Oferta a fost convertită în comandă', description: 'Acum poți prelua comanda pentru producție.' });
+    },
+    onError: () => {
+      toast({ title: 'Eroare la conversie', variant: 'destructive' });
     },
   });
 
@@ -229,6 +251,17 @@ export default function Orders() {
                       </p>
                     )}
                     <div className="flex flex-wrap gap-2 pt-3 border-t mt-3">
+                      {isOffer && (
+                        <Button 
+                          variant="default" 
+                          size="sm" 
+                          onClick={() => convertToOrder.mutate(order.id)}
+                          disabled={convertToOrder.isPending}
+                        >
+                          <ArrowRightLeft className="h-4 w-4 mr-1" />
+                          Convertește în Comandă
+                        </Button>
+                      )}
                       {!isOffer && (
                         <Button 
                           variant="default" 
