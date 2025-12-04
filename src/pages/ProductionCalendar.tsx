@@ -684,7 +684,7 @@ export default function ProductionCalendar() {
           </CardContent>
         </Card>
 
-        {/* Upcoming Tasks List */}
+        {/* Upcoming Tasks & Orders List */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -694,6 +694,89 @@ export default function ProductionCalendar() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
+              {/* Overdue Orders First */}
+              {allOrders
+                .filter(order => {
+                  const todayStr = getLocalDateString(new Date());
+                  return order.due_date && 
+                         order.due_date < todayStr && 
+                         order.status !== 'completed' && 
+                         order.status !== 'cancelled';
+                })
+                .sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''))
+                .map(order => (
+                  <div
+                    key={`order-overdue-${order.id}`}
+                    onClick={() => setSelectedOrder(order)}
+                    className="flex items-center justify-between p-3 rounded-lg border cursor-pointer border-l-4 border-l-red-500 bg-red-50/50 dark:bg-red-950/20 hover:bg-red-100/70 dark:hover:bg-red-900/30 transition-colors ring-1 ring-red-300 dark:ring-red-700"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                        <span className="text-[10px] font-bold text-red-600 uppercase tracking-wide">Întârziată</span>
+                        <span className="font-mono font-semibold text-red-800 dark:text-red-200">{order.order_number}</span>
+                        <Badge variant="destructive" className="text-xs">
+                          {orderStatusLabels[order.status] || order.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                        {order.name && <span>{order.name}</span>}
+                        {order.clients?.name && (
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {order.clients.name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-sm text-red-600 font-medium">
+                      Termen: {order.due_date ? new Date(order.due_date).toLocaleDateString('ro-RO') : '-'}
+                    </div>
+                  </div>
+                ))}
+
+              {/* Upcoming Orders */}
+              {allOrders
+                .filter(order => {
+                  const todayStr = getLocalDateString(new Date());
+                  return order.due_date && 
+                         order.due_date >= todayStr && 
+                         order.status !== 'completed' && 
+                         order.status !== 'cancelled';
+                })
+                .sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''))
+                .slice(0, 10)
+                .map(order => (
+                  <div
+                    key={`order-${order.id}`}
+                    onClick={() => setSelectedOrder(order)}
+                    className="flex items-center justify-between p-3 rounded-lg border cursor-pointer border-l-4 border-l-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/10 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/20 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <ShoppingCart className="h-4 w-4 text-emerald-600" />
+                        <span className="font-mono font-semibold text-emerald-800 dark:text-emerald-200">{order.order_number}</span>
+                        <Badge className={`${orderStatusColors[order.status] || 'bg-gray-100 text-gray-800'} text-xs`}>
+                          {orderStatusLabels[order.status] || order.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                        {order.name && <span>{order.name}</span>}
+                        {order.clients?.name && (
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {order.clients.name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Termen: {order.due_date ? new Date(order.due_date).toLocaleDateString('ro-RO') : '-'}
+                    </div>
+                  </div>
+                ))}
+
+              {/* Tasks */}
               {filteredTasks
                 .filter(t => t.status !== 'completed')
                 .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
@@ -755,6 +838,13 @@ export default function ProductionCalendar() {
                     </div>
                   </div>
                 ))}
+
+              {filteredTasks.filter(t => t.status !== 'completed').length === 0 && 
+               allOrders.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length === 0 && (
+                <div className="text-center text-muted-foreground py-4">
+                  Nu există lucrări sau comenzi în desfășurare
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
