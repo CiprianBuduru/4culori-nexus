@@ -203,6 +203,39 @@ export type Database = {
         }
         Relationships: []
       }
+      materials: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          unit: string
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          unit?: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          unit?: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -448,6 +481,81 @@ export type Database = {
           name?: string
           phone?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      recipes: {
+        Row: {
+          base_price: number | null
+          brief_keywords: string[] | null
+          created_at: string
+          description: string | null
+          formula: string | null
+          id: string
+          materials: Json | null
+          name: string
+          price_per_unit: number | null
+          services: Json | null
+          updated_at: string
+        }
+        Insert: {
+          base_price?: number | null
+          brief_keywords?: string[] | null
+          created_at?: string
+          description?: string | null
+          formula?: string | null
+          id?: string
+          materials?: Json | null
+          name: string
+          price_per_unit?: number | null
+          services?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          base_price?: number | null
+          brief_keywords?: string[] | null
+          created_at?: string
+          description?: string | null
+          formula?: string | null
+          id?: string
+          materials?: Json | null
+          name?: string
+          price_per_unit?: number | null
+          services?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      service_tariffs: {
+        Row: {
+          created_at: string
+          department_id: string | null
+          description: string | null
+          id: string
+          name: string
+          unit: string
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department_id?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          unit?: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          unit?: string
+          unit_price?: number
+          updated_at?: string
         }
         Relationships: []
       }
