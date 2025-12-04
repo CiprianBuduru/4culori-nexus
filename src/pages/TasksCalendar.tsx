@@ -533,14 +533,14 @@ export default function TasksCalendar() {
                 
                 {editingAssignee ? (
                   <Select 
-                    value={selectedTask.assigned_to || ''} 
-                    onValueChange={handleAssigneeChange}
+                    value={selectedTask.assigned_to || 'unassigned'} 
+                    onValueChange={(val) => handleAssigneeChange(val === 'unassigned' ? '' : val)}
                   >
                     <SelectTrigger className="mt-2">
                       <SelectValue placeholder="Selectează angajat" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Neasignat</SelectItem>
+                      <SelectItem value="unassigned">Neasignat</SelectItem>
                       {getTaskDepartmentEmployees().map((emp) => (
                         <SelectItem key={emp.id} value={emp.id}>
                           <span className="flex items-center gap-2">

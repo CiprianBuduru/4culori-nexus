@@ -290,12 +290,12 @@ export function TakeOrderDialog({ order, open, onOpenChange }: TakeOrderDialogPr
                 <User className="h-3 w-3" />
                 Responsabil (opțional)
               </Label>
-              <Select value={assignedTo} onValueChange={setAssignedTo}>
+              <Select value={assignedTo || 'unassigned'} onValueChange={(val) => setAssignedTo(val === 'unassigned' ? '' : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selectează angajat" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Neasignat</SelectItem>
+                  <SelectItem value="unassigned">Neasignat</SelectItem>
                   {filteredEmployees.map((emp) => (
                     <SelectItem key={emp.id} value={emp.id}>
                       <span className="flex items-center gap-2">
