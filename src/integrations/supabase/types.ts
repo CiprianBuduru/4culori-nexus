@@ -107,6 +107,36 @@ export type Database = {
         }
         Relationships: []
       }
+      departments: {
+        Row: {
+          color: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          sub_departments: Json | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          sub_departments?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          sub_departments?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           access_level: number | null
