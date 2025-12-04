@@ -31,7 +31,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { Search, Loader2, Plus, Trash2, Phone, Mail, MessageCircle, Globe, Users, MapPin, HelpCircle } from 'lucide-react';
+import { Search, Loader2, Plus, Trash2, Phone, Mail, MessageCircle, Globe, Users, MapPin, HelpCircle, FileText, Upload, X, ExternalLink } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const contactMethods = [
@@ -55,6 +55,7 @@ const clientSchema = z.object({
   company: z.string().min(1, 'Compania este obligatorie'),
   is_comercial: z.boolean().default(false),
   is_unitate_protejata: z.boolean().default(false),
+  contract_number: z.string().optional(),
   contact_name: z.string().min(1, 'Persoana de contact este obligatorie'),
   contact_phone: z.string().optional(),
   contact_email: z.string().email('Email invalid').optional().or(z.literal('')),
@@ -82,6 +83,8 @@ interface Client {
   status: string;
   is_comercial?: boolean | null;
   is_unitate_protejata?: boolean | null;
+  contract_number?: string | null;
+  contract_url?: string | null;
 }
 
 interface ClientEditDialogProps {
@@ -94,6 +97,9 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isLookingUp, setIsLookingUp] = useState(false);
+  const [contractFile, setContractFile] = useState<File | null>(null);
+  const [existingContractUrl, setExistingContractUrl] = useState<string | null>(null);
+  const [isUploadingContract, setIsUploadingContract] = useState(false);
 
   const form = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
@@ -102,6 +108,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       company: '',
       is_comercial: false,
       is_unitate_protejata: false,
+      contract_number: '',
       contact_name: '',
       contact_phone: '',
       contact_email: '',
@@ -143,6 +150,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         company: client.company || client.name || '',
         is_comercial: client.is_comercial || false,
         is_unitate_protejata: client.is_unitate_protejata || false,
+        contract_number: client.contract_number || '',
         contact_name: contactData.main?.name || '',
         contact_phone: contactData.main?.phone || client.phone || '',
         contact_email: contactData.main?.email || client.email || '',
@@ -152,12 +160,15 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         notes: client.notes || '',
         status: client.status as 'active' | 'inactive',
       });
+      setExistingContractUrl(client.contract_url || null);
+      setContractFile(null);
     } else {
       form.reset({
         cui: '',
         company: '',
         is_comercial: false,
         is_unitate_protejata: false,
+        contract_number: '',
         contact_name: '',
         contact_phone: '',
         contact_email: '',
@@ -167,6 +178,8 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         notes: '',
         status: 'active',
       });
+      setExistingContractUrl(null);
+      setContractFile(null);
     }
   }, [client, form]);
 
@@ -237,6 +250,23 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
     }
   };
 
+  const uploadContract = async (file: File, clientId: string): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${clientId}/contract-${Date.now()}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('client-contracts')
+      .upload(fileName, file, { upsert: true });
+    
+    if (uploadError) throw uploadError;
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from('client-contracts')
+      .getPublicUrl(fileName);
+    
+    return publicUrl;
+  };
+
   const mutation = useMutation({
     mutationFn: async (data: ClientFormData) => {
       // Build all contacts array: main contact first, then others
@@ -245,7 +275,9 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         ...(data.other_contacts || [])
       ];
       
-      const payload = {
+      let contractUrl = existingContractUrl;
+      
+      const payload: any = {
         cui: data.cui || null,
         name: data.company,
         email: data.contact_email || null,
@@ -253,6 +285,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         company: data.company || null,
         is_comercial: data.is_comercial || false,
         is_unitate_protejata: data.is_unitate_protejata || false,
+        contract_number: data.contract_number || null,
         address: data.delivery_address || null,
         contact_person: allContacts.length ? JSON.stringify(allContacts) : null,
         contact_method: data.contact_methods?.length ? data.contact_methods.join(',') : null,
@@ -261,14 +294,40 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       };
 
       if (client) {
+        // Upload new contract if provided
+        if (contractFile) {
+          setIsUploadingContract(true);
+          contractUrl = await uploadContract(contractFile, client.id);
+          setIsUploadingContract(false);
+        }
+        payload.contract_url = contractUrl;
+        
         const { error } = await supabase
           .from('clients')
           .update(payload)
           .eq('id', client.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('clients').insert(payload);
+        // Insert client first to get the ID
+        const { data: newClient, error } = await supabase
+          .from('clients')
+          .insert(payload)
+          .select('id')
+          .single();
         if (error) throw error;
+        
+        // Upload contract if provided
+        if (contractFile && newClient) {
+          setIsUploadingContract(true);
+          contractUrl = await uploadContract(contractFile, newClient.id);
+          setIsUploadingContract(false);
+          
+          // Update with contract URL
+          await supabase
+            .from('clients')
+            .update({ contract_url: contractUrl })
+            .eq('id', newClient.id);
+        }
       }
     },
     onSuccess: () => {
@@ -287,6 +346,26 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
 
   const onSubmit = (data: ClientFormData) => {
     mutation.mutate(data);
+  };
+
+  const handleContractFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        toast({ title: 'Doar fișiere PDF sunt acceptate', variant: 'destructive' });
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: 'Fișierul nu poate depăși 10MB', variant: 'destructive' });
+        return;
+      }
+      setContractFile(file);
+    }
+  };
+
+  const removeContract = () => {
+    setContractFile(null);
+    setExistingContractUrl(null);
   };
 
   return (
@@ -339,6 +418,83 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                 </FormItem>
               )}
             />
+
+            {/* Contract Section */}
+            <div className="space-y-3 p-3 border rounded-lg bg-muted/20">
+              <FormLabel className="text-base font-medium flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Contract
+              </FormLabel>
+              
+              <FormField
+                control={form.control}
+                name="contract_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm">Număr contract</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="ex: CTR-2024-001" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div>
+                <FormLabel className="text-sm">Atașament contract (PDF)</FormLabel>
+                <div className="mt-1.5">
+                  {contractFile ? (
+                    <div className="flex items-center gap-2 p-2 border rounded-lg bg-background">
+                      <FileText className="h-4 w-4 text-red-500" />
+                      <span className="text-sm flex-1 truncate">{contractFile.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => setContractFile(null)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : existingContractUrl ? (
+                    <div className="flex items-center gap-2 p-2 border rounded-lg bg-background">
+                      <FileText className="h-4 w-4 text-red-500" />
+                      <span className="text-sm flex-1">Contract existent</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => window.open(existingContractUrl, '_blank')}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-destructive"
+                        onClick={removeContract}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
+                      <Upload className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Încarcă PDF</span>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={handleContractFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            </div>
 
             <div className="flex gap-6">
               <FormField
@@ -600,11 +756,11 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
             />
 
             <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1" disabled={isUploadingContract}>
                 Anulează
               </Button>
-              <Button type="submit" disabled={mutation.isPending} className="flex-1">
-                {mutation.isPending ? 'Se salvează...' : 'Salvează'}
+              <Button type="submit" disabled={mutation.isPending || isUploadingContract} className="flex-1">
+                {isUploadingContract ? 'Se încarcă...' : mutation.isPending ? 'Se salvează...' : 'Salvează'}
               </Button>
             </div>
           </form>
