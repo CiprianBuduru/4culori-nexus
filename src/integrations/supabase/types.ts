@@ -297,6 +297,7 @@ export type Database = {
           order_type: string | null
           production_days: number | null
           production_operations: string[] | null
+          quantity: number | null
           status: string
           total_amount: number | null
           updated_at: string
@@ -316,6 +317,7 @@ export type Database = {
           order_type?: string | null
           production_days?: number | null
           production_operations?: string[] | null
+          quantity?: number | null
           status?: string
           total_amount?: number | null
           updated_at?: string
@@ -335,6 +337,7 @@ export type Database = {
           order_type?: string | null
           production_days?: number | null
           production_operations?: string[] | null
+          quantity?: number | null
           status?: string
           total_amount?: number | null
           updated_at?: string
