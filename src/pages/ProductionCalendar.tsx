@@ -80,13 +80,14 @@ export default function ProductionCalendar() {
 
   const queryClient = useQueryClient();
 
-  // Fetch all orders and offers for calendar display
+  // Fetch all orders (comanda only) for calendar display
   const { data: allOrders = [] } = useQuery({
     queryKey: ['orders-calendar'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
         .select('id, order_number, due_date, production_days, status, client_id, name, brief, notes, total_amount, production_operations, document_type, clients(name)')
+        .eq('document_type', 'comanda')
         .not('due_date', 'is', null)
         .order('due_date', { ascending: true });
       
