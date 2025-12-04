@@ -21,6 +21,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useProductionTasks, ProductionTaskInsert } from '@/hooks/useProductionTasks';
 import { useDepartments } from '@/hooks/useDepartments';
 import { useEmployees } from '@/hooks/useEmployees';
+import { sendTaskNotification } from '@/hooks/useNotifications';
+import { useToast } from '@/hooks/use-toast';
 import { Calendar, Package, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -46,6 +48,7 @@ export function TakeOrderDialog({ order, open, onOpenChange }: TakeOrderDialogPr
   const { addTask, addMultipleTasks } = useProductionTasks();
   const { departments, productionOperations } = useDepartments();
   const { employees } = useEmployees();
+  const { toast } = useToast();
   
   const [mode, setMode] = useState<'single' | 'multiple'>('single');
   const [startDate, setStartDate] = useState('');
@@ -70,6 +73,31 @@ export function TakeOrderDialog({ order, open, onOpenChange }: TakeOrderDialogPr
     return productionOperations.find(op => op.id === id)?.name || id;
   };
 
+  // Helper to send notification when task is assigned
+  const sendNotificationIfAssigned = async (taskId: string, taskTitle: string, operationName?: string | null) => {
+    if (assignedTo) {
+      const employee = employees.find(e => e.id === assignedTo);
+      if (employee) {
+        toast({
+          title: "Task asignat",
+          description: `${employee.name} a fost notificat despre task-ul "${taskTitle}"`,
+        });
+        
+        await sendTaskNotification({
+          employeeId: employee.id,
+          employeeName: employee.name,
+          employeeEmail: employee.email,
+          taskTitle,
+          taskId,
+          startDate,
+          endDate,
+          clientName: order?.clients?.name,
+          operationName: operationName || undefined,
+        });
+      }
+    }
+  };
+
   const handleSubmit = async () => {
     if (!order || !startDate || !endDate) return;
 
@@ -92,8 +120,10 @@ export function TakeOrderDialog({ order, open, onOpenChange }: TakeOrderDialogPr
         notes,
         operation_name: null,
       };
-      
-      await addTask.mutateAsync(task);
+      const result = await addTask.mutateAsync(task);
+      if (result) {
+        await sendNotificationIfAssigned(result.id, task.title);
+      }
     } else {
       // Multiple tasks - one per operation
       const operations = order.production_operations || [];
@@ -116,7 +146,10 @@ export function TakeOrderDialog({ order, open, onOpenChange }: TakeOrderDialogPr
           operation_name: null,
         };
         
-        await addTask.mutateAsync(task);
+        const result = await addTask.mutateAsync(task);
+        if (result) {
+          await sendNotificationIfAssigned(result.id, task.title);
+        }
       } else {
         // Create task for each operation
         const tasks: ProductionTaskInsert[] = operations.map((opId, index) => ({
@@ -135,7 +168,29 @@ export function TakeOrderDialog({ order, open, onOpenChange }: TakeOrderDialogPr
           operation_name: getOperationName(opId),
         }));
         
-        await addMultipleTasks.mutateAsync(tasks);
+        const results = await addMultipleTasks.mutateAsync(tasks);
+        // Send notification for first task only (they're all assigned to same person)
+        if (results && results.length > 0 && assignedTo) {
+          const employee = employees.find(e => e.id === assignedTo);
+          if (employee) {
+            toast({
+              title: "Task-uri asignate",
+              description: `${employee.name} a fost notificat despre ${results.length} task-uri`,
+            });
+            
+            // Send notification for the first task as a summary
+            await sendTaskNotification({
+              employeeId: employee.id,
+              employeeName: employee.name,
+              employeeEmail: employee.email,
+              taskTitle: `${results.length} task-uri pentru comanda #${order.order_number}`,
+              taskId: results[0].id,
+              startDate,
+              endDate,
+              clientName: order.clients?.name,
+            });
+          }
+        }
       }
     }
 
