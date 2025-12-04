@@ -253,6 +253,78 @@ export type Database = {
           },
         ]
       }
+      production_tasks: {
+        Row: {
+          assigned_to: string | null
+          client_name: string | null
+          created_at: string
+          department_id: string
+          description: string | null
+          end_date: string
+          id: string
+          notes: string | null
+          operation_name: string | null
+          order_id: string | null
+          priority: string
+          quantity: number | null
+          start_date: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          client_name?: string | null
+          created_at?: string
+          department_id: string
+          description?: string | null
+          end_date: string
+          id?: string
+          notes?: string | null
+          operation_name?: string | null
+          order_id?: string | null
+          priority?: string
+          quantity?: number | null
+          start_date: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          client_name?: string | null
+          created_at?: string
+          department_id?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          notes?: string | null
+          operation_name?: string | null
+          order_id?: string | null
+          priority?: string
+          quantity?: number | null
+          start_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_tasks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
