@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calculator, RotateCcw } from 'lucide-react';
+import { Calculator, RotateCcw, FileText } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { RecipeSelector } from '@/components/calculator/RecipeSelector';
 import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorItem';
 import { BriefAnalyzer } from '@/components/calculator/BriefAnalyzer';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { generateOfferPdf } from '@/lib/generateOfferPdf';
 
 interface AISuggestion {
   recipeId: string;
@@ -96,6 +96,22 @@ export default function PriceCalculator() {
 
   const getRecipeById = (recipeId: string) => {
     return defaultRecipes.find(r => r.id === recipeId);
+  };
+
+  const handleGeneratePdf = () => {
+    try {
+      const offerNumber = generateOfferPdf({
+        calculations,
+        subtotal,
+        discount,
+        discountAmount,
+        total,
+      });
+      toast.success(`Oferta ${offerNumber} a fost generată cu succes!`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Eroare la generarea PDF-ului');
+    }
   };
 
   return (
@@ -212,11 +228,13 @@ export default function PriceCalculator() {
               </div>
 
               <Button 
-                className="w-full gradient-brand text-white" 
+                className="w-full gradient-brand text-white gap-2" 
                 size="lg"
                 disabled={calculations.length === 0}
+                onClick={handleGeneratePdf}
               >
-                Generează Ofertă
+                <FileText className="h-4 w-4" />
+                Generează Ofertă PDF
               </Button>
 
               {calculations.length > 0 && (
