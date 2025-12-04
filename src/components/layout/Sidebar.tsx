@@ -8,6 +8,7 @@ import {
   Palette,
   Calculator,
   CalendarDays,
+  CheckSquare,
   LogOut,
   UserCircle,
   ShoppingCart
@@ -20,6 +21,7 @@ import { roleAccess } from '@/types/auth';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Calendar Producție', href: '/production-calendar', icon: CalendarDays },
+  { name: 'Calendar To Do', href: '/tasks-calendar', icon: CheckSquare },
   { name: 'Clienți', href: '/clients', icon: UserCircle },
   { name: 'Comenzi', href: '/orders', icon: ShoppingCart },
   { name: 'Angajați', href: '/employees', icon: Users },
