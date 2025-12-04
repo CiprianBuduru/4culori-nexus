@@ -81,15 +81,17 @@ interface Order {
   production_operations?: string[] | null;
   needs_dtp?: boolean | null;
   production_days?: number | null;
+  document_type?: 'oferta' | 'comanda';
 }
 
 interface OrderEditDialogProps {
   order: Order | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  documentType?: 'oferta' | 'comanda';
 }
 
-export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogProps) {
+export function OrderEditDialog({ order, open, onOpenChange, documentType = 'comanda' }: OrderEditDialogProps) {
   const { toast } = useToast();
   const { productionOperations } = useDepartments();
   const queryClient = useQueryClient();
@@ -178,7 +180,8 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
       setExistingAttachment(order.attachment_url || null);
       setSelectedOperations(order.production_operations || []);
     } else {
-      const nextOrderNumber = `CMD-${Date.now().toString().slice(-6)}`;
+      const prefix = documentType === 'oferta' ? 'OFR' : 'CMD';
+      const nextOrderNumber = `${prefix}-${Date.now().toString().slice(-6)}`;
       form.reset({
         order_number: nextOrderNumber,
         name: '',
@@ -197,7 +200,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
     }
     setAttachmentFile(null);
     setAttachmentPreview(null);
-  }, [order, form]);
+  }, [order, form, documentType]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -268,6 +271,10 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
     setSelectedOperations(newOps);
   };
 
+  const isOffer = (order?.document_type || documentType) === 'oferta';
+  const docLabel = isOffer ? 'Ofertă' : 'Comandă';
+  const docLabelLower = isOffer ? 'ofertă' : 'comandă';
+
   const mutation = useMutation({
     mutationFn: async (data: OrderFormData) => {
       const payload = {
@@ -283,6 +290,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
         production_operations: selectedOperations,
         needs_dtp: data.needs_dtp || false,
         production_days: data.production_days || 0,
+        document_type: order?.document_type || documentType,
       };
 
       let orderId: string;
@@ -315,11 +323,11 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast({ title: order ? 'Comandă actualizată' : 'Comandă adăugată' });
+      toast({ title: order ? `${docLabel} actualizată` : `${docLabel} adăugată` });
       onOpenChange(false);
     },
     onError: () => {
-      toast({ title: 'Eroare la salvarea comenzii', variant: 'destructive' });
+      toast({ title: `Eroare la salvarea ${docLabelLower}`, variant: 'destructive' });
     },
   });
 
@@ -341,13 +349,13 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{order ? 'Editează Comandă' : 'Comandă Nouă'}</DialogTitle>
+          <DialogTitle>{order ? `Editează ${docLabel}` : `${docLabel} Nouă`}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Workflow Progress Indicator */}
-            {order && (
+            {order && !isOffer && (
               <div className="p-3 bg-muted/30 rounded-lg border">
                 <p className="text-xs text-muted-foreground mb-2">Progres comandă:</p>
                 <div className="flex flex-wrap items-center gap-1">
@@ -380,9 +388,9 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
               name="order_number"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Număr Comandă *</FormLabel>
+                  <FormLabel>Număr {docLabel} *</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="CMD-001" />
+                    <Input {...field} placeholder={isOffer ? "OFR-001" : "CMD-001"} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -394,7 +402,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Denumire Comandă</FormLabel>
+                  <FormLabel>Denumire {docLabel}</FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="ex: Cărți de vizită, Flyere A5..." />
                   </FormControl>
@@ -408,7 +416,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
               name="order_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tip Comandă</FormLabel>
+                  <FormLabel>Tip {docLabel}</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     value={field.value || ''}

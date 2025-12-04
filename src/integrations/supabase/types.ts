@@ -287,6 +287,7 @@ export type Database = {
           brief: string | null
           client_id: string | null
           created_at: string
+          document_type: string
           due_date: string | null
           id: string
           name: string | null
@@ -305,6 +306,7 @@ export type Database = {
           brief?: string | null
           client_id?: string | null
           created_at?: string
+          document_type?: string
           due_date?: string | null
           id?: string
           name?: string | null
@@ -323,6 +325,7 @@ export type Database = {
           brief?: string | null
           client_id?: string | null
           created_at?: string
+          document_type?: string
           due_date?: string | null
           id?: string
           name?: string | null
