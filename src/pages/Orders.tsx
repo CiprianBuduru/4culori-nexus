@@ -27,6 +27,8 @@ interface Order {
 
 const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending: { label: 'În așteptare', variant: 'secondary' },
+  dtp: { label: 'DTP', variant: 'default' },
+  waiting_bt: { label: 'În așteptare BT', variant: 'outline' },
   in_progress: { label: 'În lucru', variant: 'default' },
   completed: { label: 'Finalizată', variant: 'outline' },
   cancelled: { label: 'Anulată', variant: 'destructive' },

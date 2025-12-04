@@ -34,7 +34,7 @@ import { Upload, FileText, Image, X } from 'lucide-react';
 const orderSchema = z.object({
   order_number: z.string().min(1, 'Numărul comenzii este obligatoriu'),
   client_id: z.string().optional(),
-  status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']),
+  status: z.enum(['pending', 'dtp', 'waiting_bt', 'in_progress', 'completed', 'cancelled']),
   total_amount: z.coerce.number().min(0).optional(),
   notes: z.string().optional(),
   due_date: z.string().optional(),
@@ -97,7 +97,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
       form.reset({
         order_number: order.order_number,
         client_id: order.client_id || '',
-        status: order.status as 'pending' | 'in_progress' | 'completed' | 'cancelled',
+        status: order.status as 'pending' | 'dtp' | 'waiting_bt' | 'in_progress' | 'completed' | 'cancelled',
         total_amount: order.total_amount || 0,
         notes: order.notes || '',
         due_date: order.due_date || '',
@@ -286,6 +286,8 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="pending">În așteptare</SelectItem>
+                        <SelectItem value="dtp">DTP</SelectItem>
+                        <SelectItem value="waiting_bt">În așteptare BT</SelectItem>
                         <SelectItem value="in_progress">În lucru</SelectItem>
                         <SelectItem value="completed">Finalizată</SelectItem>
                         <SelectItem value="cancelled">Anulată</SelectItem>
