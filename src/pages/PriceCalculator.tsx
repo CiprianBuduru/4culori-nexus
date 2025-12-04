@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,27 @@ import { Calculator, RotateCcw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { RecipeSelector } from '@/components/calculator/RecipeSelector';
 import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorItem';
+import { BriefAnalyzer } from '@/components/calculator/BriefAnalyzer';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface AISuggestion {
+  recipeId: string;
+  recipeName: string;
+  quantity: number;
+  confidence: number;
+  reasoning: string;
+  recipe: {
+    id: string;
+    name: string;
+    description: string;
+    base_price: number;
+    price_per_unit: number;
+    materials: any;
+    services: any;
+  };
+}
 
 export default function PriceCalculator() {
   const [calculations, setCalculations] = useState<RecipeCalculation[]>([]);
@@ -30,6 +50,25 @@ export default function PriceCalculator() {
       totalPrice: recipe.basePrice,
     };
     setCalculations([...calculations, newCalculation]);
+  };
+
+  const handleAddAISuggestion = (suggestion: AISuggestion) => {
+    const basePrice = suggestion.recipe.base_price || 0;
+    const pricePerUnit = suggestion.recipe.price_per_unit || 0;
+    const totalPrice = basePrice + (pricePerUnit * suggestion.quantity);
+
+    const newCalculation: RecipeCalculation = {
+      id: crypto.randomUUID(),
+      recipeId: suggestion.recipeId,
+      recipeName: suggestion.recipeName,
+      category: 'printed' as RecipeCategory, // Default category for DB recipes
+      quantity: suggestion.quantity,
+      materialCost: 0,
+      personalizationCost: 0,
+      totalPrice: totalPrice,
+    };
+    setCalculations([...calculations, newCalculation]);
+    toast.success(`Adăugat: ${suggestion.recipeName} x${suggestion.quantity}`);
   };
 
   const handleUpdateCalculation = (updated: RecipeCalculation) => {
@@ -77,9 +116,12 @@ export default function PriceCalculator() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left Column - Recipe Selector & Items */}
+          {/* Left Column - AI Analyzer, Recipe Selector & Items */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Recipe Selector */}
+            {/* AI Brief Analyzer */}
+            <BriefAnalyzer onAddSuggestion={handleAddAISuggestion} />
+
+            {/* Manual Recipe Selector */}
             <RecipeSelector onSelectRecipe={handleSelectRecipe} />
 
             {/* Added Items */}
