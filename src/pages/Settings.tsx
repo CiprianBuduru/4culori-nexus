@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
 
 interface CompanySettings {
   companyName: string;
@@ -42,7 +42,10 @@ const Settings = () => {
   const queryClient = useQueryClient();
   const [settings, setSettings] = useState<CompanySettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
-  const [orderTypeEdits, setOrderTypeEdits] = useState<Record<string, number>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ order_type: '', order_type_label: '', default_production_days: 7 });
+  const [isAdding, setIsAdding] = useState(false);
+  const [newForm, setNewForm] = useState({ order_type: '', order_type_label: '', default_production_days: 7 });
 
   // Fetch order type defaults
   const { data: orderTypeDefaults, isLoading: isLoadingOrderTypes } = useQuery({
@@ -59,15 +62,61 @@ const Settings = () => {
 
   // Mutation for updating order type defaults
   const updateOrderTypeMutation = useMutation({
-    mutationFn: async ({ id, days }: { id: string; days: number }) => {
+    mutationFn: async (item: Partial<OrderTypeDefault> & { id: string }) => {
       const { error } = await supabase
         .from('order_type_defaults')
-        .update({ default_production_days: days })
+        .update({
+          order_type: item.order_type,
+          order_type_label: item.order_type_label,
+          default_production_days: item.default_production_days,
+        })
+        .eq('id', item.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['order_type_defaults'] });
+      setEditingId(null);
+      toast({ title: 'Tip comandă actualizat' });
+    },
+    onError: () => {
+      toast({ title: 'Eroare', description: 'Nu s-a putut actualiza', variant: 'destructive' });
+    },
+  });
+
+  // Mutation for adding new order type
+  const addOrderTypeMutation = useMutation({
+    mutationFn: async (item: Omit<OrderTypeDefault, 'id'>) => {
+      const { error } = await supabase
+        .from('order_type_defaults')
+        .insert(item);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['order_type_defaults'] });
+      setIsAdding(false);
+      setNewForm({ order_type: '', order_type_label: '', default_production_days: 7 });
+      toast({ title: 'Tip comandă adăugat' });
+    },
+    onError: () => {
+      toast({ title: 'Eroare', description: 'Nu s-a putut adăuga', variant: 'destructive' });
+    },
+  });
+
+  // Mutation for deleting order type
+  const deleteOrderTypeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('order_type_defaults')
+        .delete()
         .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['order_type_defaults'] });
+      toast({ title: 'Tip comandă șters' });
+    },
+    onError: () => {
+      toast({ title: 'Eroare', description: 'Nu s-a putut șterge', variant: 'destructive' });
     },
   });
 
@@ -92,39 +141,43 @@ const Settings = () => {
     setHasChanges(true);
   };
 
-  const handleOrderTypeDaysChange = (id: string, days: number) => {
-    setOrderTypeEdits(prev => ({ ...prev, [id]: days }));
-    setHasChanges(true);
-  };
-
-  const handleSave = async () => {
-    // Save company settings to localStorage
+  const handleSave = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    
-    // Save order type defaults to database
-    const updatePromises = Object.entries(orderTypeEdits).map(([id, days]) =>
-      updateOrderTypeMutation.mutateAsync({ id, days })
-    );
-    
-    try {
-      await Promise.all(updatePromises);
-      setOrderTypeEdits({});
-      setHasChanges(false);
-      toast({
-        title: 'Setări salvate',
-        description: 'Modificările au fost salvate cu succes',
-      });
-    } catch (error) {
-      toast({
-        title: 'Eroare',
-        description: 'Nu s-au putut salva setările',
-        variant: 'destructive',
-      });
-    }
+    setHasChanges(false);
+    toast({
+      title: 'Setări salvate',
+      description: 'Modificările au fost salvate cu succes',
+    });
   };
 
-  const getDisplayDays = (item: OrderTypeDefault) => {
-    return orderTypeEdits[item.id] ?? item.default_production_days;
+  const startEdit = (item: OrderTypeDefault) => {
+    setEditingId(item.id);
+    setEditForm({
+      order_type: item.order_type,
+      order_type_label: item.order_type_label,
+      default_production_days: item.default_production_days,
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm({ order_type: '', order_type_label: '', default_production_days: 7 });
+  };
+
+  const saveEdit = (id: string) => {
+    if (!editForm.order_type || !editForm.order_type_label) {
+      toast({ title: 'Completează toate câmpurile', variant: 'destructive' });
+      return;
+    }
+    updateOrderTypeMutation.mutate({ id, ...editForm });
+  };
+
+  const handleAdd = () => {
+    if (!newForm.order_type || !newForm.order_type_label) {
+      toast({ title: 'Completează toate câmpurile', variant: 'destructive' });
+      return;
+    }
+    addOrderTypeMutation.mutate(newForm);
   };
 
   return (
@@ -140,34 +193,111 @@ const Settings = () => {
 
         {/* Order Type Production Days */}
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-lg font-semibold text-foreground">Zile Producție per Tip Comandă</h2>
-          <p className="text-sm text-muted-foreground">
-            Configurează numărul implicit de zile de producție pentru fiecare tip de comandă
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Tipuri de Comenzi</h2>
+              <p className="text-sm text-muted-foreground">
+                Gestionează tipurile de comenzi și zilele de producție implicite
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAdding(true)}
+              disabled={isAdding}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Adaugă
+            </Button>
+          </div>
           <Separator className="my-4" />
+          
           {isLoadingOrderTypes ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
+              {/* Add new form */}
+              {isAdding && (
+                <div className="flex items-center gap-2 rounded-lg border border-primary/50 bg-primary/5 p-3">
+                  <Input
+                    placeholder="Cod (ex: tiparire)"
+                    className="flex-1"
+                    value={newForm.order_type}
+                    onChange={(e) => setNewForm(prev => ({ ...prev, order_type: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="Nume (ex: Tipărire)"
+                    className="flex-1"
+                    value={newForm.order_type_label}
+                    onChange={(e) => setNewForm(prev => ({ ...prev, order_type_label: e.target.value }))}
+                  />
+                  <Input
+                    type="number"
+                    min={1}
+                    className="w-20 text-center"
+                    value={newForm.default_production_days}
+                    onChange={(e) => setNewForm(prev => ({ ...prev, default_production_days: parseInt(e.target.value) || 1 }))}
+                  />
+                  <Button size="icon" variant="ghost" onClick={handleAdd} disabled={addOrderTypeMutation.isPending}>
+                    <Check className="h-4 w-4 text-green-600" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => { setIsAdding(false); setNewForm({ order_type: '', order_type_label: '', default_production_days: 7 }); }}>
+                    <X className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Existing items */}
               {orderTypeDefaults?.map((item) => (
-                <div key={item.id} className="flex items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{item.order_type_label}</p>
-                    <p className="text-sm text-muted-foreground">{item.order_type}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min={1}
-                      max={365}
-                      className="w-20 text-center"
-                      value={getDisplayDays(item)}
-                      onChange={(e) => handleOrderTypeDaysChange(item.id, parseInt(e.target.value) || 1)}
-                    />
-                    <span className="text-sm text-muted-foreground">zile</span>
-                  </div>
+                <div key={item.id} className="flex items-center gap-2 rounded-lg border border-border p-3">
+                  {editingId === item.id ? (
+                    <>
+                      <Input
+                        className="flex-1"
+                        value={editForm.order_type}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, order_type: e.target.value }))}
+                      />
+                      <Input
+                        className="flex-1"
+                        value={editForm.order_type_label}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, order_type_label: e.target.value }))}
+                      />
+                      <Input
+                        type="number"
+                        min={1}
+                        className="w-20 text-center"
+                        value={editForm.default_production_days}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, default_production_days: parseInt(e.target.value) || 1 }))}
+                      />
+                      <Button size="icon" variant="ghost" onClick={() => saveEdit(item.id)} disabled={updateOrderTypeMutation.isPending}>
+                        <Check className="h-4 w-4 text-green-600" />
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={cancelEdit}>
+                        <X className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex-1">
+                        <p className="font-medium text-foreground">{item.order_type_label}</p>
+                        <p className="text-sm text-muted-foreground">{item.order_type}</p>
+                      </div>
+                      <span className="text-sm text-muted-foreground">{item.default_production_days} zile</span>
+                      <Button size="icon" variant="ghost" onClick={() => startEdit(item)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        onClick={() => deleteOrderTypeMutation.mutate(item.id)}
+                        disabled={deleteOrderTypeMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -263,11 +393,8 @@ const Settings = () => {
           <Button 
             onClick={handleSave} 
             className="px-8"
-            disabled={!hasChanges || updateOrderTypeMutation.isPending}
+            disabled={!hasChanges}
           >
-            {updateOrderTypeMutation.isPending && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            )}
             Salvează Modificările
           </Button>
         </div>
