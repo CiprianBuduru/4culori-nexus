@@ -1,0 +1,688 @@
+import { useState, useMemo } from 'react';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Calendar as CalendarIcon,
+  Filter,
+  Clock,
+  User,
+  Trash2,
+  UserCheck,
+  CheckSquare
+} from 'lucide-react';
+import { useDepartments } from '@/hooks/useDepartments';
+import { useProductionTasks, ProductionTask } from '@/hooks/useProductionTasks';
+import { useEmployees } from '@/hooks/useEmployees';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  productionStatusLabels, 
+  productionStatusColors,
+  priorityLabels 
+} from '@/types/production';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Label } from '@/components/ui/label';
+import { DroppableDay } from '@/components/calendar/DroppableDay';
+
+const departmentColors: Record<string, string> = {
+  '1': 'bg-brand-blue',    // Vânzări
+  '3': 'bg-brand-pink',    // Marketing
+  '4': 'bg-brand-purple',  // Financiar
+  '5': 'bg-brand-green',   // Management
+};
+
+const departmentBorderColors: Record<string, string> = {
+  '1': 'border-l-brand-blue',
+  '3': 'border-l-brand-pink',
+  '4': 'border-l-brand-purple',
+  '5': 'border-l-brand-green',
+};
+
+export default function TasksCalendar() {
+  const { departments } = useDepartments();
+  const { tasks: productionTasks, isLoading, deleteTask, updateTask } = useProductionTasks();
+  const { employees } = useEmployees();
+  const { toast } = useToast();
+  
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+  const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
+  const [editingAssignee, setEditingAssignee] = useState(false);
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [activeTask, setActiveTask] = useState<ProductionTask | null>(null);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Get employee name by ID
+  const getEmployeeName = (employeeId: string | null) => {
+    if (!employeeId) return null;
+    const employee = employees.find(e => e.id === employeeId);
+    return employee?.name || null;
+  };
+
+  const getEmployee = (employeeId: string | null) => {
+    if (!employeeId) return null;
+    return employees.find(e => e.id === employeeId) || null;
+  };
+
+  // Get days for the smart layout
+  const { 
+    primaryDays, 
+    secondaryDays, 
+    remainingDays, 
+    monthName, 
+    year 
+  } = useMemo(() => {
+    const month = currentDate.getMonth();
+    const year = currentDate.getFullYear();
+    const firstDay = new Date(year, month, 1);
+
+    // Calculate days relative to today
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    
+    // Primary days: today, tomorrow, day after tomorrow
+    const primary: Date[] = [];
+    for (let i = 0; i < 3; i++) {
+      const d = new Date(todayDate);
+      d.setDate(todayDate.getDate() + i);
+      primary.push(d);
+    }
+
+    // Secondary days: next 2 days after primary
+    const secondary: Date[] = [];
+    for (let i = 3; i < 5; i++) {
+      const d = new Date(todayDate);
+      d.setDate(todayDate.getDate() + i);
+      secondary.push(d);
+    }
+
+    // Remaining days: starting from day 6 onwards
+    const remaining: Date[] = [];
+    const startDate = new Date(todayDate);
+    startDate.setDate(todayDate.getDate() + 5);
+    
+    const endOfMonth = new Date(year, month + 1, 0);
+    const currentDay = new Date(startDate);
+    
+    while (currentDay <= endOfMonth) {
+      remaining.push(new Date(currentDay));
+      currentDay.setDate(currentDay.getDate() + 1);
+    }
+
+    return {
+      primaryDays: primary,
+      secondaryDays: secondary,
+      remainingDays: remaining,
+      monthName: firstDay.toLocaleDateString('ro-RO', { month: 'long' }),
+      year,
+    };
+  }, [currentDate]);
+
+  // Tasks calendar only shows Management (5), Vânzări (1), Marketing (3), Financiar (4)
+  const allowedDepartmentIds = ['1', '3', '4', '5'];
+  
+  // Filter departments for dropdown
+  const taskDepartments = useMemo(() => {
+    return departments.filter(d => allowedDepartmentIds.includes(d.id));
+  }, [departments]);
+
+  // Filter tasks - only Management, Vânzări, Marketing, Financiar
+  const filteredTasks = useMemo(() => {
+    const baseTasks = productionTasks.filter(task => 
+      allowedDepartmentIds.includes(task.department_id)
+    );
+    
+    if (selectedDepartment === 'all') {
+      return baseTasks;
+    }
+    return baseTasks.filter(task => task.department_id === selectedDepartment);
+  }, [selectedDepartment, productionTasks]);
+
+  // Get tasks for a specific date
+  const getTasksForDate = (date: Date): ProductionTask[] => {
+    const dateStr = date.toISOString().split('T')[0];
+    
+    return filteredTasks.filter(task => {
+      const start = new Date(task.start_date);
+      const end = new Date(task.end_date);
+      const current = new Date(dateStr);
+      return current >= start && current <= end;
+    });
+  };
+
+  // Navigation
+  const prevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  // Check if date is today
+  const isToday = (date: Date) => {
+    return date.toDateString() === today.toDateString();
+  };
+
+  // Check if date is in current month
+  const isCurrentMonth = (date: Date) => {
+    return date.getMonth() === currentDate.getMonth() && 
+           date.getFullYear() === currentDate.getFullYear();
+  };
+
+  const getDepartmentName = (deptId: string) => {
+    return departments.find(d => d.id === deptId)?.name || 'Necunoscut';
+  };
+
+  const getDepartmentColor = (deptId: string) => {
+    return departmentColors[deptId] || 'bg-muted';
+  };
+
+  const getDepartmentBorderColor = (deptId: string) => {
+    return departmentBorderColors[deptId] || 'border-l-muted';
+  };
+
+  const handleDeleteTask = async () => {
+    if (selectedTask) {
+      await deleteTask.mutateAsync(selectedTask.id);
+      setSelectedTask(null);
+    }
+  };
+
+  const handleAssigneeChange = async (employeeId: string) => {
+    if (selectedTask) {
+      await updateTask.mutateAsync({
+        id: selectedTask.id,
+        assigned_to: employeeId || null,
+      });
+      setSelectedTask({ ...selectedTask, assigned_to: employeeId || null });
+      setEditingAssignee(false);
+    }
+  };
+
+  // Get employees for the selected task's department
+  const getTaskDepartmentEmployees = () => {
+    if (!selectedTask) return employees;
+    return employees.filter(e => e.departmentId === selectedTask.department_id);
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const task = productionTasks.find(t => t.id === active.id);
+    if (task) {
+      setActiveTask(task);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+
+    if (!over) return;
+
+    const taskId = active.id as string;
+    const targetDateStr = (over.data.current as { date: string })?.date;
+    
+    if (!targetDateStr) return;
+
+    const task = productionTasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const startDate = new Date(task.start_date);
+    const endDate = new Date(task.end_date);
+    const durationMs = endDate.getTime() - startDate.getTime();
+
+    const newStartDate = new Date(targetDateStr);
+    const newEndDate = new Date(newStartDate.getTime() + durationMs);
+
+    const newStartStr = newStartDate.toISOString().split('T')[0];
+    const newEndStr = newEndDate.toISOString().split('T')[0];
+
+    if (newStartStr !== task.start_date) {
+      await updateTask.mutateAsync({
+        id: taskId,
+        start_date: newStartStr,
+        end_date: newEndStr,
+      });
+
+      toast({
+        title: "Task mutat",
+        description: `"${task.title}" a fost mutat pe ${newStartDate.toLocaleDateString('ro-RO')}`,
+      });
+    }
+  };
+
+  return (
+    <MainLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+              <CheckSquare className="h-8 w-8 text-brand-blue" />
+              Calendar To Do
+            </h1>
+            <p className="text-muted-foreground">
+              Task-uri pentru Management, Vânzări, Marketing și Financiar
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <SelectTrigger className="w-[200px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filtrează" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toate departamentele</SelectItem>
+                {taskDepartments.map(dept => (
+                  <SelectItem key={dept.id} value={dept.id}>
+                    <span className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${getDepartmentColor(dept.id)}`} />
+                      {dept.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-4">
+          {taskDepartments.map(dept => (
+            <div key={dept.id} className="flex items-center gap-2 text-sm">
+              <span className={`w-3 h-3 rounded-full ${getDepartmentColor(dept.id)}`} />
+              <span>{dept.name}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Month Navigation */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-4">
+            <div className="flex items-center gap-4">
+              <Button variant="outline" size="icon" onClick={prevMonth}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <CardTitle className="text-xl capitalize">
+                {monthName} {year}
+              </CardTitle>
+              <Button variant="outline" size="icon" onClick={nextMonth}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <Button variant="outline" onClick={goToToday} className="gap-2">
+              <CalendarIcon className="h-4 w-4" />
+              Astăzi
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <DndContext
+              sensors={sensors}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              {/* Primary Row */}
+              <div className="grid grid-cols-5 gap-4">
+                {primaryDays.map((date, idx) => (
+                  <div key={date.toISOString()} className={idx < 3 ? 'col-span-1' : ''}>
+                    <DroppableDay
+                      date={date}
+                      tasks={getTasksForDate(date)}
+                      size="large"
+                      isToday={isToday(date)}
+                      isCurrentMonth={isCurrentMonth(date)}
+                      getDepartmentBorderColor={getDepartmentBorderColor}
+                      onTaskClick={setSelectedTask}
+                    />
+                  </div>
+                ))}
+                {secondaryDays.map((date) => (
+                  <div key={date.toISOString()} className="col-span-1">
+                    <DroppableDay
+                      date={date}
+                      tasks={getTasksForDate(date)}
+                      size="medium"
+                      isToday={isToday(date)}
+                      isCurrentMonth={isCurrentMonth(date)}
+                      getDepartmentBorderColor={getDepartmentBorderColor}
+                      onTaskClick={setSelectedTask}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Remaining days */}
+              <div className="pt-4 border-t">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                  Restul lunii {monthName}
+                </h3>
+                <div className="grid grid-cols-7 gap-2">
+                  {remainingDays
+                    .filter(date => isCurrentMonth(date))
+                    .map((date) => (
+                      <DroppableDay
+                        key={date.toISOString()}
+                        date={date}
+                        tasks={getTasksForDate(date)}
+                        size="small"
+                        isToday={isToday(date)}
+                        isCurrentMonth={isCurrentMonth(date)}
+                        getDepartmentBorderColor={getDepartmentBorderColor}
+                        onTaskClick={setSelectedTask}
+                      />
+                    ))}
+                </div>
+              </div>
+
+              {/* Drag Overlay */}
+              <DragOverlay>
+                {activeTask && (
+                  <div className={`
+                    p-2 rounded-lg border-l-4 ${getDepartmentBorderColor(activeTask.department_id)}
+                    bg-card shadow-xl text-sm opacity-90
+                  `}>
+                    <div className="font-medium">{activeTask.title}</div>
+                    <div className="flex items-center gap-2 mt-1 text-muted-foreground text-xs">
+                      <Badge className={`${productionStatusColors[activeTask.status]} text-[10px] px-1.5 py-0`}>
+                        {productionStatusLabels[activeTask.status]}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+              </DragOverlay>
+            </DndContext>
+          </CardContent>
+        </Card>
+
+        {/* Upcoming Tasks List */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-brand-blue" />
+              Task-uri în desfășurare și viitoare
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {filteredTasks
+                .filter(t => t.status !== 'completed')
+                .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+                .slice(0, 10)
+                .map(task => (
+                  <div
+                    key={task.id}
+                    onClick={() => setSelectedTask(task)}
+                    className={`
+                      flex items-center justify-between p-3 rounded-lg border cursor-pointer
+                      border-l-4 ${getDepartmentBorderColor(task.department_id)}
+                      hover:bg-muted/50 transition-colors
+                    `}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{task.title}</span>
+                        <Badge className={productionStatusColors[task.status]}>
+                          {productionStatusLabels[task.status]}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <span className={`w-2 h-2 rounded-full ${getDepartmentColor(task.department_id)}`} />
+                          {getDepartmentName(task.department_id)}
+                        </span>
+                        {task.client_name && (
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {task.client_name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {task.assigned_to && (
+                        <Avatar className="h-8 w-8 border-2 border-background">
+                          <AvatarImage src={getEmployee(task.assigned_to)?.avatar} />
+                          <AvatarFallback className="text-xs">
+                            {getEmployeeName(task.assigned_to)?.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div className="text-sm text-muted-foreground text-right">
+                        <div>{new Date(task.start_date).toLocaleDateString('ro-RO')}</div>
+                        <div>→ {new Date(task.end_date).toLocaleDateString('ro-RO')}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              {filteredTasks.filter(t => t.status !== 'completed').length === 0 && (
+                <p className="text-center text-muted-foreground py-8">
+                  Nu există task-uri active
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Task Detail Dialog */}
+      <Dialog open={!!selectedTask} onOpenChange={() => { setSelectedTask(null); setEditingAssignee(false); setEditingStatus(false); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className={`w-3 h-3 rounded-full ${getDepartmentColor(selectedTask?.department_id || '')}`} />
+              {selectedTask?.title}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedTask && (
+            <div className="space-y-4">
+              {selectedTask.description && (
+                <p className="text-muted-foreground">{selectedTask.description}</p>
+              )}
+              
+              {/* Assigned Employee Section */}
+              <div className="p-3 rounded-lg bg-muted/30 border">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2 text-muted-foreground">
+                    <UserCheck className="h-4 w-4" />
+                    Responsabil
+                  </Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setEditingAssignee(!editingAssignee)}
+                  >
+                    {editingAssignee ? 'Anulează' : 'Modifică'}
+                  </Button>
+                </div>
+                
+                {editingAssignee ? (
+                  <Select 
+                    value={selectedTask.assigned_to || ''} 
+                    onValueChange={handleAssigneeChange}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Selectează angajat" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Neasignat</SelectItem>
+                      {getTaskDepartmentEmployees().map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          <span className="flex items-center gap-2">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage src={emp.avatar} />
+                              <AvatarFallback className="text-[10px]">
+                                {emp.name.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            {emp.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="mt-2">
+                    {selectedTask.assigned_to ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={getEmployee(selectedTask.assigned_to)?.avatar} />
+                          <AvatarFallback>
+                            {getEmployeeName(selectedTask.assigned_to)?.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{getEmployeeName(selectedTask.assigned_to)}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground italic">Neasignat</span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Status Edit Section */}
+              <div className="p-3 rounded-lg bg-muted/30 border">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2 text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    Status
+                  </Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setEditingStatus(!editingStatus)}
+                  >
+                    {editingStatus ? 'Anulează' : 'Modifică'}
+                  </Button>
+                </div>
+                
+                {editingStatus ? (
+                  <Select 
+                    value={selectedTask.status} 
+                    onValueChange={async (value: 'pending' | 'in-progress' | 'completed' | 'delayed') => {
+                      await updateTask.mutateAsync({
+                        id: selectedTask.id,
+                        status: value,
+                      });
+                      setSelectedTask({ ...selectedTask, status: value });
+                      setEditingStatus(false);
+                      toast({
+                        title: "Status actualizat",
+                        description: `Task-ul "${selectedTask.title}" a fost marcat ca ${productionStatusLabels[value]}`,
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                          În așteptare
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="in-progress">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          În lucru
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="completed">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500" />
+                          Finalizat
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="delayed">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          Întârziat
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="mt-2">
+                    <Badge className={productionStatusColors[selectedTask.status]}>
+                      {productionStatusLabels[selectedTask.status]}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Departament:</span>
+                  <p className="font-medium">{getDepartmentName(selectedTask.department_id)}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Perioadă:</span>
+                  <p className="font-medium">
+                    {new Date(selectedTask.start_date).toLocaleDateString('ro-RO')} - {new Date(selectedTask.end_date).toLocaleDateString('ro-RO')}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Prioritate:</span>
+                  <p className="font-medium">{priorityLabels[selectedTask.priority]}</p>
+                </div>
+                {selectedTask.client_name && (
+                  <div>
+                    <span className="text-muted-foreground">Client:</span>
+                    <p className="font-medium">{selectedTask.client_name}</p>
+                  </div>
+                )}
+              </div>
+
+              {selectedTask.notes && (
+                <div className="pt-2 border-t">
+                  <span className="text-sm text-muted-foreground">Note:</span>
+                  <p className="text-sm mt-1">{selectedTask.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={handleDeleteTask}
+              disabled={deleteTask.isPending}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Șterge Task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </MainLayout>
+  );
+}
