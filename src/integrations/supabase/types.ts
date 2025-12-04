@@ -254,6 +254,7 @@ export type Database = {
       order_type_defaults: {
         Row: {
           created_at: string
+          default_brief: string | null
           default_production_days: number
           id: string
           order_type: string
@@ -262,6 +263,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_brief?: string | null
           default_production_days?: number
           id?: string
           order_type: string
@@ -270,6 +272,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_brief?: string | null
           default_production_days?: number
           id?: string
           order_type?: string

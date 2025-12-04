@@ -117,7 +117,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
     queryFn: async () => {
       const { data, error } = await supabase
         .from('order_type_defaults')
-        .select('order_type, order_type_label, default_production_days')
+        .select('order_type, order_type_label, default_production_days, default_brief')
         .order('order_type_label');
       if (error) throw error;
       return data;
@@ -145,12 +145,17 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
   const needsDtp = form.watch('needs_dtp');
   const watchedOrderType = form.watch('order_type');
 
-  // Auto-update production_days when order_type changes (only for new orders)
+  // Auto-update production_days and brief when order_type changes (only for new orders)
   useEffect(() => {
     if (!order && watchedOrderType && orderTypeDefaults.length > 0) {
       const typeDefault = orderTypeDefaults.find(t => t.order_type === watchedOrderType);
       if (typeDefault) {
         form.setValue('production_days', typeDefault.default_production_days);
+        // Only set brief if it's empty or was auto-filled before
+        const currentBrief = form.getValues('brief');
+        if (!currentBrief || currentBrief === '') {
+          form.setValue('brief', typeDefault.default_brief || '');
+        }
       }
     }
   }, [watchedOrderType, orderTypeDefaults, order, form]);

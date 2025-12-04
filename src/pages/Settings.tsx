@@ -5,11 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Plus, Pencil, Trash2, Check, X, ShieldAlert } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Check, X, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface CompanySettings {
   companyName: string;
@@ -25,6 +27,7 @@ interface OrderTypeDefault {
   order_type: string;
   order_type_label: string;
   default_production_days: number;
+  default_brief: string | null;
 }
 
 const defaultSettings: CompanySettings = {
@@ -45,9 +48,10 @@ const Settings = () => {
   const [settings, setSettings] = useState<CompanySettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ order_type: '', order_type_label: '', default_production_days: 7 });
+  const [editForm, setEditForm] = useState({ order_type: '', order_type_label: '', default_production_days: 7, default_brief: '' });
   const [isAdding, setIsAdding] = useState(false);
-  const [newForm, setNewForm] = useState({ order_type: '', order_type_label: '', default_production_days: 7 });
+  const [newForm, setNewForm] = useState({ order_type: '', order_type_label: '', default_production_days: 7, default_brief: '' });
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   // Fetch order type defaults
   const { data: orderTypeDefaults, isLoading: isLoadingOrderTypes } = useQuery({
@@ -72,6 +76,7 @@ const Settings = () => {
           order_type: item.order_type,
           order_type_label: item.order_type_label,
           default_production_days: item.default_production_days,
+          default_brief: item.default_brief || '',
         })
         .eq('id', item.id);
       if (error) throw error;
@@ -97,7 +102,7 @@ const Settings = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['order_type_defaults'] });
       setIsAdding(false);
-      setNewForm({ order_type: '', order_type_label: '', default_production_days: 7 });
+      setNewForm({ order_type: '', order_type_label: '', default_production_days: 7, default_brief: '' });
       toast({ title: 'Tip comandă adăugat' });
     },
     onError: () => {
@@ -159,12 +164,14 @@ const Settings = () => {
       order_type: item.order_type,
       order_type_label: item.order_type_label,
       default_production_days: item.default_production_days,
+      default_brief: item.default_brief || '',
     });
+    setExpandedItems(prev => new Set([...prev, item.id]));
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditForm({ order_type: '', order_type_label: '', default_production_days: 7 });
+    setEditForm({ order_type: '', order_type_label: '', default_production_days: 7, default_brief: '' });
   };
 
   const saveEdit = (id: string) => {
@@ -181,6 +188,18 @@ const Settings = () => {
       return;
     }
     addOrderTypeMutation.mutate(newForm);
+  };
+
+  const toggleExpanded = (id: string) => {
+    setExpandedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
   // Check access - show loading or restricted after all hooks
@@ -213,7 +232,7 @@ const Settings = () => {
 
   return (
     <MainLayout>
-      <div className="max-w-2xl space-y-8">
+      <div className="max-w-3xl space-y-8">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-foreground">Setări</h1>
@@ -228,7 +247,7 @@ const Settings = () => {
             <div>
               <h2 className="text-lg font-semibold text-foreground">Tipuri de Comenzi</h2>
               <p className="text-sm text-muted-foreground">
-                Gestionează tipurile de comenzi și zilele de producție implicite
+                Gestionează tipurile de comenzi, zilele de producție și brief-ul implicit
               </p>
             </div>
             <Button
@@ -251,85 +270,139 @@ const Settings = () => {
             <div className="space-y-3">
               {/* Add new form */}
               {isAdding && (
-                <div className="flex items-center gap-2 rounded-lg border border-primary/50 bg-primary/5 p-3">
-                  <Input
-                    placeholder="Cod (ex: tiparire)"
-                    className="flex-1"
-                    value={newForm.order_type}
-                    onChange={(e) => setNewForm(prev => ({ ...prev, order_type: e.target.value }))}
-                  />
-                  <Input
-                    placeholder="Nume (ex: Tipărire)"
-                    className="flex-1"
-                    value={newForm.order_type_label}
-                    onChange={(e) => setNewForm(prev => ({ ...prev, order_type_label: e.target.value }))}
-                  />
-                  <Input
-                    type="number"
-                    min={1}
-                    className="w-20 text-center"
-                    value={newForm.default_production_days}
-                    onChange={(e) => setNewForm(prev => ({ ...prev, default_production_days: parseInt(e.target.value) || 1 }))}
-                  />
-                  <Button size="icon" variant="ghost" onClick={handleAdd} disabled={addOrderTypeMutation.isPending}>
-                    <Check className="h-4 w-4 text-green-600" />
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => { setIsAdding(false); setNewForm({ order_type: '', order_type_label: '', default_production_days: 7 }); }}>
-                    <X className="h-4 w-4 text-destructive" />
-                  </Button>
+                <div className="rounded-lg border border-primary/50 bg-primary/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="Cod (ex: tiparire)"
+                      className="flex-1"
+                      value={newForm.order_type}
+                      onChange={(e) => setNewForm(prev => ({ ...prev, order_type: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Nume (ex: Tipărire)"
+                      className="flex-1"
+                      value={newForm.order_type_label}
+                      onChange={(e) => setNewForm(prev => ({ ...prev, order_type_label: e.target.value }))}
+                    />
+                    <Input
+                      type="number"
+                      min={1}
+                      className="w-24 text-center"
+                      placeholder="Zile"
+                      value={newForm.default_production_days}
+                      onChange={(e) => setNewForm(prev => ({ ...prev, default_production_days: parseInt(e.target.value) || 1 }))}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground mb-1 block">Brief implicit (opțional)</Label>
+                    <Textarea
+                      placeholder="Introduceți template-ul pentru brief..."
+                      className="min-h-[80px]"
+                      value={newForm.default_brief}
+                      onChange={(e) => setNewForm(prev => ({ ...prev, default_brief: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => { setIsAdding(false); setNewForm({ order_type: '', order_type_label: '', default_production_days: 7, default_brief: '' }); }}>
+                      <X className="h-4 w-4 mr-1" /> Anulează
+                    </Button>
+                    <Button size="sm" onClick={handleAdd} disabled={addOrderTypeMutation.isPending}>
+                      <Check className="h-4 w-4 mr-1" /> Adaugă
+                    </Button>
+                  </div>
                 </div>
               )}
 
               {/* Existing items */}
               {orderTypeDefaults?.map((item) => (
-                <div key={item.id} className="flex items-center gap-2 rounded-lg border border-border p-3">
-                  {editingId === item.id ? (
-                    <>
-                      <Input
-                        className="flex-1"
-                        value={editForm.order_type}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, order_type: e.target.value }))}
-                      />
-                      <Input
-                        className="flex-1"
-                        value={editForm.order_type_label}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, order_type_label: e.target.value }))}
-                      />
-                      <Input
-                        type="number"
-                        min={1}
-                        className="w-20 text-center"
-                        value={editForm.default_production_days}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, default_production_days: parseInt(e.target.value) || 1 }))}
-                      />
-                      <Button size="icon" variant="ghost" onClick={() => saveEdit(item.id)} disabled={updateOrderTypeMutation.isPending}>
-                        <Check className="h-4 w-4 text-green-600" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={cancelEdit}>
-                        <X className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">{item.order_type_label}</p>
-                        <p className="text-sm text-muted-foreground">{item.order_type}</p>
+                <Collapsible 
+                  key={item.id} 
+                  open={expandedItems.has(item.id) || editingId === item.id}
+                  onOpenChange={() => editingId !== item.id && toggleExpanded(item.id)}
+                >
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    {editingId === item.id ? (
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            className="flex-1"
+                            value={editForm.order_type}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, order_type: e.target.value }))}
+                          />
+                          <Input
+                            className="flex-1"
+                            value={editForm.order_type_label}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, order_type_label: e.target.value }))}
+                          />
+                          <Input
+                            type="number"
+                            min={1}
+                            className="w-24 text-center"
+                            value={editForm.default_production_days}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, default_production_days: parseInt(e.target.value) || 1 }))}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm text-muted-foreground mb-1 block">Brief implicit</Label>
+                          <Textarea
+                            placeholder="Introduceți template-ul pentru brief..."
+                            className="min-h-[100px]"
+                            value={editForm.default_brief}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, default_brief: e.target.value }))}
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={cancelEdit}>
+                            <X className="h-4 w-4 mr-1" /> Anulează
+                          </Button>
+                          <Button size="sm" onClick={() => saveEdit(item.id)} disabled={updateOrderTypeMutation.isPending}>
+                            <Check className="h-4 w-4 mr-1" /> Salvează
+                          </Button>
+                        </div>
                       </div>
-                      <span className="text-sm text-muted-foreground">{item.default_production_days} zile</span>
-                      <Button size="icon" variant="ghost" onClick={() => startEdit(item)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        onClick={() => deleteOrderTypeMutation.mutate(item.id)}
-                        disabled={deleteOrderTypeMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </>
-                  )}
-                </div>
+                    ) : (
+                      <>
+                        <CollapsibleTrigger asChild>
+                          <div className="flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                            <div className="flex-1">
+                              <p className="font-medium text-foreground">{item.order_type_label}</p>
+                              <p className="text-sm text-muted-foreground">{item.order_type}</p>
+                            </div>
+                            <span className="text-sm text-muted-foreground">{item.default_production_days} zile</span>
+                            <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); startEdit(item); }}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              onClick={(e) => { e.stopPropagation(); deleteOrderTypeMutation.mutate(item.id); }}
+                              disabled={deleteOrderTypeMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                            {expandedItems.has(item.id) ? (
+                              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="px-3 pb-3 pt-0">
+                            <div className="rounded-md bg-muted/50 p-3">
+                              <Label className="text-xs text-muted-foreground mb-1 block">Brief implicit:</Label>
+                              {item.default_brief ? (
+                                <p className="text-sm whitespace-pre-wrap">{item.default_brief}</p>
+                              ) : (
+                                <p className="text-sm text-muted-foreground italic">Niciun brief implicit configurat</p>
+                              )}
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </>
+                    )}
+                  </div>
+                </Collapsible>
               ))}
             </div>
           )}
