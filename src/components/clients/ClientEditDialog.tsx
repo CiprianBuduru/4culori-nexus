@@ -51,11 +51,12 @@ const contactPersonSchema = z.object({
 
 const clientSchema = z.object({
   cui: z.string().optional(),
-  email: z.string().email('Email invalid').optional().or(z.literal('')),
-  phone: z.string().optional(),
   company: z.string().min(1, 'Compania este obligatorie'),
-  address: z.string().optional(),
-  contact_persons: z.array(contactPersonSchema).optional(),
+  contact_name: z.string().min(1, 'Persoana de contact este obligatorie'),
+  contact_phone: z.string().optional(),
+  contact_email: z.string().email('Email invalid').optional().or(z.literal('')),
+  delivery_address: z.string().optional(),
+  other_contacts: z.array(contactPersonSchema).optional(),
   contact_methods: z.array(z.string()).optional(),
   notes: z.string().optional(),
   status: z.enum(['active', 'inactive']),
@@ -93,11 +94,12 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
     resolver: zodResolver(clientSchema),
     defaultValues: {
       cui: '',
-      email: '',
-      phone: '',
       company: '',
-      address: '',
-      contact_persons: [],
+      contact_name: '',
+      contact_phone: '',
+      contact_email: '',
+      delivery_address: '',
+      other_contacts: [],
       contact_methods: [],
       notes: '',
       status: 'active',
@@ -106,34 +108,37 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: 'contact_persons',
+    name: 'other_contacts',
   });
 
   // Helper to parse contact_person JSON from DB
-  const parseContactPersons = (value: string | null): ContactPerson[] => {
-    if (!value) return [];
+  const parseContactData = (value: string | null): { main: { name: string; email: string; phone: string } | null; others: ContactPerson[] } => {
+    if (!value) return { main: null, others: [] };
     try {
       const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) return parsed;
-      // Legacy: single string name
-      if (typeof parsed === 'string') return [{ name: parsed, email: '', phone: '' }];
-      return [];
+      if (Array.isArray(parsed)) {
+        const [main, ...others] = parsed;
+        return { main: main || null, others };
+      }
+      if (typeof parsed === 'string') return { main: { name: parsed, email: '', phone: '' }, others: [] };
+      return { main: null, others: [] };
     } catch {
-      // Legacy: plain string
-      if (value) return [{ name: value, email: '', phone: '' }];
-      return [];
+      if (value) return { main: { name: value, email: '', phone: '' }, others: [] };
+      return { main: null, others: [] };
     }
   };
 
   useEffect(() => {
     if (client) {
+      const contactData = parseContactData(client.contact_person);
       form.reset({
         cui: client.cui || '',
-        email: client.email || '',
-        phone: client.phone || '',
         company: client.company || client.name || '',
-        address: client.address || '',
-        contact_persons: parseContactPersons(client.contact_person),
+        contact_name: contactData.main?.name || '',
+        contact_phone: contactData.main?.phone || client.phone || '',
+        contact_email: contactData.main?.email || client.email || '',
+        delivery_address: client.address || '',
+        other_contacts: contactData.others,
         contact_methods: client.contact_method ? client.contact_method.split(',') : [],
         notes: client.notes || '',
         status: client.status as 'active' | 'inactive',
@@ -141,11 +146,12 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
     } else {
       form.reset({
         cui: '',
-        email: '',
-        phone: '',
         company: '',
-        address: '',
-        contact_persons: [],
+        contact_name: '',
+        contact_phone: '',
+        contact_email: '',
+        delivery_address: '',
+        other_contacts: [],
         contact_methods: [],
         notes: '',
         status: 'active',
@@ -191,9 +197,9 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       }
 
       form.setValue('company', data.name || form.getValues('company'));
-      form.setValue('address', data.address || form.getValues('address'));
+      form.setValue('delivery_address', data.address || form.getValues('delivery_address'));
       if (data.phone) {
-        form.setValue('phone', data.phone);
+        form.setValue('contact_phone', data.phone);
       }
 
       toast({ 
@@ -222,14 +228,20 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
 
   const mutation = useMutation({
     mutationFn: async (data: ClientFormData) => {
+      // Build all contacts array: main contact first, then others
+      const allContacts = [
+        { name: data.contact_name, email: data.contact_email || '', phone: data.contact_phone || '' },
+        ...(data.other_contacts || [])
+      ];
+      
       const payload = {
         cui: data.cui || null,
         name: data.company,
-        email: data.email || null,
-        phone: data.phone || null,
+        email: data.contact_email || null,
+        phone: data.contact_phone || null,
         company: data.company || null,
-        address: data.address || null,
-        contact_person: data.contact_persons?.length ? JSON.stringify(data.contact_persons) : null,
+        address: data.delivery_address || null,
+        contact_person: allContacts.length ? JSON.stringify(allContacts) : null,
         contact_method: data.contact_methods?.length ? data.contact_methods.join(',') : null,
         notes: data.notes || null,
         status: data.status,
@@ -315,29 +327,58 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Main Contact Person Section */}
+            <div className="space-y-3 p-3 border rounded-lg bg-muted/20">
+              <FormLabel className="text-base font-medium">Persoană de contact *</FormLabel>
+              
               <FormField
                 control={form.control}
-                name="email"
+                name="contact_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input {...field} type="email" placeholder="email@exemplu.ro" />
+                      <Input {...field} placeholder="Nume persoană contact" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="contact_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input {...field} placeholder="Telefon" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contact_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input {...field} type="email" placeholder="Email" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
-                name="phone"
+                name="delivery_address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Telefon</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="0700 000 000" />
+                      <Textarea {...field} placeholder="Adresă de livrare" rows={2} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -345,24 +386,10 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Adresă</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} placeholder="Adresa completă" rows={2} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Contact Persons Section */}
+            {/* Other Contact Persons Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <FormLabel>Persoane de contact</FormLabel>
+                <FormLabel>Alte persoane de contact</FormLabel>
                 <Button
                   type="button"
                   variant="outline"
@@ -376,7 +403,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
               </div>
               
               {fields.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nicio persoană de contact adăugată</p>
+                <p className="text-sm text-muted-foreground">Nicio altă persoană de contact</p>
               ) : (
                 <div className="space-y-3">
                   {fields.map((field, index) => (
@@ -395,7 +422,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                       </div>
                       <FormField
                         control={form.control}
-                        name={`contact_persons.${index}.name`}
+                        name={`other_contacts.${index}.name`}
                         render={({ field }) => (
                           <FormItem>
                             <FormControl>
@@ -408,7 +435,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                       <div className="grid grid-cols-2 gap-2">
                         <FormField
                           control={form.control}
-                          name={`contact_persons.${index}.email`}
+                          name={`other_contacts.${index}.email`}
                           render={({ field }) => (
                             <FormItem>
                               <FormControl>
@@ -420,7 +447,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                         />
                         <FormField
                           control={form.control}
-                          name={`contact_persons.${index}.phone`}
+                          name={`other_contacts.${index}.phone`}
                           render={({ field }) => (
                             <FormItem>
                               <FormControl>
