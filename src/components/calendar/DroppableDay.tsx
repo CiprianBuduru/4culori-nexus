@@ -22,6 +22,7 @@ interface DroppableDayProps {
   isCurrentMonth: boolean;
   getDepartmentBorderColor: (deptId: string) => string;
   onTaskClick: (task: ProductionTask) => void;
+  onOrderClick?: (order: OrderForCalendar) => void;
   orderStatusLabels?: Record<string, string>;
   orderStatusColors?: Record<string, string>;
 }
@@ -35,6 +36,7 @@ export function DroppableDay({
   isCurrentMonth: inCurrentMonth,
   getDepartmentBorderColor,
   onTaskClick,
+  onOrderClick,
   orderStatusLabels = {},
   orderStatusColors = {},
 }: DroppableDayProps) {
@@ -101,11 +103,13 @@ export function DroppableDay({
       <div className={`flex-1 space-y-2 overflow-y-auto ${size === 'small' ? 'space-y-1' : ''}`}>
         {/* Orders first - they represent deadlines */}
         {visibleOrders.map(order => (
-          <div
+          <button
             key={order.id}
+            onClick={() => onOrderClick?.(order)}
             className={`
-              w-full p-2 rounded-lg border-l-4 border-l-emerald-500
+              w-full text-left p-2 rounded-lg border-l-4 border-l-emerald-500
               bg-emerald-50/50 dark:bg-emerald-950/20 
+              hover:bg-emerald-100/70 dark:hover:bg-emerald-900/30 transition-colors
               ${size === 'small' ? 'text-xs' : 'text-sm'}
             `}
           >
@@ -130,7 +134,7 @@ export function DroppableDay({
                 )}
               </div>
             </div>
-          </div>
+          </button>
         ))}
 
         {/* Tasks */}

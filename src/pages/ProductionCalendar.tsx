@@ -15,7 +15,8 @@ import {
   Package,
   Trash2,
   UserCheck,
-  AlertTriangle
+  AlertTriangle,
+  ShoppingCart
 } from 'lucide-react';
 import { useDepartments } from '@/hooks/useDepartments';
 import { useProductionTasks, ProductionTask } from '@/hooks/useProductionTasks';
@@ -70,6 +71,7 @@ export default function ProductionCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [editingAssignee, setEditingAssignee] = useState(false);
   const [editingStatus, setEditingStatus] = useState(false);
   const [activeTask, setActiveTask] = useState<ProductionTask | null>(null);
@@ -80,7 +82,7 @@ export default function ProductionCalendar() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, due_date, production_days, status, client_id, name, clients(name)')
+        .select('id, order_number, due_date, production_days, status, client_id, name, brief, notes, total_amount, production_operations, clients(name)')
         .eq('document_type', 'comanda')
         .not('due_date', 'is', null)
         .order('due_date', { ascending: true });
@@ -542,6 +544,7 @@ export default function ProductionCalendar() {
                       isCurrentMonth={isCurrentMonth(date)}
                       getDepartmentBorderColor={getDepartmentBorderColor}
                       onTaskClick={setSelectedTask}
+                      onOrderClick={setSelectedOrder}
                       orderStatusLabels={orderStatusLabels}
                       orderStatusColors={orderStatusColors}
                     />
@@ -559,6 +562,7 @@ export default function ProductionCalendar() {
                       isCurrentMonth={isCurrentMonth(date)}
                       getDepartmentBorderColor={getDepartmentBorderColor}
                       onTaskClick={setSelectedTask}
+                      onOrderClick={setSelectedOrder}
                       orderStatusLabels={orderStatusLabels}
                       orderStatusColors={orderStatusColors}
                     />
@@ -585,6 +589,7 @@ export default function ProductionCalendar() {
                         isCurrentMonth={isCurrentMonth(date)}
                         getDepartmentBorderColor={getDepartmentBorderColor}
                         onTaskClick={setSelectedTask}
+                        onOrderClick={setSelectedOrder}
                         orderStatusLabels={orderStatusLabels}
                         orderStatusColors={orderStatusColors}
                       />
@@ -886,6 +891,110 @@ export default function ProductionCalendar() {
             >
               <Trash2 className="h-4 w-4 mr-1" />
               Șterge Task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Details Dialog */}
+      <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-emerald-600" />
+              Comandă {selectedOrder?.order_number}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4">
+              {/* Order name */}
+              {selectedOrder.name && (
+                <div>
+                  <span className="text-sm text-muted-foreground">Denumire:</span>
+                  <p className="font-medium">{selectedOrder.name}</p>
+                </div>
+              )}
+
+              {/* Client */}
+              {selectedOrder.clients?.name && (
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">{selectedOrder.clients.name}</span>
+                </div>
+              )}
+
+              {/* Status */}
+              <div className="flex items-center gap-2">
+                <Badge className={`${orderStatusColors[selectedOrder.status] || 'bg-gray-100 text-gray-800'}`}>
+                  {orderStatusLabels[selectedOrder.status] || selectedOrder.status}
+                </Badge>
+              </div>
+
+              {/* Due date and production days */}
+              <div className="grid grid-cols-2 gap-4 p-3 rounded-lg bg-muted/30 border">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <span className="text-xs text-muted-foreground block">Livrare</span>
+                    <span className="font-medium">
+                      {selectedOrder.due_date ? format(new Date(selectedOrder.due_date), 'd MMMM yyyy', { locale: ro }) : '-'}
+                    </span>
+                  </div>
+                </div>
+                {selectedOrder.production_days > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <span className="text-xs text-muted-foreground block">Producție</span>
+                      <span className="font-medium">{selectedOrder.production_days} zile</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Total amount */}
+              {selectedOrder.total_amount > 0 && (
+                <div>
+                  <span className="text-sm text-muted-foreground">Valoare totală:</span>
+                  <p className="font-semibold text-lg">{selectedOrder.total_amount.toLocaleString('ro-RO')} RON</p>
+                </div>
+              )}
+
+              {/* Production operations */}
+              {selectedOrder.production_operations?.length > 0 && (
+                <div>
+                  <span className="text-sm text-muted-foreground">Operațiuni producție:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedOrder.production_operations.map((op: string, idx: number) => (
+                      <Badge key={idx} variant="outline">{op}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Brief */}
+              {selectedOrder.brief && (
+                <div className="pt-2 border-t">
+                  <span className="text-sm text-muted-foreground">Brief:</span>
+                  <p className="text-sm mt-1 whitespace-pre-wrap">{selectedOrder.brief}</p>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedOrder.notes && (
+                <div className="pt-2 border-t">
+                  <span className="text-sm text-muted-foreground">Note:</span>
+                  <p className="text-sm mt-1">{selectedOrder.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setSelectedOrder(null)}
+            >
+              Închide
             </Button>
           </DialogFooter>
         </DialogContent>
