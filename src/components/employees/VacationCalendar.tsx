@@ -25,10 +25,17 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { format, eachDayOfInterval, isSameDay, isWithinInterval, startOfMonth, endOfMonth, addMonths, subMonths, isWeekend, startOfYear, endOfYear } from 'date-fns';
 import { ro } from 'date-fns/locale';
-import { Plus, ChevronLeft, ChevronRight, Trash2, User, CalendarDays, Users, Download } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Trash2, User, CalendarDays, Users, Download, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { Employee } from '@/types';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
+import { useAuth } from '@/hooks/useAuth';
+
+// Approvers by company
+const APPROVERS = {
+  LMG: 'Ciprian Buduru',
+  EQS: 'Nicoleta Buduru',
+};
 
 interface Vacation {
   id: string;
@@ -179,25 +186,60 @@ export function VacationCalendar({ employees }: VacationCalendarProps) {
   const addVacation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const employee = employees.find(e => e.id === data.employee_id);
+      const approver = employee?.company ? APPROVERS[employee.company] : APPROVERS.LMG;
       const { error } = await supabase.from('vacations').insert({
         employee_id: data.employee_id,
         employee_name: employee?.name || 'Necunoscut',
         start_date: data.start_date,
         end_date: data.end_date,
         type: data.type,
-        status: 'approved',
+        status: 'pending',
         notes: data.notes || null,
       });
       if (error) throw error;
+      return { approver, employeeName: employee?.name };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['vacations'] });
-      toast({ title: 'Concediu adăugat cu succes' });
+      toast({ 
+        title: 'Cerere de concediu trimisă',
+        description: `Așteaptă aprobarea de la ${result?.approver}`,
+      });
       setIsAddDialogOpen(false);
       resetForm();
     },
     onError: () => {
-      toast({ title: 'Eroare la adăugarea concediului', variant: 'destructive' });
+      toast({ title: 'Eroare la trimiterea cererii', variant: 'destructive' });
+    },
+  });
+
+  const approveVacation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('vacations').update({ status: 'approved' }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vacations'] });
+      toast({ title: 'Concediu aprobat' });
+      setSelectedVacation(null);
+    },
+    onError: () => {
+      toast({ title: 'Eroare la aprobarea concediului', variant: 'destructive' });
+    },
+  });
+
+  const rejectVacation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('vacations').update({ status: 'rejected' }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vacations'] });
+      toast({ title: 'Concediu respins' });
+      setSelectedVacation(null);
+    },
+    onError: () => {
+      toast({ title: 'Eroare la respingerea concediului', variant: 'destructive' });
     },
   });
 
@@ -226,8 +268,10 @@ export function VacationCalendar({ employees }: VacationCalendarProps) {
     });
   };
 
+  // Only show approved vacations in calendar
   const getVacationsForDay = (date: Date) => {
     return vacations.filter(v => {
+      if (v.status !== 'approved') return false;
       const start = new Date(v.start_date);
       const end = new Date(v.end_date);
       return isWithinInterval(date, { start, end }) || isSameDay(date, start) || isSameDay(date, end);
@@ -242,15 +286,23 @@ export function VacationCalendar({ employees }: VacationCalendarProps) {
     return vacationTypes.find(t => t.id === type)?.name || type;
   };
 
+  const getApproverForEmployee = (employeeId: string) => {
+    const employee = employees.find(e => e.id === employeeId);
+    return employee?.company ? APPROVERS[employee.company] : APPROVERS.LMG;
+  };
+
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
 
-  // Get all vacations that overlap with current month
-  const monthVacations = vacations.filter(v => {
+  // Separate approved and pending vacations
+  const approvedMonthVacations = vacations.filter(v => {
+    if (v.status !== 'approved') return false;
     const start = new Date(v.start_date);
     const end = new Date(v.end_date);
     return (start <= monthEnd && end >= monthStart);
   });
+
+  const pendingVacations = vacations.filter(v => v.status === 'pending');
 
   return (
     <div className="space-y-6">
@@ -399,10 +451,10 @@ export function VacationCalendar({ employees }: VacationCalendarProps) {
           <CardContent className="space-y-3 max-h-[400px] overflow-y-auto">
             {isLoading ? (
               <p className="text-sm text-muted-foreground">Se încarcă...</p>
-            ) : monthVacations.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Niciun concediu în această lună</p>
+            ) : approvedMonthVacations.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Niciun concediu aprobat în această lună</p>
             ) : (
-              monthVacations.map(vacation => (
+              approvedMonthVacations.map(vacation => (
                 <div
                   key={vacation.id}
                   className="p-3 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors"
@@ -423,6 +475,92 @@ export function VacationCalendar({ employees }: VacationCalendarProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending Requests Section */}
+      {pendingVacations.length > 0 && (
+        <Card className="border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2 text-orange-700 dark:text-orange-400">
+              <Clock className="h-5 w-5" />
+              Cereri în Așteptare ({pendingVacations.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {pendingVacations.map(vacation => {
+                const employee = employees.find(e => e.id === vacation.employee_id);
+                const approver = getApproverForEmployee(vacation.employee_id);
+                const businessDays = getBusinessDays(new Date(vacation.start_date), new Date(vacation.end_date));
+                
+                return (
+                  <div key={vacation.id} className="p-4 rounded-lg border bg-card">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <div className={cn('w-3 h-3 rounded-full', getVacationColor(vacation.type))} />
+                          <span className="font-medium">{vacation.employee_name}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {getVacationTypeName(vacation.type)}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700">
+                        În așteptare
+                      </Badge>
+                    </div>
+                    
+                    <div className="text-sm space-y-1 mb-3">
+                      <p>
+                        {format(new Date(vacation.start_date), 'd MMM', { locale: ro })} - {format(new Date(vacation.end_date), 'd MMM yyyy', { locale: ro })}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {businessDays} zile lucrătoare
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Aprobare: <span className="font-medium text-foreground">{approver}</span>
+                        {employee?.company && (
+                          <Badge variant="outline" className={cn(
+                            'ml-2 text-xs',
+                            employee.company === 'LMG' ? 'border-blue-500 text-blue-600' : 'border-red-500 text-red-600'
+                          )}>
+                            {employee.company}
+                          </Badge>
+                        )}
+                      </p>
+                    </div>
+                    
+                    {vacation.notes && (
+                      <p className="text-xs text-muted-foreground mb-3 italic">"{vacation.notes}"</p>
+                    )}
+                    
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        className="flex-1 gap-1 bg-green-600 hover:bg-green-700"
+                        onClick={() => approveVacation.mutate(vacation.id)}
+                        disabled={approveVacation.isPending}
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Aprobă
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        className="flex-1 gap-1"
+                        onClick={() => rejectVacation.mutate(vacation.id)}
+                        disabled={rejectVacation.isPending}
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Respinge
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Add Vacation Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
