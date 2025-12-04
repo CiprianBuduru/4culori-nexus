@@ -30,16 +30,17 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { Search, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Search, Loader2, Plus, Trash2, Phone, Mail, MessageCircle, Globe, Users, MapPin, HelpCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const contactMethods = [
-  { value: 'telefon', label: 'Telefon' },
-  { value: 'email', label: 'Email' },
-  { value: 'whatsapp', label: 'WhatsApp' },
-  { value: 'website', label: 'Website' },
-  { value: 'recomandare', label: 'Recomandare' },
-  { value: 'vizita', label: 'Vizită directă' },
-  { value: 'altul', label: 'Altul' },
+  { value: 'telefon', label: 'Telefon', icon: Phone },
+  { value: 'email', label: 'Email', icon: Mail },
+  { value: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+  { value: 'website', label: 'Website', icon: Globe },
+  { value: 'recomandare', label: 'Recomandare', icon: Users },
+  { value: 'vizita', label: 'Vizită directă', icon: MapPin },
+  { value: 'altul', label: 'Altul', icon: HelpCircle },
 ];
 
 const contactPersonSchema = z.object({
@@ -462,29 +463,39 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Modalitate contact</FormLabel>
-                  <div className="flex flex-wrap gap-2">
-                    {contactMethods.map(method => {
-                      const isSelected = field.value?.includes(method.value);
-                      return (
-                        <Button
-                          key={method.value}
-                          type="button"
-                          variant={isSelected ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => {
-                            const current = field.value || [];
-                            if (isSelected) {
-                              field.onChange(current.filter(v => v !== method.value));
-                            } else {
-                              field.onChange([...current, method.value]);
-                            }
-                          }}
-                        >
-                          {method.label}
-                        </Button>
-                      );
-                    })}
-                  </div>
+                  <TooltipProvider>
+                    <div className="flex flex-wrap gap-2">
+                      {contactMethods.map(method => {
+                        const isSelected = field.value?.includes(method.value);
+                        const Icon = method.icon;
+                        return (
+                          <Tooltip key={method.value}>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant={isSelected ? 'default' : 'outline'}
+                                size="icon"
+                                className="h-9 w-9"
+                                onClick={() => {
+                                  const current = field.value || [];
+                                  if (isSelected) {
+                                    field.onChange(current.filter(v => v !== method.value));
+                                  } else {
+                                    field.onChange([...current, method.value]);
+                                  }
+                                }}
+                              >
+                                <Icon className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{method.label}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                  </TooltipProvider>
                   <FormMessage />
                 </FormItem>
               )}
