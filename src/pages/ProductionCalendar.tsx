@@ -21,7 +21,7 @@ import {
 import { useDepartments } from '@/hooks/useDepartments';
 import { useProductionTasks, ProductionTask } from '@/hooks/useProductionTasks';
 import { useEmployees } from '@/hooks/useEmployees';
-import { sendTaskNotification } from '@/hooks/useNotifications';
+import { sendTaskNotification, sendOrderStatusNotification } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -267,16 +267,33 @@ export default function ProductionCalendar() {
 
   // Update order status mutation
   const updateOrderStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+    mutationFn: async ({ id, status, previousStatus, orderNumber, orderName, clientName }: { 
+      id: string; 
+      status: string; 
+      previousStatus: string;
+      orderNumber: string;
+      orderName?: string;
+      clientName?: string;
+    }) => {
       const { error } = await supabase
         .from('orders')
         .update({ status })
         .eq('id', id);
       if (error) throw error;
+      
+      // Send notification
+      await sendOrderStatusNotification({
+        orderId: id,
+        orderNumber,
+        orderName,
+        clientName,
+        previousStatus,
+        newStatus: status,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders-calendar'] });
-      toast({ title: 'Status actualizat', description: 'Progresul comenzii a fost salvat.' });
+      toast({ title: 'Status actualizat', description: 'Progresul comenzii a fost salvat și notificarea a fost trimisă.' });
     },
     onError: () => {
       toast({ title: 'Eroare', description: 'Nu s-a putut actualiza statusul.', variant: 'destructive' });
@@ -964,7 +981,14 @@ export default function ProductionCalendar() {
                   <Select 
                     value={selectedOrder.status} 
                     onValueChange={async (value) => {
-                      await updateOrderStatus.mutateAsync({ id: selectedOrder.id, status: value });
+                      await updateOrderStatus.mutateAsync({ 
+                        id: selectedOrder.id, 
+                        status: value,
+                        previousStatus: selectedOrder.status,
+                        orderNumber: selectedOrder.order_number,
+                        orderName: selectedOrder.name,
+                        clientName: selectedOrder.clients?.name,
+                      });
                       setSelectedOrder({ ...selectedOrder, status: value });
                       setEditingOrderStatus(false);
                     }}
