@@ -23,7 +23,7 @@ import { useProductionTasks, ProductionTask } from '@/hooks/useProductionTasks';
 import { useEmployees } from '@/hooks/useEmployees';
 import { sendTaskNotification } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   productionStatusLabels, 
@@ -74,7 +74,10 @@ export default function ProductionCalendar() {
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [editingAssignee, setEditingAssignee] = useState(false);
   const [editingStatus, setEditingStatus] = useState(false);
+  const [editingOrderStatus, setEditingOrderStatus] = useState(false);
   const [activeTask, setActiveTask] = useState<ProductionTask | null>(null);
+
+  const queryClient = useQueryClient();
 
   // Fetch all orders (comanda only) for calendar display
   const { data: allOrders = [] } = useQuery({
@@ -261,6 +264,24 @@ export default function ProductionCalendar() {
     bt_approved: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
     production: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
   };
+
+  // Update order status mutation
+  const updateOrderStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders-calendar'] });
+      toast({ title: 'Status actualizat', description: 'Progresul comenzii a fost salvat.' });
+    },
+    onError: () => {
+      toast({ title: 'Eroare', description: 'Nu s-a putut actualiza statusul.', variant: 'destructive' });
+    },
+  });
 
   // Navigation
   const prevMonth = () => {
@@ -923,11 +944,52 @@ export default function ProductionCalendar() {
                 </div>
               )}
 
-              {/* Status */}
-              <div className="flex items-center gap-2">
-                <Badge className={`${orderStatusColors[selectedOrder.status] || 'bg-gray-100 text-gray-800'}`}>
-                  {orderStatusLabels[selectedOrder.status] || selectedOrder.status}
-                </Badge>
+              {/* Status - Editable */}
+              <div className="p-3 rounded-lg bg-muted/30 border">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2 text-muted-foreground">
+                    <Package className="h-4 w-4" />
+                    Status Comandă
+                  </Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setEditingOrderStatus(!editingOrderStatus)}
+                  >
+                    {editingOrderStatus ? 'Anulează' : 'Modifică'}
+                  </Button>
+                </div>
+                
+                {editingOrderStatus ? (
+                  <Select 
+                    value={selectedOrder.status} 
+                    onValueChange={async (value) => {
+                      await updateOrderStatus.mutateAsync({ id: selectedOrder.id, status: value });
+                      setSelectedOrder({ ...selectedOrder, status: value });
+                      setEditingOrderStatus(false);
+                    }}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(orderStatusLabels).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          <span className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${orderStatusColors[key]?.split(' ')[0] || 'bg-gray-300'}`} />
+                            {label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="mt-2">
+                    <Badge className={`${orderStatusColors[selectedOrder.status] || 'bg-gray-100 text-gray-800'}`}>
+                      {orderStatusLabels[selectedOrder.status] || selectedOrder.status}
+                    </Badge>
+                  </div>
+                )}
               </div>
 
               {/* Due date and production days */}
