@@ -51,10 +51,9 @@ const contactPersonSchema = z.object({
 
 const clientSchema = z.object({
   cui: z.string().optional(),
-  name: z.string().min(1, 'Numele este obligatoriu'),
   email: z.string().email('Email invalid').optional().or(z.literal('')),
   phone: z.string().optional(),
-  company: z.string().optional(),
+  company: z.string().min(1, 'Compania este obligatorie'),
   address: z.string().optional(),
   contact_persons: z.array(contactPersonSchema).optional(),
   contact_methods: z.array(z.string()).optional(),
@@ -94,7 +93,6 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
     resolver: zodResolver(clientSchema),
     defaultValues: {
       cui: '',
-      name: '',
       email: '',
       phone: '',
       company: '',
@@ -131,10 +129,9 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
     if (client) {
       form.reset({
         cui: client.cui || '',
-        name: client.name,
         email: client.email || '',
         phone: client.phone || '',
-        company: client.company || '',
+        company: client.company || client.name || '',
         address: client.address || '',
         contact_persons: parseContactPersons(client.contact_person),
         contact_methods: client.contact_method ? client.contact_method.split(',') : [],
@@ -144,7 +141,6 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
     } else {
       form.reset({
         cui: '',
-        name: '',
         email: '',
         phone: '',
         company: '',
@@ -194,7 +190,6 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         return;
       }
 
-      form.setValue('name', data.name || form.getValues('name'));
       form.setValue('company', data.name || form.getValues('company'));
       form.setValue('address', data.address || form.getValues('address'));
       if (data.phone) {
@@ -229,7 +224,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
     mutationFn: async (data: ClientFormData) => {
       const payload = {
         cui: data.cui || null,
-        name: data.name,
+        name: data.company,
         email: data.email || null,
         phone: data.phone || null,
         company: data.company || null,
@@ -308,24 +303,10 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
 
             <FormField
               control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nume / Denumire *</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Nume complet sau denumire firmă" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="company"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Companie</FormLabel>
+                  <FormLabel>Companie *</FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="Numele companiei" />
                   </FormControl>
