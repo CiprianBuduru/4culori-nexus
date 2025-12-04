@@ -154,12 +154,16 @@ export function AddTaskDialog({
 
             <div className="space-y-2">
               <Label>Responsabil</Label>
-              <Select value={assignedTo} onValueChange={setAssignedTo} disabled={!departmentId}>
+              <Select 
+                value={assignedTo || 'unassigned'} 
+                onValueChange={(v) => setAssignedTo(v === 'unassigned' ? '' : v)} 
+                disabled={!departmentId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={departmentId ? "Selectează" : "Alege departament"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Neasignat</SelectItem>
+                  <SelectItem value="unassigned">Neasignat</SelectItem>
                   {filteredEmployees.map(emp => (
                     <SelectItem key={emp.id} value={emp.id}>
                       {emp.name}
