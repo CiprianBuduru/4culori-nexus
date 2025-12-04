@@ -24,6 +24,8 @@ interface Client {
   status: string;
   is_comercial: boolean | null;
   is_unitate_protejata: boolean | null;
+  contract_number: string | null;
+  contract_url: string | null;
   created_at: string;
 }
 
