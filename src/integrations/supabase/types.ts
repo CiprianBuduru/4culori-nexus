@@ -88,6 +88,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          attachment_url: string | null
           client_id: string | null
           created_at: string
           due_date: string | null
@@ -99,6 +100,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attachment_url?: string | null
           client_id?: string | null
           created_at?: string
           due_date?: string | null
@@ -110,6 +112,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attachment_url?: string | null
           client_id?: string | null
           created_at?: string
           due_date?: string | null

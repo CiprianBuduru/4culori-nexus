@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,6 +29,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Upload, FileText, Image, X } from 'lucide-react';
 
 const orderSchema = z.object({
   order_number: z.string().min(1, 'Numărul comenzii este obligatoriu'),
@@ -49,6 +50,7 @@ interface Order {
   total_amount: number | null;
   notes: string | null;
   due_date: string | null;
+  attachment_url?: string | null;
 }
 
 interface OrderEditDialogProps {
@@ -60,6 +62,10 @@ interface OrderEditDialogProps {
 export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
+  const [existingAttachment, setExistingAttachment] = useState<string | null>(null);
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-select'],
@@ -96,6 +102,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
         notes: order.notes || '',
         due_date: order.due_date || '',
       });
+      setExistingAttachment(order.attachment_url || null);
     } else {
       const nextOrderNumber = `CMD-${Date.now().toString().slice(-6)}`;
       form.reset({
@@ -106,8 +113,60 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
         notes: '',
         due_date: '',
       });
+      setExistingAttachment(null);
     }
+    setAttachmentFile(null);
+    setAttachmentPreview(null);
   }, [order, form]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast({ title: 'Tip de fișier invalid. Acceptăm PDF sau imagini.', variant: 'destructive' });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: 'Fișierul este prea mare. Maxim 10MB.', variant: 'destructive' });
+      return;
+    }
+
+    setAttachmentFile(file);
+    if (file.type.startsWith('image/')) {
+      setAttachmentPreview(URL.createObjectURL(file));
+    } else {
+      setAttachmentPreview(null);
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachmentFile(null);
+    setAttachmentPreview(null);
+    setExistingAttachment(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const uploadAttachment = async (orderId: string): Promise<string | null> => {
+    if (!attachmentFile) return existingAttachment;
+
+    const fileExt = attachmentFile.name.split('.').pop();
+    const fileName = `${orderId}-${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('order-attachments')
+      .upload(fileName, attachmentFile);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('order-attachments')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
 
   const mutation = useMutation({
     mutationFn: async (data: OrderFormData) => {
@@ -120,15 +179,32 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
         due_date: data.due_date || null,
       };
 
+      let orderId: string;
+
       if (order) {
+        orderId = order.id;
+        const attachmentUrl = await uploadAttachment(orderId);
         const { error } = await supabase
           .from('orders')
-          .update(payload)
+          .update({ ...payload, attachment_url: attachmentUrl })
           .eq('id', order.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('orders').insert(payload);
+        const { data: newOrder, error } = await supabase
+          .from('orders')
+          .insert(payload)
+          .select('id')
+          .single();
         if (error) throw error;
+        orderId = newOrder.id;
+
+        if (attachmentFile) {
+          const attachmentUrl = await uploadAttachment(orderId);
+          await supabase
+            .from('orders')
+            .update({ attachment_url: attachmentUrl })
+            .eq('id', orderId);
+        }
       }
     },
     onSuccess: () => {
@@ -145,9 +221,11 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
     mutation.mutate(data);
   };
 
+  const isPdf = (url: string) => url.toLowerCase().endsWith('.pdf');
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{order ? 'Editează Comandă' : 'Comandă Nouă'}</DialogTitle>
         </DialogHeader>
@@ -260,6 +338,66 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
                 </FormItem>
               )}
             />
+
+            {/* Attachment Section */}
+            <div className="space-y-2">
+              <FormLabel>Atașament (PDF sau imagine)</FormLabel>
+              
+              {(attachmentFile || existingAttachment) ? (
+                <div className="relative border rounded-lg p-3 bg-muted/30">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1 right-1 h-6 w-6"
+                    onClick={removeAttachment}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  
+                  {attachmentPreview ? (
+                    <img src={attachmentPreview} alt="Preview" className="max-h-32 rounded object-contain mx-auto" />
+                  ) : existingAttachment && !isPdf(existingAttachment) ? (
+                    <img src={existingAttachment} alt="Atașament" className="max-h-32 rounded object-contain mx-auto" />
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <FileText className="h-8 w-8" />
+                      <span>{attachmentFile?.name || 'Document PDF'}</span>
+                    </div>
+                  )}
+                  
+                  {existingAttachment && !attachmentFile && (
+                    <a 
+                      href={existingAttachment} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline mt-2 block"
+                    >
+                      Deschide fișierul
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div 
+                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Click pentru a încărca PDF sau imagine
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Max 10MB</p>
+                </div>
+              )}
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,image/jpeg,image/png,image/webp"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </div>
 
             <div className="flex gap-3 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">

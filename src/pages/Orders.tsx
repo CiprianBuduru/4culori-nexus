@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, ShoppingCart, Calendar, User, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, ShoppingCart, Calendar, User, Edit, Trash2, Paperclip } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +21,7 @@ interface Order {
   notes: string | null;
   due_date: string | null;
   created_at: string;
+  attachment_url: string | null;
   clients?: { name: string } | null;
 }
 
@@ -45,6 +46,12 @@ export default function Orders() {
         .from('orders')
         .select('*, clients(name)')
         .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data.map(order => ({
+        ...order,
+        attachment_url: order.attachment_url || null
+      })) as Order[];
       
       if (error) throw error;
       return data as Order[];
@@ -142,7 +149,12 @@ export default function Orders() {
                           </p>
                         )}
                       </div>
-                      <Badge variant={status.variant}>{status.label}</Badge>
+                                                  <div className="flex items-center gap-2">
+                          <Badge variant={status.variant}>{status.label}</Badge>
+                          {order.attachment_url && (
+                            <Paperclip className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
