@@ -14,11 +14,10 @@ import {
   User,
   Package,
   Trash2,
-  UserCheck,
-  Plus
+  UserCheck
 } from 'lucide-react';
 import { useDepartments } from '@/hooks/useDepartments';
-import { useProductionTasks, ProductionTask, ProductionTaskInsert } from '@/hooks/useProductionTasks';
+import { useProductionTasks, ProductionTask } from '@/hooks/useProductionTasks';
 import { useEmployees } from '@/hooks/useEmployees';
 import { sendTaskNotification } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
@@ -38,7 +37,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import { DroppableDay } from '@/components/calendar/DroppableDay';
 import { DraggableTask } from '@/components/calendar/DraggableTask';
-import { AddTaskDialog } from '@/components/calendar/AddTaskDialog';
 
 const departmentColors: Record<string, string> = {
   '1': 'bg-brand-blue',    // Vânzări
@@ -60,7 +58,7 @@ const departmentBorderColors: Record<string, string> = {
 
 export default function ProductionCalendar() {
   const { departments } = useDepartments();
-  const { tasks: productionTasks, isLoading, deleteTask, updateTask, addTask } = useProductionTasks();
+  const { tasks: productionTasks, isLoading, deleteTask, updateTask } = useProductionTasks();
   const { employees } = useEmployees();
   const { toast } = useToast();
   
@@ -70,7 +68,6 @@ export default function ProductionCalendar() {
   const [editingAssignee, setEditingAssignee] = useState(false);
   const [editingStatus, setEditingStatus] = useState(false);
   const [activeTask, setActiveTask] = useState<ProductionTask | null>(null);
-  const [showAddDialog, setShowAddDialog] = useState(false);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -333,10 +330,6 @@ export default function ProductionCalendar() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={() => setShowAddDialog(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Adaugă Task
-            </Button>
             <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
@@ -745,19 +738,6 @@ export default function ProductionCalendar() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Add Task Dialog */}
-      <AddTaskDialog
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
-        onAddTask={async (task) => {
-          await addTask.mutateAsync(task);
-        }}
-        departments={departments}
-        employees={employees}
-        allowedDepartmentIds={allowedDepartmentIds}
-        isLoading={addTask.isPending}
-      />
     </MainLayout>
   );
 }
