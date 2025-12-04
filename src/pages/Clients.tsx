@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Building2, Mail, Phone, MapPin, Edit, Trash2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Search, Building2, Mail, Phone, MapPin, Edit, Trash2, Filter } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +35,10 @@ export default function Clients() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [filterComercial, setFilterComercial] = useState(false);
+  const [filterUnitateProtejata, setFilterUnitateProtejata] = useState(false);
+  const [filterLMG, setFilterLMG] = useState(false);
+  const [filterEQS, setFilterEQS] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -64,11 +69,27 @@ export default function Clients() {
     },
   });
 
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredClients = clients.filter(client => {
+    // Text search
+    const matchesSearch = 
+      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      client.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      client.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Type filters (OR logic between Comercial and Unitate Protejată)
+    const typeFiltersActive = filterComercial || filterUnitateProtejata;
+    const matchesType = !typeFiltersActive || 
+      (filterComercial && client.is_comercial) ||
+      (filterUnitateProtejata && client.is_unitate_protejata);
+    
+    // Company filters (OR logic between LMG and EQS)
+    const companyFiltersActive = filterLMG || filterEQS;
+    const matchesCompany = !companyFiltersActive ||
+      (filterLMG && client.contract_company === 'LMG') ||
+      (filterEQS && client.contract_company === 'EQS');
+    
+    return matchesSearch && matchesType && matchesCompany;
+  });
 
   const handleAddNew = () => {
     setEditingClient(null);
@@ -96,14 +117,60 @@ export default function Clients() {
           </Button>
         </div>
 
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Caută clienți..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Caută clienți..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Filter className="h-4 w-4" />
+            </div>
+            
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={filterComercial}
+                onCheckedChange={(checked) => setFilterComercial(checked === true)}
+                className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+              />
+              <span className="text-sm">Comercial</span>
+            </label>
+            
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={filterUnitateProtejata}
+                onCheckedChange={(checked) => setFilterUnitateProtejata(checked === true)}
+                className="data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
+              />
+              <span className="text-sm">Unitate Protejată</span>
+            </label>
+            
+            <div className="h-4 w-px bg-border" />
+            
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={filterLMG}
+                onCheckedChange={(checked) => setFilterLMG(checked === true)}
+                className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+              />
+              <span className="text-sm font-medium text-blue-600">LMG</span>
+            </label>
+            
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={filterEQS}
+                onCheckedChange={(checked) => setFilterEQS(checked === true)}
+                className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+              />
+              <span className="text-sm font-medium text-red-500">EQS</span>
+            </label>
+          </div>
         </div>
 
         {isLoading ? (
