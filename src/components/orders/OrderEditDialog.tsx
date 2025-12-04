@@ -125,7 +125,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
       notes: '',
       due_date: '',
       needs_dtp: false,
-      production_days: 0,
+      production_days: 7,
     },
   });
 
@@ -162,7 +162,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
         notes: '',
         due_date: '',
         needs_dtp: false,
-        production_days: 0,
+        production_days: 7,
       });
       setExistingAttachment(null);
       setSelectedOperations([]);
