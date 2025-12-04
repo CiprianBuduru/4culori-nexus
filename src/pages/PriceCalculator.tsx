@@ -33,6 +33,7 @@ interface AISuggestion {
 export default function PriceCalculator() {
   const [calculations, setCalculations] = useState<RecipeCalculation[]>([]);
   const [discount, setDiscount] = useState(0);
+  const [clientName, setClientName] = useState('');
 
   const handleSelectRecipe = (recipe: Recipe) => {
     const newCalculation: RecipeCalculation = {
@@ -92,6 +93,7 @@ export default function PriceCalculator() {
   const clearAll = () => {
     setCalculations([]);
     setDiscount(0);
+    setClientName('');
   };
 
   const getRecipeById = (recipeId: string) => {
@@ -106,6 +108,7 @@ export default function PriceCalculator() {
         discount,
         discountAmount,
         total,
+        clientName: clientName.trim() || undefined,
       });
       toast.success(`Oferta ${offerNumber} a fost generată cu succes!`);
     } catch (error) {
@@ -197,6 +200,18 @@ export default function PriceCalculator() {
               </div>
 
               <Separator />
+
+              {/* Client Name */}
+              <div className="space-y-2">
+                <Label className="text-xs">Nume client (opțional)</Label>
+                <Input
+                  type="text"
+                  placeholder="ex: SC Exemplu SRL"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  maxLength={100}
+                />
+              </div>
 
               <div className="flex justify-between font-medium">
                 <span>Subtotal</span>
