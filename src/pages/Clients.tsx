@@ -26,6 +26,7 @@ interface Client {
   is_unitate_protejata: boolean | null;
   contract_number: string | null;
   contract_url: string | null;
+  contract_company: string | null;
   created_at: string;
 }
 

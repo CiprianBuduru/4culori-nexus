@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -56,6 +57,7 @@ const clientSchema = z.object({
   is_comercial: z.boolean().default(false),
   is_unitate_protejata: z.boolean().default(false),
   contract_number: z.string().optional(),
+  contract_company: z.enum(['LMG', 'EQS']).optional(),
   contact_name: z.string().min(1, 'Persoana de contact este obligatorie'),
   contact_phone: z.string().optional(),
   contact_email: z.string().email('Email invalid').optional().or(z.literal('')),
@@ -85,6 +87,7 @@ interface Client {
   is_unitate_protejata?: boolean | null;
   contract_number?: string | null;
   contract_url?: string | null;
+  contract_company?: string | null;
 }
 
 interface ClientEditDialogProps {
@@ -109,6 +112,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       is_comercial: false,
       is_unitate_protejata: false,
       contract_number: '',
+      contract_company: undefined,
       contact_name: '',
       contact_phone: '',
       contact_email: '',
@@ -151,6 +155,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         is_comercial: client.is_comercial || false,
         is_unitate_protejata: client.is_unitate_protejata || false,
         contract_number: client.contract_number || '',
+        contract_company: (client.contract_company as 'LMG' | 'EQS') || undefined,
         contact_name: contactData.main?.name || '',
         contact_phone: contactData.main?.phone || client.phone || '',
         contact_email: contactData.main?.email || client.email || '',
@@ -169,6 +174,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         is_comercial: false,
         is_unitate_protejata: false,
         contract_number: '',
+        contract_company: undefined,
         contact_name: '',
         contact_phone: '',
         contact_email: '',
@@ -286,6 +292,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         is_comercial: data.is_comercial || false,
         is_unitate_protejata: data.is_unitate_protejata || false,
         contract_number: data.contract_number || null,
+        contract_company: data.contract_company || null,
         address: data.delivery_address || null,
         contact_person: allContacts.length ? JSON.stringify(allContacts) : null,
         contact_method: data.contact_methods?.length ? data.contact_methods.join(',') : null,
@@ -474,6 +481,58 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                   </FormItem>
                 )}
               />
+
+              {/* Contract Company - auto LMG for Unitate Protejată, choice for Comercial */}
+              {(form.watch('is_comercial') || form.watch('is_unitate_protejata')) && (
+                <FormField
+                  control={form.control}
+                  name="contract_company"
+                  render={({ field }) => {
+                    const isUnitateProtejata = form.watch('is_unitate_protejata');
+                    
+                    // Auto-set LMG for Unitate Protejată
+                    if (isUnitateProtejata && field.value !== 'LMG') {
+                      field.onChange('LMG');
+                    }
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel className="text-sm">Companie contract</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            className="flex gap-4"
+                            disabled={isUnitateProtejata}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="LMG" id="contract-lmg" className="border-blue-500 text-blue-500" />
+                              <label htmlFor="contract-lmg" className={`text-sm cursor-pointer ${isUnitateProtejata ? 'text-muted-foreground' : ''}`}>
+                                LMG
+                              </label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem 
+                                value="EQS" 
+                                id="contract-eqs" 
+                                className="border-red-500 text-red-500"
+                                disabled={isUnitateProtejata}
+                              />
+                              <label htmlFor="contract-eqs" className={`text-sm cursor-pointer ${isUnitateProtejata ? 'text-muted-foreground' : ''}`}>
+                                EQS
+                              </label>
+                            </div>
+                          </RadioGroup>
+                        </FormControl>
+                        {isUnitateProtejata && (
+                          <p className="text-xs text-muted-foreground">Unitate Protejată - contract exclusiv LMG</p>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              )}
 
               <div>
                 <FormLabel className="text-sm">Atașament contract (PDF)</FormLabel>
