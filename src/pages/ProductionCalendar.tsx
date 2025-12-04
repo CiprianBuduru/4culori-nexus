@@ -63,6 +63,7 @@ export default function ProductionCalendar() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
   const [editingAssignee, setEditingAssignee] = useState(false);
+  const [editingStatus, setEditingStatus] = useState(false);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -507,7 +508,7 @@ export default function ProductionCalendar() {
       </div>
 
       {/* Task Detail Dialog */}
-      <Dialog open={!!selectedTask} onOpenChange={() => { setSelectedTask(null); setEditingAssignee(false); }}>
+      <Dialog open={!!selectedTask} onOpenChange={() => { setSelectedTask(null); setEditingAssignee(false); setEditingStatus(false); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -581,16 +582,81 @@ export default function ProductionCalendar() {
                 )}
               </div>
               
+              {/* Status Edit Section */}
+              <div className="p-3 rounded-lg bg-muted/30 border">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2 text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    Status
+                  </Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setEditingStatus(!editingStatus)}
+                  >
+                    {editingStatus ? 'Anulează' : 'Modifică'}
+                  </Button>
+                </div>
+                
+                {editingStatus ? (
+                  <Select 
+                    value={selectedTask.status} 
+                    onValueChange={async (value: 'pending' | 'in-progress' | 'completed' | 'delayed') => {
+                      await updateTask.mutateAsync({
+                        id: selectedTask.id,
+                        status: value,
+                      });
+                      setSelectedTask({ ...selectedTask, status: value });
+                      setEditingStatus(false);
+                      toast({
+                        title: "Status actualizat",
+                        description: `Task-ul "${selectedTask.title}" a fost marcat ca ${productionStatusLabels[value]}`,
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                          În așteptare
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="in-progress">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          În lucru
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="completed">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500" />
+                          Finalizat
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="delayed">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          Întârziat
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="mt-2">
+                    <Badge className={productionStatusColors[selectedTask.status]}>
+                      {productionStatusLabels[selectedTask.status]}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Departament:</span>
                   <p className="font-medium">{getDepartmentName(selectedTask.department_id)}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Status:</span>
-                  <Badge className={`ml-2 ${productionStatusColors[selectedTask.status]}`}>
-                    {productionStatusLabels[selectedTask.status]}
-                  </Badge>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Perioadă:</span>
