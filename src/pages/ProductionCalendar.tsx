@@ -237,7 +237,7 @@ export default function ProductionCalendar() {
     });
   };
 
-  // Get orders for a specific date (by due_date) + overdue orders
+  // Get orders for a specific date (by due_date) + overdue orders (only on today)
   const getOrdersForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
     const todayStr = new Date().toISOString().split('T')[0];
@@ -245,20 +245,21 @@ export default function ProductionCalendar() {
     // Orders due on this date
     const ordersForDate = allOrders.filter(order => order.due_date === dateStr);
     
-    // If viewing today or future dates, also include overdue orders (past due_date, not completed)
-    const overdueOrders = dateStr >= todayStr 
+    // Overdue orders only appear on TODAY (not on future calendar days)
+    // They carry over day by day until completed
+    const overdueOrders = dateStr === todayStr 
       ? allOrders.filter(order => 
           order.due_date && 
-          order.due_date < dateStr && 
+          order.due_date < todayStr && 
           order.status !== 'completed' && 
           order.status !== 'cancelled'
         ).map(order => ({ ...order, isOverdue: true }))
       : [];
     
-    // Mark regular orders as not overdue and combine (overdue first)
+    // Mark regular orders (not overdue since they're on their due date)
     const regularOrders = ordersForDate.map(order => ({ 
       ...order, 
-      isOverdue: order.due_date && order.due_date < todayStr && order.status !== 'completed' && order.status !== 'cancelled'
+      isOverdue: false
     }));
     
     // Return overdue orders first, then regular orders
