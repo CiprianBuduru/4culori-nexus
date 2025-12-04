@@ -245,9 +245,9 @@ const Settings = () => {
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Tipuri de Comenzi</h2>
+              <h2 className="text-lg font-semibold text-foreground">Tipuri de Oferte / Comenzi</h2>
               <p className="text-sm text-muted-foreground">
-                Gestionează tipurile de comenzi, zilele de producție și brief-ul implicit
+                Gestionează tipurile de oferte/comenzi, zilele de producție și brief-ul implicit
               </p>
             </div>
             <Button
