@@ -107,6 +107,72 @@ export type Database = {
         }
         Relationships: []
       }
+      employees: {
+        Row: {
+          access_level: number | null
+          avatar: string | null
+          birth_date: string | null
+          company: string | null
+          created_at: string
+          department_id: string
+          email: string
+          hire_date: string | null
+          id: string
+          is_protected_unit: boolean | null
+          name: string
+          phone: string | null
+          position: string
+          salary_gross: number | null
+          salary_net: number | null
+          service_ids: string[] | null
+          status: string
+          updated_at: string
+          vacation_days_per_year: number | null
+        }
+        Insert: {
+          access_level?: number | null
+          avatar?: string | null
+          birth_date?: string | null
+          company?: string | null
+          created_at?: string
+          department_id: string
+          email: string
+          hire_date?: string | null
+          id?: string
+          is_protected_unit?: boolean | null
+          name: string
+          phone?: string | null
+          position: string
+          salary_gross?: number | null
+          salary_net?: number | null
+          service_ids?: string[] | null
+          status?: string
+          updated_at?: string
+          vacation_days_per_year?: number | null
+        }
+        Update: {
+          access_level?: number | null
+          avatar?: string | null
+          birth_date?: string | null
+          company?: string | null
+          created_at?: string
+          department_id?: string
+          email?: string
+          hire_date?: string | null
+          id?: string
+          is_protected_unit?: boolean | null
+          name?: string
+          phone?: string | null
+          position?: string
+          salary_gross?: number | null
+          salary_net?: number | null
+          service_ids?: string[] | null
+          status?: string
+          updated_at?: string
+          vacation_days_per_year?: number | null
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           attachment_url: string | null
