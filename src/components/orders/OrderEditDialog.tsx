@@ -58,6 +58,7 @@ const orderSchema = z.object({
   client_id: z.string().optional(),
   status: z.enum(['pending', 'dtp', 'waiting_bt', 'bt_approved', 'production', 'ready_for_delivery', 'delivered', 'completed', 'cancelled']),
   total_amount: z.coerce.number().min(0).optional(),
+  quantity: z.coerce.number().min(0).optional(),
   notes: z.string().optional(),
   due_date: z.string().optional(),
   needs_dtp: z.boolean().optional(),
@@ -75,6 +76,7 @@ interface Order {
   client_id: string | null;
   status: string;
   total_amount: number | null;
+  quantity?: number | null;
   notes: string | null;
   due_date: string | null;
   attachment_url?: string | null;
@@ -136,6 +138,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
       client_id: '',
       status: 'pending',
       total_amount: 0,
+      quantity: 0,
       notes: '',
       due_date: '',
       needs_dtp: false,
@@ -172,6 +175,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
         client_id: order.client_id || '',
         status: order.status as OrderStatus,
         total_amount: order.total_amount || 0,
+        quantity: order.quantity || 0,
         notes: order.notes || '',
         due_date: order.due_date || '',
         needs_dtp: order.needs_dtp || false,
@@ -190,6 +194,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
         client_id: '',
         status: 'pending',
         total_amount: 0,
+        quantity: 0,
         notes: '',
         due_date: '',
         needs_dtp: false,
@@ -285,6 +290,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
         client_id: data.client_id || null,
         status: data.status,
         total_amount: data.total_amount || 0,
+        quantity: data.quantity || null,
         notes: data.notes || null,
         due_date: data.due_date || null,
         production_operations: selectedOperations,
@@ -478,7 +484,21 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="quantity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bucăți</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="number" min="0" placeholder="0" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="total_amount"
