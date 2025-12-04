@@ -450,32 +450,31 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
               )}
             />
 
-            {/* Production Days and Operations Section - only shown after BT approved */}
-            {showProductionOperations && (
-              <div className="space-y-4">
-                {/* Production Days Input */}
-                <FormField
-                  control={form.control}
-                  name="production_days"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Zile necesare producție</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="number" min="0" placeholder="0" />
-                      </FormControl>
-                      <FormDescription>
-                        Numărul de zile necesare pentru producție. Calendarul va afișa alertă de începere cu acest număr de zile înainte de termenul de livrare.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            {/* Production Days - always visible */}
+            <FormField
+              control={form.control}
+              name="production_days"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Zile necesare producție</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="number" min="0" placeholder="0" />
+                  </FormControl>
+                  <FormDescription>
+                    Numărul de zile necesare pentru producție. Calendarul va afișa alertă de începere cu acest număr de zile înainte de termenul de livrare.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-                <div className="space-y-3">
-                  <FormLabel>Operațiuni Producție</FormLabel>
-                  <p className="text-xs text-muted-foreground">
-                    Directorul de producție selectează operațiunile necesare după aprobarea BT
-                  </p>
+            {/* Production Operations Section - only shown after BT approved */}
+            {showProductionOperations && (
+              <div className="space-y-3">
+                <FormLabel>Operațiuni Producție</FormLabel>
+                <p className="text-xs text-muted-foreground">
+                  Directorul de producție selectează operațiunile necesare după aprobarea BT
+                </p>
                 
                 {/* Available operations to select */}
                 <div className="border rounded-lg p-3 space-y-2 bg-muted/20">
@@ -549,7 +548,6 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
                     ))}
                   </div>
                 )}
-                </div>
               </div>
             )}
 
