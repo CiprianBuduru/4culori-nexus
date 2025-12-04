@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calculator, RotateCcw, FileText, Users } from 'lucide-react';
+import { Calculator, RotateCcw, FileText, Users, Mail, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RecipeSelector } from '@/components/calculator/RecipeSelector';
@@ -19,6 +19,7 @@ interface Client {
   id: string;
   name: string;
   company: string | null;
+  email: string | null;
 }
 
 interface AISuggestion {
@@ -44,12 +45,14 @@ export default function PriceCalculator() {
   const [clientName, setClientName] = useState('');
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [clientEmail, setClientEmail] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   useEffect(() => {
     const fetchClients = async () => {
       const { data, error } = await supabase
         .from('clients')
-        .select('id, name, company')
+        .select('id, name, company, email')
         .eq('status', 'active')
         .order('name');
       
@@ -64,11 +67,13 @@ export default function PriceCalculator() {
     if (value === 'custom') {
       setSelectedClientId('');
       setClientName('');
+      setClientEmail('');
     } else {
       setSelectedClientId(value);
       const client = clients.find(c => c.id === value);
       if (client) {
         setClientName(client.company ? `${client.name} (${client.company})` : client.name);
+        setClientEmail(client.email || '');
       }
     }
   };
@@ -133,6 +138,7 @@ export default function PriceCalculator() {
     setDiscount(0);
     setClientName('');
     setSelectedClientId('');
+    setClientEmail('');
   };
 
   const getRecipeById = (recipeId: string) => {
@@ -153,6 +159,58 @@ export default function PriceCalculator() {
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error('Eroare la generarea PDF-ului');
+    }
+  };
+
+  const handleSendEmail = async () => {
+    const emailToUse = clientEmail.trim();
+    if (!emailToUse) {
+      toast.error('Selectează un client cu email sau introdu adresa de email');
+      return;
+    }
+
+    if (calculations.length === 0) {
+      toast.error('Adaugă produse în ofertă');
+      return;
+    }
+
+    setIsSendingEmail(true);
+    
+    try {
+      const offerNumber = `OF-${Date.now()}`;
+      const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('ro-RO');
+      
+      const products = calculations.map(calc => ({
+        name: calc.recipeName,
+        quantity: calc.quantity,
+        unitPrice: calc.quantity > 0 ? calc.totalPrice / calc.quantity : 0,
+        totalPrice: calc.totalPrice,
+        category: calc.category,
+      }));
+
+      const { data, error } = await supabase.functions.invoke('send-offer-email', {
+        body: {
+          clientEmail: emailToUse,
+          clientName: clientName.trim(),
+          offerNumber,
+          products,
+          subtotal,
+          discount,
+          discountAmount,
+          total,
+          validUntil,
+        },
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Eroare la trimiterea email-ului');
+
+      toast.success(`Oferta ${offerNumber} a fost trimisă pe email la ${emailToUse}`);
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      toast.error(error.message || 'Eroare la trimiterea email-ului');
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -261,7 +319,7 @@ export default function PriceCalculator() {
                     ))}
                   </SelectContent>
                 </Select>
-                {!selectedClientId && (
+              {!selectedClientId && (
                   <Input
                     type="text"
                     placeholder="Nume client personalizat..."
@@ -270,6 +328,21 @@ export default function PriceCalculator() {
                     maxLength={100}
                   />
                 )}
+              </div>
+
+              {/* Client Email */}
+              <div className="space-y-2">
+                <Label className="text-xs flex items-center gap-1">
+                  <Mail className="h-3 w-3" />
+                  Email client
+                </Label>
+                <Input
+                  type="email"
+                  placeholder="email@exemplu.ro"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  maxLength={100}
+                />
               </div>
 
               <div className="flex justify-between font-medium">
@@ -309,6 +382,21 @@ export default function PriceCalculator() {
               >
                 <FileText className="h-4 w-4" />
                 Generează Ofertă PDF
+              </Button>
+
+              <Button 
+                variant="outline"
+                className="w-full gap-2" 
+                size="lg"
+                disabled={calculations.length === 0 || !clientEmail.trim() || isSendingEmail}
+                onClick={handleSendEmail}
+              >
+                {isSendingEmail ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Mail className="h-4 w-4" />
+                )}
+                Trimite pe Email
               </Button>
 
               {calculations.length > 0 && (
