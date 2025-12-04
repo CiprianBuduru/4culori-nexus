@@ -145,3 +145,30 @@ export async function sendTaskNotification(data: {
     return { success: false, error };
   }
 }
+
+// Function to send order status change notification
+export async function sendOrderStatusNotification(data: {
+  orderId: string;
+  orderNumber: string;
+  orderName?: string;
+  clientName?: string;
+  previousStatus: string;
+  newStatus: string;
+  notifyEmail?: string;
+}) {
+  try {
+    const { data: result, error } = await supabase.functions.invoke('send-order-notification', {
+      body: data,
+    });
+
+    if (error) {
+      console.error('Error sending order notification:', error);
+      return { success: false, error };
+    }
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error('Error invoking order notification function:', error);
+    return { success: false, error };
+  }
+}
