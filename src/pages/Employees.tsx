@@ -8,21 +8,20 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Users, CalendarDays } from 'lucide-react';
-import { employees as initialEmployees, departments } from '@/data/mockData';
+import { Plus, Search, Users, CalendarDays, Loader2 } from 'lucide-react';
+import { departments } from '@/data/mockData';
 import { Employee } from '@/types';
-import { useToast } from '@/hooks/use-toast';
+import { useEmployees } from '@/hooks/useEmployees';
 
 const Employees = () => {
+  const { employees: employeeList, loading, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
   const [searchTerm, setSearchTerm] = useState('');
-  const [employeeList, setEmployeeList] = useState<Employee[]>(initialEmployees);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filterProtectedUnit, setFilterProtectedUnit] = useState(false);
   const [filterLMG, setFilterLMG] = useState(false);
   const [filterEQS, setFilterEQS] = useState(false);
   const [activeTab, setActiveTab] = useState('employees');
-  const { toast } = useToast();
 
   const filteredEmployees = employeeList.filter((emp) => {
     const matchesSearch =
@@ -50,39 +49,18 @@ const Employees = () => {
     setIsDialogOpen(true);
   };
 
-  const handleSave = (data: Omit<Employee, 'id' | 'avatar'>) => {
+  const handleSave = async (data: Omit<Employee, 'id'>) => {
     if (editingEmployee) {
-      setEmployeeList((prev) =>
-        prev.map((emp) =>
-          emp.id === editingEmployee.id ? { ...emp, ...data } : emp
-        )
-      );
-      toast({
-        title: 'Angajat actualizat',
-        description: `${data.name} a fost actualizat cu succes`,
-      });
+      await updateEmployee(editingEmployee.id, data);
     } else {
-      const newEmployee: Employee = {
-        id: crypto.randomUUID(),
-        ...data,
-      };
-      setEmployeeList((prev) => [...prev, newEmployee]);
-      toast({
-        title: 'Angajat adăugat',
-        description: `${data.name} a fost adăugat cu succes`,
-      });
+      await addEmployee(data);
     }
     setIsDialogOpen(false);
     setEditingEmployee(null);
   };
 
-  const handleDelete = (employee: Employee) => {
-    setEmployeeList((prev) => prev.filter((emp) => emp.id !== employee.id));
-    toast({
-      title: 'Angajat șters',
-      description: `${employee.name} a fost șters`,
-      variant: 'destructive',
-    });
+  const handleDelete = async (employee: Employee) => {
+    await deleteEmployee(employee.id, employee.name);
   };
 
   return (
@@ -170,27 +148,35 @@ const Employees = () => {
             </div>
 
             {/* Employees Grid */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredEmployees.map((employee) => (
-                <EmployeeCard
-                  key={employee.id}
-                  employee={employee}
-                  department={departments.find((d) => d.id === employee.departmentId)}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-
-            {filteredEmployees.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <p className="text-lg font-medium text-muted-foreground">
-                  Nu am găsit angajați
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Încearcă să modifici criteriile de căutare
-                </p>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
+            ) : (
+              <>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredEmployees.map((employee) => (
+                    <EmployeeCard
+                      key={employee.id}
+                      employee={employee}
+                      department={departments.find((d) => d.id === employee.departmentId)}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </div>
+
+                {filteredEmployees.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <p className="text-lg font-medium text-muted-foreground">
+                      Nu am găsit angajați
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Încearcă să modifici criteriile de căutare
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </TabsContent>
 
