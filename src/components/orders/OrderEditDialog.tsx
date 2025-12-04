@@ -32,13 +32,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, X, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 
-// Production operations list
+// Production operations list - matches subDepartments from mockData.ts
 const PRODUCTION_OPERATIONS = [
-  { id: 'print-3d', name: 'Print 3D' },
-  { id: 'gravura', name: 'Gravură' },
-  { id: 'dtf-uv', name: 'DTF-UV' },
-  { id: 'broderie', name: 'Broderie' },
-  { id: 'tipografie', name: 'Tipografie' },
+  { id: 'sub-1', name: 'Print 3D' },
+  { id: 'sub-2', name: 'Gravură' },
+  { id: 'sub-3', name: 'DTF-UV' },
+  { id: 'sub-4', name: 'Broderie' },
+  { id: 'sub-5', name: 'Tipografie' },
 ];
 
 const orderSchema = z.object({
