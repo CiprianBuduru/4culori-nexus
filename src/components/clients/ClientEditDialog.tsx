@@ -384,6 +384,51 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                   </FormItem>
                 )}
               />
+
+              {/* Contact Methods */}
+              <FormField
+                control={form.control}
+                name="contact_methods"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm">Modalitate contact</FormLabel>
+                    <TooltipProvider>
+                      <div className="flex flex-wrap gap-2">
+                        {contactMethods.map(method => {
+                          const isSelected = field.value?.includes(method.value);
+                          const Icon = method.icon;
+                          return (
+                            <Tooltip key={method.value}>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant={isSelected ? 'default' : 'outline'}
+                                  size="icon"
+                                  className="h-9 w-9"
+                                  onClick={() => {
+                                    const current = field.value || [];
+                                    if (isSelected) {
+                                      field.onChange(current.filter(v => v !== method.value));
+                                    } else {
+                                      field.onChange([...current, method.value]);
+                                    }
+                                  }}
+                                >
+                                  <Icon className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{method.label}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                      </div>
+                    </TooltipProvider>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             {/* Other Contact Persons Section */}
@@ -463,51 +508,6 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                 </div>
               )}
             </div>
-
-            {/* Contact Methods */}
-            <FormField
-              control={form.control}
-              name="contact_methods"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Modalitate contact</FormLabel>
-                  <TooltipProvider>
-                    <div className="flex flex-wrap gap-2">
-                      {contactMethods.map(method => {
-                        const isSelected = field.value?.includes(method.value);
-                        const Icon = method.icon;
-                        return (
-                          <Tooltip key={method.value}>
-                            <TooltipTrigger asChild>
-                              <Button
-                                type="button"
-                                variant={isSelected ? 'default' : 'outline'}
-                                size="icon"
-                                className="h-9 w-9"
-                                onClick={() => {
-                                  const current = field.value || [];
-                                  if (isSelected) {
-                                    field.onChange(current.filter(v => v !== method.value));
-                                  } else {
-                                    field.onChange([...current, method.value]);
-                                  }
-                                }}
-                              >
-                                <Icon className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{method.label}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        );
-                      })}
-                    </div>
-                  </TooltipProvider>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <FormField
               control={form.control}
