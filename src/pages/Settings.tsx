@@ -364,11 +364,16 @@ const Settings = () => {
                       <>
                         <CollapsibleTrigger asChild>
                           <div className="flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/50 transition-colors">
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <p className="font-medium text-foreground">{item.order_type_label}</p>
                               <p className="text-sm text-muted-foreground">{item.order_type}</p>
+                              {item.default_brief && (
+                                <p className="text-xs text-muted-foreground/70 truncate mt-1 italic">
+                                  Brief: {item.default_brief.slice(0, 60)}{item.default_brief.length > 60 ? '...' : ''}
+                                </p>
+                              )}
                             </div>
-                            <span className="text-sm text-muted-foreground">{item.default_production_days} zile</span>
+                            <span className="text-sm text-muted-foreground whitespace-nowrap">{item.default_production_days} zile</span>
                             <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); startEdit(item); }}>
                               <Pencil className="h-4 w-4" />
                             </Button>
