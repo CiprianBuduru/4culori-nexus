@@ -150,11 +150,24 @@ export default function ProductionCalendar() {
     };
   }, [currentDate]);
 
-  // Filter tasks
+  // Production calendar only shows DTP (6) and Producție (2) departments
+  const allowedDepartmentIds = ['2', '6'];
+  
+  // Filter departments for dropdown
+  const productionDepartments = useMemo(() => {
+    return departments.filter(d => allowedDepartmentIds.includes(d.id));
+  }, [departments]);
+
+  // Filter tasks - only DTP and Producție
   const filteredTasks = useMemo(() => {
-    return productionTasks.filter(task => 
-      selectedDepartment === 'all' || task.department_id === selectedDepartment
+    const baseTasks = productionTasks.filter(task => 
+      allowedDepartmentIds.includes(task.department_id)
     );
+    
+    if (selectedDepartment === 'all') {
+      return baseTasks;
+    }
+    return baseTasks.filter(task => task.department_id === selectedDepartment);
   }, [selectedDepartment, productionTasks]);
 
   // Get tasks for a specific date
@@ -323,8 +336,8 @@ export default function ProductionCalendar() {
                 <SelectValue placeholder="Filtrează" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toate departamentele</SelectItem>
-                {departments.map(dept => (
+                <SelectItem value="all">DTP & Producție</SelectItem>
+                {productionDepartments.map(dept => (
                   <SelectItem key={dept.id} value={dept.id}>
                     <span className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${getDepartmentColor(dept.id)}`} />
@@ -339,7 +352,7 @@ export default function ProductionCalendar() {
 
         {/* Legend */}
         <div className="flex flex-wrap gap-4">
-          {departments.map(dept => (
+          {productionDepartments.map(dept => (
             <div key={dept.id} className="flex items-center gap-2 text-sm">
               <span className={`w-3 h-3 rounded-full ${getDepartmentColor(dept.id)}`} />
               <span>{dept.name}</span>
