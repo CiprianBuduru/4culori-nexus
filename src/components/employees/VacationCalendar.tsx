@@ -25,9 +25,10 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { format, eachDayOfInterval, isSameDay, isWithinInterval, startOfMonth, endOfMonth, addMonths, subMonths, isWeekend, startOfYear, endOfYear } from 'date-fns';
 import { ro } from 'date-fns/locale';
-import { Plus, ChevronLeft, ChevronRight, Trash2, User, CalendarDays, Users } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Trash2, User, CalendarDays, Users, Download } from 'lucide-react';
 import { Employee } from '@/types';
 import { cn } from '@/lib/utils';
+import * as XLSX from 'xlsx';
 
 interface Vacation {
   id: string;
@@ -125,6 +126,56 @@ export function VacationCalendar({ employees }: VacationCalendarProps) {
     }).filter(stat => stat.employee.status === 'active').sort((a, b) => b.percentage - a.percentage);
   }, [employees, vacations]);
 
+  // Export to Excel function
+  const exportToExcel = () => {
+    const currentYear = new Date().getFullYear();
+    
+    // Sheet 1: Employee Summary
+    const summaryData = employeeVacationStats.map(stat => ({
+      'Angajat': stat.employee.name,
+      'Zile Alocate': stat.allocated,
+      'Zile Folosite': stat.used,
+      'Zile Rămase': stat.remaining,
+      'Procent Utilizat': `${Math.round(stat.percentage)}%`,
+    }));
+
+    // Sheet 2: Vacation Details
+    const detailsData = vacations.map(v => {
+      const businessDays = getBusinessDays(new Date(v.start_date), new Date(v.end_date));
+      const typeName = vacationTypes.find(t => t.id === v.type)?.name || v.type;
+      return {
+        'Angajat': v.employee_name,
+        'Tip Concediu': typeName,
+        'Data Început': format(new Date(v.start_date), 'dd.MM.yyyy'),
+        'Data Sfârșit': format(new Date(v.end_date), 'dd.MM.yyyy'),
+        'Zile Lucrătoare': businessDays,
+        'Status': v.status === 'approved' ? 'Aprobat' : v.status,
+        'Note': v.notes || '',
+      };
+    });
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Add summary sheet
+    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+    wsSummary['!cols'] = [
+      { wch: 25 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }
+    ];
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Sumar Angajați');
+    
+    // Add details sheet
+    const wsDetails = XLSX.utils.json_to_sheet(detailsData);
+    wsDetails['!cols'] = [
+      { wch: 25 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 30 }
+    ];
+    XLSX.utils.book_append_sheet(wb, wsDetails, 'Detalii Concedii');
+
+    // Download file
+    XLSX.writeFile(wb, `Raport_Concedii_${currentYear}.xlsx`);
+    toast({ title: 'Raport exportat cu succes' });
+  };
+
   const addVacation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const employee = employees.find(e => e.id === data.employee_id);
@@ -216,10 +267,16 @@ export function VacationCalendar({ employees }: VacationCalendarProps) {
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Adaugă Concediu
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportToExcel} className="gap-2">
+            <Download className="h-4 w-4" />
+            Export Excel
+          </Button>
+          <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Adaugă Concediu
+          </Button>
+        </div>
       </div>
 
       {/* Legend */}
