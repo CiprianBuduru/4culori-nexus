@@ -32,6 +32,18 @@ import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { Search, Loader2, ExternalLink } from 'lucide-react';
 
+const contactMethods = [
+  { value: 'telefon', label: 'Telefon' },
+  { value: 'email', label: 'Email' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'website', label: 'Website' },
+  { value: 'recomandare', label: 'Recomandare' },
+  { value: 'vizita', label: 'Vizită directă' },
+  { value: 'altul', label: 'Altul' },
+];
+
 const clientSchema = z.object({
   cui: z.string().optional(),
   name: z.string().min(1, 'Numele este obligatoriu'),
@@ -39,6 +51,8 @@ const clientSchema = z.object({
   phone: z.string().optional(),
   company: z.string().optional(),
   address: z.string().optional(),
+  contact_person: z.string().optional(),
+  contact_method: z.string().optional(),
   notes: z.string().optional(),
   status: z.enum(['active', 'inactive']),
 });
@@ -53,6 +67,8 @@ interface Client {
   phone: string | null;
   company: string | null;
   address: string | null;
+  contact_person: string | null;
+  contact_method: string | null;
   notes: string | null;
   status: string;
 }
@@ -77,6 +93,8 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       phone: '',
       company: '',
       address: '',
+      contact_person: '',
+      contact_method: '',
       notes: '',
       status: 'active',
     },
@@ -91,6 +109,8 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         phone: client.phone || '',
         company: client.company || '',
         address: client.address || '',
+        contact_person: client.contact_person || '',
+        contact_method: client.contact_method || '',
         notes: client.notes || '',
         status: client.status as 'active' | 'inactive',
       });
@@ -102,6 +122,8 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         phone: '',
         company: '',
         address: '',
+        contact_person: '',
+        contact_method: '',
         notes: '',
         status: 'active',
       });
@@ -185,6 +207,8 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         phone: data.phone || null,
         company: data.company || null,
         address: data.address || null,
+        contact_person: data.contact_person || null,
+        contact_method: data.contact_method || null,
         notes: data.notes || null,
         status: data.status,
       };
@@ -326,6 +350,47 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="contact_person"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Persoană de contact</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Nume persoană" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="contact_method"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Modalitate contact</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selectează..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {contactMethods.map(method => (
+                          <SelectItem key={method.value} value={method.value}>
+                            {method.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}

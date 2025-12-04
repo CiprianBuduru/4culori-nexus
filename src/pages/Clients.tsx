@@ -12,11 +12,14 @@ import { ClientEditDialog } from '@/components/clients/ClientEditDialog';
 
 interface Client {
   id: string;
+  cui?: string | null;
   name: string;
   email: string | null;
   phone: string | null;
   company: string | null;
   address: string | null;
+  contact_person: string | null;
+  contact_method: string | null;
   notes: string | null;
   status: string;
   created_at: string;

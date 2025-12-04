@@ -48,6 +48,8 @@ export type Database = {
         Row: {
           address: string | null
           company: string | null
+          contact_method: string | null
+          contact_person: string | null
           created_at: string
           cui: string | null
           email: string | null
@@ -61,6 +63,8 @@ export type Database = {
         Insert: {
           address?: string | null
           company?: string | null
+          contact_method?: string | null
+          contact_person?: string | null
           created_at?: string
           cui?: string | null
           email?: string | null
@@ -74,6 +78,8 @@ export type Database = {
         Update: {
           address?: string | null
           company?: string | null
+          contact_method?: string | null
+          contact_person?: string | null
           created_at?: string
           cui?: string | null
           email?: string | null
