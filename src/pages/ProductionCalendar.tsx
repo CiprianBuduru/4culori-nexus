@@ -16,7 +16,8 @@ import {
   Trash2,
   UserCheck,
   AlertTriangle,
-  ShoppingCart
+  ShoppingCart,
+  FileText
 } from 'lucide-react';
 import { useDepartments } from '@/hooks/useDepartments';
 import { useProductionTasks, ProductionTask } from '@/hooks/useProductionTasks';
@@ -79,14 +80,13 @@ export default function ProductionCalendar() {
 
   const queryClient = useQueryClient();
 
-  // Fetch all orders (comanda only) for calendar display
+  // Fetch all orders and offers for calendar display
   const { data: allOrders = [] } = useQuery({
     queryKey: ['orders-calendar'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, due_date, production_days, status, client_id, name, brief, notes, total_amount, production_operations, clients(name)')
-        .eq('document_type', 'comanda')
+        .select('id, order_number, due_date, production_days, status, client_id, name, brief, notes, total_amount, production_operations, document_type, clients(name)')
         .not('due_date', 'is', null)
         .order('due_date', { ascending: true });
       
@@ -934,17 +934,31 @@ export default function ProductionCalendar() {
         </DialogContent>
       </Dialog>
 
-      {/* Order Details Dialog */}
+      {/* Order/Offer Details Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5 text-emerald-600" />
-              Comandă {selectedOrder?.order_number}
+              {selectedOrder?.document_type === 'oferta' ? (
+                <>
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  Ofertă {selectedOrder?.order_number}
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="h-5 w-5 text-emerald-600" />
+                  Comandă {selectedOrder?.order_number}
+                </>
+              )}
             </DialogTitle>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4">
+              {/* Document type badge */}
+              {selectedOrder.document_type === 'oferta' && (
+                <Badge className="bg-blue-100 text-blue-700 border-blue-200">Ofertă</Badge>
+              )}
+              
               {/* Order name */}
               {selectedOrder.name && (
                 <div>
@@ -966,7 +980,7 @@ export default function ProductionCalendar() {
                 <div className="flex items-center justify-between">
                   <Label className="flex items-center gap-2 text-muted-foreground">
                     <Package className="h-4 w-4" />
-                    Status Comandă
+                    Status {selectedOrder.document_type === 'oferta' ? 'Ofertă' : 'Comandă'}
                   </Label>
                   <Button 
                     variant="ghost" 
