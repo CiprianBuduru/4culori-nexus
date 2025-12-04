@@ -50,6 +50,7 @@ export type Database = {
           company: string | null
           contact_method: string | null
           contact_person: string | null
+          contract_company: string | null
           contract_number: string | null
           contract_url: string | null
           created_at: string
@@ -69,6 +70,7 @@ export type Database = {
           company?: string | null
           contact_method?: string | null
           contact_person?: string | null
+          contract_company?: string | null
           contract_number?: string | null
           contract_url?: string | null
           created_at?: string
@@ -88,6 +90,7 @@ export type Database = {
           company?: string | null
           contact_method?: string | null
           contact_person?: string | null
+          contract_company?: string | null
           contract_number?: string | null
           contract_url?: string | null
           created_at?: string
