@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -30,7 +30,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { Search, Loader2, ExternalLink } from 'lucide-react';
+import { Search, Loader2, Plus, Trash2 } from 'lucide-react';
 
 const contactMethods = [
   { value: 'telefon', label: 'Telefon' },
@@ -42,6 +42,12 @@ const contactMethods = [
   { value: 'altul', label: 'Altul' },
 ];
 
+const contactPersonSchema = z.object({
+  name: z.string().min(1, 'Numele este obligatoriu'),
+  email: z.string().email('Email invalid').optional().or(z.literal('')),
+  phone: z.string().optional(),
+});
+
 const clientSchema = z.object({
   cui: z.string().optional(),
   name: z.string().min(1, 'Numele este obligatoriu'),
@@ -49,13 +55,14 @@ const clientSchema = z.object({
   phone: z.string().optional(),
   company: z.string().optional(),
   address: z.string().optional(),
-  contact_person: z.string().optional(),
+  contact_persons: z.array(contactPersonSchema).optional(),
   contact_methods: z.array(z.string()).optional(),
   notes: z.string().optional(),
   status: z.enum(['active', 'inactive']),
 });
 
 type ClientFormData = z.infer<typeof clientSchema>;
+type ContactPerson = z.infer<typeof contactPersonSchema>;
 
 interface Client {
   id: string;
@@ -91,12 +98,33 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       phone: '',
       company: '',
       address: '',
-      contact_person: '',
+      contact_persons: [],
       contact_methods: [],
       notes: '',
       status: 'active',
     },
   });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'contact_persons',
+  });
+
+  // Helper to parse contact_person JSON from DB
+  const parseContactPersons = (value: string | null): ContactPerson[] => {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+      // Legacy: single string name
+      if (typeof parsed === 'string') return [{ name: parsed, email: '', phone: '' }];
+      return [];
+    } catch {
+      // Legacy: plain string
+      if (value) return [{ name: value, email: '', phone: '' }];
+      return [];
+    }
+  };
 
   useEffect(() => {
     if (client) {
@@ -107,7 +135,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         phone: client.phone || '',
         company: client.company || '',
         address: client.address || '',
-        contact_person: client.contact_person || '',
+        contact_persons: parseContactPersons(client.contact_person),
         contact_methods: client.contact_method ? client.contact_method.split(',') : [],
         notes: client.notes || '',
         status: client.status as 'active' | 'inactive',
@@ -120,7 +148,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         phone: '',
         company: '',
         address: '',
-        contact_person: '',
+        contact_persons: [],
         contact_methods: [],
         notes: '',
         status: 'active',
@@ -205,7 +233,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         phone: data.phone || null,
         company: data.company || null,
         address: data.address || null,
-        contact_person: data.contact_person || null,
+        contact_person: data.contact_persons?.length ? JSON.stringify(data.contact_persons) : null,
         contact_method: data.contact_methods?.length ? data.contact_methods.join(',') : null,
         notes: data.notes || null,
         status: data.status,
@@ -349,55 +377,118 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="contact_person"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Persoană de contact</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Nume persoană" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="contact_methods"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Modalitate contact</FormLabel>
-                    <div className="flex flex-wrap gap-2">
-                      {contactMethods.map(method => {
-                        const isSelected = field.value?.includes(method.value);
-                        return (
-                          <Button
-                            key={method.value}
-                            type="button"
-                            variant={isSelected ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => {
-                              const current = field.value || [];
-                              if (isSelected) {
-                                field.onChange(current.filter(v => v !== method.value));
-                              } else {
-                                field.onChange([...current, method.value]);
-                              }
-                            }}
-                          >
-                            {method.label}
-                          </Button>
-                        );
-                      })}
+            {/* Contact Persons Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <FormLabel>Persoane de contact</FormLabel>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => append({ name: '', email: '', phone: '' })}
+                  className="gap-1"
+                >
+                  <Plus className="h-3 w-3" />
+                  Adaugă
+                </Button>
+              </div>
+              
+              {fields.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nicio persoană de contact adăugată</p>
+              ) : (
+                <div className="space-y-3">
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="p-3 border rounded-lg bg-muted/30 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Contact {index + 1}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => remove(index)}
+                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <FormField
+                        control={form.control}
+                        name={`contact_persons.${index}.name`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} placeholder="Nume" className="h-8" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <FormField
+                          control={form.control}
+                          name={`contact_persons.${index}.email`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input {...field} type="email" placeholder="Email" className="h-8" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`contact_persons.${index}.phone`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input {...field} placeholder="Telefon" className="h-8" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* Contact Methods */}
+            <FormField
+              control={form.control}
+              name="contact_methods"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Modalitate contact</FormLabel>
+                  <div className="flex flex-wrap gap-2">
+                    {contactMethods.map(method => {
+                      const isSelected = field.value?.includes(method.value);
+                      return (
+                        <Button
+                          key={method.value}
+                          type="button"
+                          variant={isSelected ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => {
+                            const current = field.value || [];
+                            if (isSelected) {
+                              field.onChange(current.filter(v => v !== method.value));
+                            } else {
+                              field.onChange([...current, method.value]);
+                            }
+                          }}
+                        >
+                          {method.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
