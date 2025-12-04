@@ -2,7 +2,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { Badge } from '@/components/ui/badge';
 import { ProductionTask } from '@/hooks/useProductionTasks';
 import { DraggableTask } from './DraggableTask';
-import { ShoppingCart, FileText } from 'lucide-react';
+import { ShoppingCart, FileText, AlertTriangle } from 'lucide-react';
 
 interface OrderForCalendar {
   id: string;
@@ -12,6 +12,7 @@ interface OrderForCalendar {
   name: string | null;
   document_type?: string;
   clients: { name: string } | null;
+  isOverdue?: boolean;
 }
 
 interface DroppableDayProps {
@@ -93,9 +94,14 @@ export function DroppableDay({
               {tasks.length} {tasks.length === 1 ? 'lucrare' : 'lucrări'}
             </Badge>
           )}
-          {orders.filter(o => o.document_type === 'comanda').length > 0 && (
+          {orders.filter(o => o.isOverdue).length > 0 && (
+            <Badge variant="destructive" className="text-xs">
+              {orders.filter(o => o.isOverdue).length} întârziat{orders.filter(o => o.isOverdue).length === 1 ? 'ă' : 'e'}
+            </Badge>
+          )}
+          {orders.filter(o => o.document_type === 'comanda' && !o.isOverdue).length > 0 && (
             <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800">
-              {orders.filter(o => o.document_type === 'comanda').length} {orders.filter(o => o.document_type === 'comanda').length === 1 ? 'comandă' : 'comenzi'}
+              {orders.filter(o => o.document_type === 'comanda' && !o.isOverdue).length} {orders.filter(o => o.document_type === 'comanda' && !o.isOverdue).length === 1 ? 'comandă' : 'comenzi'}
             </Badge>
           )}
           {orders.filter(o => o.document_type === 'oferta').length > 0 && (
@@ -110,34 +116,53 @@ export function DroppableDay({
         {/* Orders and Offers - they represent deadlines */}
         {visibleOrders.map(order => {
           const isOffer = order.document_type === 'oferta';
-          const borderColor = isOffer ? 'border-l-blue-500' : 'border-l-emerald-500';
-          const bgColor = isOffer 
-            ? 'bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/70 dark:hover:bg-blue-900/30' 
-            : 'bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/30';
-          const textColor = isOffer 
-            ? 'text-blue-800 dark:text-blue-200' 
-            : 'text-emerald-800 dark:text-emerald-200';
-          const iconColor = isOffer 
-            ? 'text-blue-600 dark:text-blue-400' 
-            : 'text-emerald-600 dark:text-emerald-400';
+          const isOverdue = order.isOverdue;
+          
+          // Overdue orders get red styling
+          const borderColor = isOverdue 
+            ? 'border-l-red-500' 
+            : isOffer ? 'border-l-blue-500' : 'border-l-emerald-500';
+          const bgColor = isOverdue
+            ? 'bg-red-50/70 dark:bg-red-950/30 hover:bg-red-100/80 dark:hover:bg-red-900/40'
+            : isOffer 
+              ? 'bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/70 dark:hover:bg-blue-900/30' 
+              : 'bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/30';
+          const textColor = isOverdue
+            ? 'text-red-800 dark:text-red-200'
+            : isOffer 
+              ? 'text-blue-800 dark:text-blue-200' 
+              : 'text-emerald-800 dark:text-emerald-200';
+          const iconColor = isOverdue
+            ? 'text-red-600 dark:text-red-400'
+            : isOffer 
+              ? 'text-blue-600 dark:text-blue-400' 
+              : 'text-emerald-600 dark:text-emerald-400';
           
           return (
             <button
-              key={order.id}
+              key={`${order.id}-${isOverdue ? 'overdue' : 'normal'}`}
               onClick={() => onOrderClick?.(order)}
               className={`
                 w-full text-left p-2 rounded-lg border-l-4 ${borderColor}
                 ${bgColor} transition-colors
                 ${size === 'small' ? 'text-xs' : 'text-sm'}
+                ${isOverdue ? 'ring-1 ring-red-300 dark:ring-red-700' : ''}
               `}
             >
               <div className="flex items-start gap-2">
-                {isOffer ? (
+                {isOverdue ? (
+                  <AlertTriangle className={`h-3 w-3 mt-0.5 ${iconColor} shrink-0`} />
+                ) : isOffer ? (
                   <FileText className={`h-3 w-3 mt-0.5 ${iconColor} shrink-0`} />
                 ) : (
                   <ShoppingCart className={`h-3 w-3 mt-0.5 ${iconColor} shrink-0`} />
                 )}
                 <div className="flex-1 min-w-0">
+                  {isOverdue && (
+                    <div className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wide mb-0.5">
+                      Lucrare întârziată
+                    </div>
+                  )}
                   <div className={`font-mono font-semibold truncate ${textColor}`}>
                     {order.order_number}
                   </div>
@@ -149,8 +174,13 @@ export function DroppableDay({
                       {order.clients?.name && (
                         <div className="text-xs text-muted-foreground truncate">{order.clients.name}</div>
                       )}
-                      <div className="flex items-center gap-1 mt-1">
-                        {isOffer && (
+                      <div className="flex items-center flex-wrap gap-1 mt-1">
+                        {isOverdue && (
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                            Întârziat
+                          </Badge>
+                        )}
+                        {isOffer && !isOverdue && (
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 border-blue-200">
                             Ofertă
                           </Badge>
