@@ -254,13 +254,16 @@ export type Database = {
       orders: {
         Row: {
           attachment_url: string | null
+          brief: string | null
           client_id: string | null
           created_at: string
           due_date: string | null
           id: string
+          name: string | null
           needs_dtp: boolean | null
           notes: string | null
           order_number: string
+          order_type: string | null
           production_days: number | null
           production_operations: string[] | null
           status: string
@@ -269,13 +272,16 @@ export type Database = {
         }
         Insert: {
           attachment_url?: string | null
+          brief?: string | null
           client_id?: string | null
           created_at?: string
           due_date?: string | null
           id?: string
+          name?: string | null
           needs_dtp?: boolean | null
           notes?: string | null
           order_number: string
+          order_type?: string | null
           production_days?: number | null
           production_operations?: string[] | null
           status?: string
@@ -284,13 +290,16 @@ export type Database = {
         }
         Update: {
           attachment_url?: string | null
+          brief?: string | null
           client_id?: string | null
           created_at?: string
           due_date?: string | null
           id?: string
+          name?: string | null
           needs_dtp?: boolean | null
           notes?: string | null
           order_number?: string
+          order_type?: string | null
           production_days?: number | null
           production_operations?: string[] | null
           status?: string

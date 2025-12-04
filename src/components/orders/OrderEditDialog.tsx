@@ -52,6 +52,9 @@ type OrderStatus = typeof ORDER_STATUSES[number]['value'];
 
 const orderSchema = z.object({
   order_number: z.string().min(1, 'Numărul comenzii este obligatoriu'),
+  name: z.string().optional(),
+  order_type: z.string().optional(),
+  brief: z.string().optional(),
   client_id: z.string().optional(),
   status: z.enum(['pending', 'dtp', 'waiting_bt', 'bt_approved', 'production', 'ready_for_delivery', 'delivered', 'completed', 'cancelled']),
   total_amount: z.coerce.number().min(0).optional(),
@@ -66,6 +69,9 @@ type OrderFormData = z.infer<typeof orderSchema>;
 interface Order {
   id: string;
   order_number: string;
+  name?: string | null;
+  order_type?: string | null;
+  brief?: string | null;
   client_id: string | null;
   status: string;
   total_amount: number | null;
@@ -110,6 +116,9 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
     resolver: zodResolver(orderSchema),
     defaultValues: {
       order_number: '',
+      name: '',
+      order_type: '',
+      brief: '',
       client_id: '',
       status: 'pending',
       total_amount: 0,
@@ -127,6 +136,9 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
     if (order) {
       form.reset({
         order_number: order.order_number,
+        name: order.name || '',
+        order_type: order.order_type || '',
+        brief: order.brief || '',
         client_id: order.client_id || '',
         status: order.status as OrderStatus,
         total_amount: order.total_amount || 0,
@@ -141,6 +153,9 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
       const nextOrderNumber = `CMD-${Date.now().toString().slice(-6)}`;
       form.reset({
         order_number: nextOrderNumber,
+        name: '',
+        order_type: '',
+        brief: '',
         client_id: '',
         status: 'pending',
         total_amount: 0,
@@ -229,6 +244,9 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
     mutationFn: async (data: OrderFormData) => {
       const payload = {
         order_number: data.order_number,
+        name: data.name || null,
+        order_type: data.order_type || null,
+        brief: data.brief || null,
         client_id: data.client_id || null,
         status: data.status,
         total_amount: data.total_amount || 0,
@@ -337,6 +355,61 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
                   <FormLabel>Număr Comandă *</FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="CMD-001" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Denumire Comandă</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="ex: Cărți de vizită, Flyere A5..." />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="order_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tip Comandă</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selectează tipul" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="print">Tipărire</SelectItem>
+                      <SelectItem value="personalizare">Personalizare</SelectItem>
+                      <SelectItem value="gravura">Gravură</SelectItem>
+                      <SelectItem value="broderie">Broderie</SelectItem>
+                      <SelectItem value="dtf_uv">DTF/UV</SelectItem>
+                      <SelectItem value="print_3d">Print 3D</SelectItem>
+                      <SelectItem value="mixt">Mixt</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="brief"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Brief Comandă</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} placeholder="Descrierea detaliată a comenzii..." rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
