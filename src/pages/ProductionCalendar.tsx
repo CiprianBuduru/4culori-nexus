@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,8 @@ import {
 } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
+import { DroppableDay } from '@/components/calendar/DroppableDay';
+import { DraggableTask } from '@/components/calendar/DraggableTask';
 
 const departmentColors: Record<string, string> = {
   '1': 'bg-brand-blue',    // Vânzări
@@ -64,6 +67,16 @@ export default function ProductionCalendar() {
   const [selectedTask, setSelectedTask] = useState<ProductionTask | null>(null);
   const [editingAssignee, setEditingAssignee] = useState(false);
   const [editingStatus, setEditingStatus] = useState(false);
+  const [activeTask, setActiveTask] = useState<ProductionTask | null>(null);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -241,100 +254,55 @@ export default function ProductionCalendar() {
     return employees.filter(e => e.departmentId === selectedTask.department_id);
   };
 
-  const formatDayName = (date: Date) => {
-    return date.toLocaleDateString('ro-RO', { weekday: 'short' });
+  // Drag and drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const task = productionTasks.find(t => t.id === active.id);
+    if (task) {
+      setActiveTask(task);
+    }
   };
 
-  const formatFullDate = (date: Date) => {
-    return date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
-  };
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
 
-  // Render task item
-  const TaskItem = ({ task, compact = false }: { task: ProductionTask; compact?: boolean }) => (
-    <button
-      onClick={() => setSelectedTask(task)}
-      className={`
-        w-full text-left p-2 rounded-lg border-l-4 ${getDepartmentBorderColor(task.department_id)}
-        bg-muted/50 hover:bg-muted transition-colors
-        ${compact ? 'text-xs' : 'text-sm'}
-      `}
-    >
-      <div className="font-medium truncate">{task.title}</div>
-      {!compact && (
-        <div className="flex items-center gap-2 mt-1 text-muted-foreground text-xs">
-          <Badge className={`${productionStatusColors[task.status]} text-[10px] px-1.5 py-0`}>
-            {productionStatusLabels[task.status]}
-          </Badge>
-          {task.client_name && <span className="truncate">{task.client_name}</span>}
-          {task.operation_name && <span className="truncate text-primary">• {task.operation_name}</span>}
-        </div>
-      )}
-    </button>
-  );
+    if (!over) return;
 
-  // Render day column
-  const DayColumn = ({ 
-    date, 
-    size = 'large' 
-  }: { 
-    date: Date; 
-    size?: 'large' | 'medium' | 'small' 
-  }) => {
-    const tasks = getTasksForDate(date);
-    const inCurrentMonth = isCurrentMonth(date);
-    const dayIsToday = isToday(date);
+    const taskId = active.id as string;
+    const targetDateStr = (over.data.current as { date: string })?.date;
+    
+    if (!targetDateStr) return;
 
-    const maxTasks = size === 'large' ? Infinity : size === 'medium' ? 5 : 2;
-    const visibleTasks = tasks.slice(0, maxTasks);
-    const hiddenCount = tasks.length - visibleTasks.length;
+    const task = productionTasks.find(t => t.id === taskId);
+    if (!task) return;
 
-    return (
-      <div
-        className={`
-          rounded-xl border bg-card p-3 flex flex-col
-          ${dayIsToday ? 'ring-2 ring-primary shadow-lg' : ''}
-          ${!inCurrentMonth ? 'opacity-50' : ''}
-          ${size === 'large' ? 'min-h-[400px]' : size === 'medium' ? 'min-h-[200px]' : 'min-h-[80px]'}
-        `}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <div className={`text-xs uppercase font-medium ${dayIsToday ? 'text-primary' : 'text-muted-foreground'}`}>
-              {formatDayName(date)}
-            </div>
-            <div className={`text-2xl font-bold ${dayIsToday ? 'text-primary' : 'text-foreground'}`}>
-              {date.getDate()}
-            </div>
-            {size !== 'small' && (
-              <div className="text-xs text-muted-foreground">
-                {formatFullDate(date)}
-              </div>
-            )}
-          </div>
-          {tasks.length > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {tasks.length} {tasks.length === 1 ? 'lucrare' : 'lucrări'}
-            </Badge>
-          )}
-        </div>
+    // Calculate the duration of the task
+    const startDate = new Date(task.start_date);
+    const endDate = new Date(task.end_date);
+    const durationMs = endDate.getTime() - startDate.getTime();
 
-        <div className={`flex-1 space-y-2 overflow-y-auto ${size === 'small' ? 'space-y-1' : ''}`}>
-          {visibleTasks.map(task => (
-            <TaskItem key={task.id} task={task} compact={size === 'small'} />
-          ))}
-          {hiddenCount > 0 && (
-            <div className="text-xs text-muted-foreground text-center py-1">
-              +{hiddenCount} altele
-            </div>
-          )}
-          {tasks.length === 0 && size !== 'small' && (
-            <div className="text-sm text-muted-foreground text-center py-4">
-              Nicio lucrare
-            </div>
-          )}
-        </div>
-      </div>
-    );
+    // New start date from where we dropped
+    const newStartDate = new Date(targetDateStr);
+    const newEndDate = new Date(newStartDate.getTime() + durationMs);
+
+    // Format dates for database
+    const newStartStr = newStartDate.toISOString().split('T')[0];
+    const newEndStr = newEndDate.toISOString().split('T')[0];
+
+    // Only update if dates actually changed
+    if (newStartStr !== task.start_date) {
+      await updateTask.mutateAsync({
+        id: taskId,
+        start_date: newStartStr,
+        end_date: newEndStr,
+      });
+
+      toast({
+        title: "Task mutat",
+        description: `"${task.title}" a fost mutat pe ${newStartDate.toLocaleDateString('ro-RO')}`,
+      });
+    }
   };
 
   return (
@@ -399,35 +367,83 @@ export default function ProductionCalendar() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Primary Row: Today + Tomorrow + Day after (large) + Next 2 days (medium) */}
-            <div className="grid grid-cols-5 gap-4">
-              {/* 3 Primary days - larger */}
-              {primaryDays.map((date, idx) => (
-                <div key={date.toISOString()} className={idx < 3 ? 'col-span-1' : ''}>
-                  <DayColumn date={date} size="large" />
-                </div>
-              ))}
-              {/* 2 Secondary days - medium height */}
-              {secondaryDays.map((date) => (
-                <div key={date.toISOString()} className="col-span-1">
-                  <DayColumn date={date} size="medium" />
-                </div>
-              ))}
-            </div>
-
-            {/* Remaining days of month - compact grid */}
-            <div className="pt-4 border-t">
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">
-                Restul lunii {monthName}
-              </h3>
-              <div className="grid grid-cols-7 gap-2">
-                {remainingDays
-                  .filter(date => isCurrentMonth(date))
-                  .map((date) => (
-                    <DayColumn key={date.toISOString()} date={date} size="small" />
-                  ))}
+            <DndContext
+              sensors={sensors}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              {/* Primary Row: Today + Tomorrow + Day after (large) + Next 2 days (medium) */}
+              <div className="grid grid-cols-5 gap-4">
+                {/* 3 Primary days - larger */}
+                {primaryDays.map((date, idx) => (
+                  <div key={date.toISOString()} className={idx < 3 ? 'col-span-1' : ''}>
+                    <DroppableDay
+                      date={date}
+                      tasks={getTasksForDate(date)}
+                      size="large"
+                      isToday={isToday(date)}
+                      isCurrentMonth={isCurrentMonth(date)}
+                      getDepartmentBorderColor={getDepartmentBorderColor}
+                      onTaskClick={setSelectedTask}
+                    />
+                  </div>
+                ))}
+                {/* 2 Secondary days - medium height */}
+                {secondaryDays.map((date) => (
+                  <div key={date.toISOString()} className="col-span-1">
+                    <DroppableDay
+                      date={date}
+                      tasks={getTasksForDate(date)}
+                      size="medium"
+                      isToday={isToday(date)}
+                      isCurrentMonth={isCurrentMonth(date)}
+                      getDepartmentBorderColor={getDepartmentBorderColor}
+                      onTaskClick={setSelectedTask}
+                    />
+                  </div>
+                ))}
               </div>
-            </div>
+
+              {/* Remaining days of month - compact grid */}
+              <div className="pt-4 border-t">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                  Restul lunii {monthName}
+                </h3>
+                <div className="grid grid-cols-7 gap-2">
+                  {remainingDays
+                    .filter(date => isCurrentMonth(date))
+                    .map((date) => (
+                      <DroppableDay
+                        key={date.toISOString()}
+                        date={date}
+                        tasks={getTasksForDate(date)}
+                        size="small"
+                        isToday={isToday(date)}
+                        isCurrentMonth={isCurrentMonth(date)}
+                        getDepartmentBorderColor={getDepartmentBorderColor}
+                        onTaskClick={setSelectedTask}
+                      />
+                    ))}
+                </div>
+              </div>
+
+              {/* Drag Overlay */}
+              <DragOverlay>
+                {activeTask && (
+                  <div className={`
+                    p-2 rounded-lg border-l-4 ${getDepartmentBorderColor(activeTask.department_id)}
+                    bg-card shadow-xl text-sm opacity-90
+                  `}>
+                    <div className="font-medium">{activeTask.title}</div>
+                    <div className="flex items-center gap-2 mt-1 text-muted-foreground text-xs">
+                      <Badge className={`${productionStatusColors[activeTask.status]} text-[10px] px-1.5 py-0`}>
+                        {productionStatusLabels[activeTask.status]}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+              </DragOverlay>
+            </DndContext>
           </CardContent>
         </Card>
 
