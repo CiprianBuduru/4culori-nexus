@@ -237,10 +237,15 @@ export default function ProductionCalendar() {
     });
   };
 
+  // Helper to get local date string (timezone-aware)
+  const getLocalDateString = (date: Date): string => {
+    return format(date, 'yyyy-MM-dd');
+  };
+
   // Get orders for a specific date (by due_date) + overdue orders (only on today)
   const getOrdersForDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    const todayStr = new Date().toISOString().split('T')[0];
+    const dateStr = getLocalDateString(date);
+    const todayStr = getLocalDateString(new Date());
     
     // Orders due on this date
     const ordersForDate = allOrders.filter(order => order.due_date === dateStr);
