@@ -2,7 +2,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { Badge } from '@/components/ui/badge';
 import { ProductionTask } from '@/hooks/useProductionTasks';
 import { DraggableTask } from './DraggableTask';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, FileText } from 'lucide-react';
 
 interface OrderForCalendar {
   id: string;
@@ -10,6 +10,7 @@ interface OrderForCalendar {
   due_date: string | null;
   status: string;
   name: string | null;
+  document_type?: string;
   clients: { name: string } | null;
 }
 
@@ -92,50 +93,79 @@ export function DroppableDay({
               {tasks.length} {tasks.length === 1 ? 'lucrare' : 'lucrări'}
             </Badge>
           )}
-          {orders.length > 0 && (
+          {orders.filter(o => o.document_type === 'comanda').length > 0 && (
             <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800">
-              {orders.length} {orders.length === 1 ? 'comandă' : 'comenzi'}
+              {orders.filter(o => o.document_type === 'comanda').length} {orders.filter(o => o.document_type === 'comanda').length === 1 ? 'comandă' : 'comenzi'}
+            </Badge>
+          )}
+          {orders.filter(o => o.document_type === 'oferta').length > 0 && (
+            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800">
+              {orders.filter(o => o.document_type === 'oferta').length} {orders.filter(o => o.document_type === 'oferta').length === 1 ? 'ofertă' : 'oferte'}
             </Badge>
           )}
         </div>
       </div>
 
       <div className={`flex-1 space-y-2 overflow-y-auto ${size === 'small' ? 'space-y-1' : ''}`}>
-        {/* Orders first - they represent deadlines */}
-        {visibleOrders.map(order => (
-          <button
-            key={order.id}
-            onClick={() => onOrderClick?.(order)}
-            className={`
-              w-full text-left p-2 rounded-lg border-l-4 border-l-emerald-500
-              bg-emerald-50/50 dark:bg-emerald-950/20 
-              hover:bg-emerald-100/70 dark:hover:bg-emerald-900/30 transition-colors
-              ${size === 'small' ? 'text-xs' : 'text-sm'}
-            `}
-          >
-            <div className="flex items-start gap-2">
-              <ShoppingCart className="h-3 w-3 mt-0.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="font-mono font-semibold truncate text-emerald-800 dark:text-emerald-200">
-                  {order.order_number}
-                </div>
-                {!size || size !== 'small' && (
-                  <>
-                    {order.name && (
-                      <div className="text-xs text-muted-foreground truncate">{order.name}</div>
-                    )}
-                    {order.clients?.name && (
-                      <div className="text-xs text-muted-foreground truncate">{order.clients.name}</div>
-                    )}
-                    <Badge className={`${orderStatusColors[order.status] || 'bg-gray-100 text-gray-800'} text-[10px] px-1.5 py-0 mt-1`}>
-                      {orderStatusLabels[order.status] || order.status}
-                    </Badge>
-                  </>
+        {/* Orders and Offers - they represent deadlines */}
+        {visibleOrders.map(order => {
+          const isOffer = order.document_type === 'oferta';
+          const borderColor = isOffer ? 'border-l-blue-500' : 'border-l-emerald-500';
+          const bgColor = isOffer 
+            ? 'bg-blue-50/50 dark:bg-blue-950/20 hover:bg-blue-100/70 dark:hover:bg-blue-900/30' 
+            : 'bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/30';
+          const textColor = isOffer 
+            ? 'text-blue-800 dark:text-blue-200' 
+            : 'text-emerald-800 dark:text-emerald-200';
+          const iconColor = isOffer 
+            ? 'text-blue-600 dark:text-blue-400' 
+            : 'text-emerald-600 dark:text-emerald-400';
+          
+          return (
+            <button
+              key={order.id}
+              onClick={() => onOrderClick?.(order)}
+              className={`
+                w-full text-left p-2 rounded-lg border-l-4 ${borderColor}
+                ${bgColor} transition-colors
+                ${size === 'small' ? 'text-xs' : 'text-sm'}
+              `}
+            >
+              <div className="flex items-start gap-2">
+                {isOffer ? (
+                  <FileText className={`h-3 w-3 mt-0.5 ${iconColor} shrink-0`} />
+                ) : (
+                  <ShoppingCart className={`h-3 w-3 mt-0.5 ${iconColor} shrink-0`} />
                 )}
+                <div className="flex-1 min-w-0">
+                  <div className={`font-mono font-semibold truncate ${textColor}`}>
+                    {order.order_number}
+                  </div>
+                  {!size || size !== 'small' && (
+                    <>
+                      {order.name && (
+                        <div className="text-xs text-muted-foreground truncate">{order.name}</div>
+                      )}
+                      {order.clients?.name && (
+                        <div className="text-xs text-muted-foreground truncate">{order.clients.name}</div>
+                      )}
+                      <div className="flex items-center gap-1 mt-1">
+                        {isOffer && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700 border-blue-200">
+                            Ofertă
+                          </Badge>
+                        )}
+                        <Badge className={`${orderStatusColors[order.status] || 'bg-gray-100 text-gray-800'} text-[10px] px-1.5 py-0`}>
+                          {orderStatusLabels[order.status] || order.status}
+                        </Badge>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          </button>
-        ))}
+            </button>
+          );
+        })}
 
         {/* Tasks */}
         {visibleTasks.map(task => (
