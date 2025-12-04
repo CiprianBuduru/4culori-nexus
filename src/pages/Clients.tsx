@@ -22,6 +22,8 @@ interface Client {
   contact_method: string | null;
   notes: string | null;
   status: string;
+  is_comercial: boolean | null;
+  is_unitate_protejata: boolean | null;
   created_at: string;
 }
 
@@ -133,9 +135,21 @@ export default function Clients() {
                         </p>
                       )}
                     </div>
-                    <Badge variant={client.status === 'active' ? 'default' : 'secondary'}>
-                      {client.status === 'active' ? 'Activ' : 'Inactiv'}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                      {client.is_comercial && (
+                        <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">
+                          Comercial
+                        </Badge>
+                      )}
+                      {client.is_unitate_protejata && (
+                        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                          Unitate Protejată
+                        </Badge>
+                      )}
+                      <Badge variant={client.status === 'active' ? 'default' : 'secondary'}>
+                        {client.status === 'active' ? 'Activ' : 'Inactiv'}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
