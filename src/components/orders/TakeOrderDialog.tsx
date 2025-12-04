@@ -20,7 +20,9 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useProductionTasks, ProductionTaskInsert } from '@/hooks/useProductionTasks';
 import { useDepartments } from '@/hooks/useDepartments';
-import { Calendar, Package } from 'lucide-react';
+import { useEmployees } from '@/hooks/useEmployees';
+import { Calendar, Package, User } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface Order {
   id: string;
@@ -43,15 +45,26 @@ interface TakeOrderDialogProps {
 export function TakeOrderDialog({ order, open, onOpenChange }: TakeOrderDialogProps) {
   const { addTask, addMultipleTasks } = useProductionTasks();
   const { departments, productionOperations } = useDepartments();
+  const { employees } = useEmployees();
   
   const [mode, setMode] = useState<'single' | 'multiple'>('single');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [departmentId, setDepartmentId] = useState('');
+  const [assignedTo, setAssignedTo] = useState<string>('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [notes, setNotes] = useState('');
 
   const productionDept = departments.find(d => d.name.toLowerCase().includes('producție') || d.name.toLowerCase().includes('productie'));
+
+  // Filter employees by selected department
+  const filteredEmployees = employees.filter(emp => {
+    if (mode === 'single' && departmentId) {
+      return emp.departmentId === departmentId;
+    }
+    // For multiple mode, show production department employees
+    return productionDept ? emp.departmentId === productionDept.id : true;
+  });
 
   const getOperationName = (id: string) => {
     return productionOperations.find(op => op.id === id)?.name || id;
@@ -69,7 +82,7 @@ export function TakeOrderDialog({ order, open, onOpenChange }: TakeOrderDialogPr
         title: `Comandă #${order.order_number}`,
         description: order.notes || null,
         department_id: departmentId || productionDept?.id || '',
-        assigned_to: null,
+        assigned_to: assignedTo || null,
         start_date: startDate,
         end_date: endDate,
         status: 'pending',
@@ -92,7 +105,7 @@ export function TakeOrderDialog({ order, open, onOpenChange }: TakeOrderDialogPr
           title: `Comandă #${order.order_number}`,
           description: order.notes || null,
           department_id: productionDept?.id || '',
-          assigned_to: null,
+          assigned_to: assignedTo || null,
           start_date: startDate,
           end_date: endDate,
           status: 'pending',
@@ -111,7 +124,7 @@ export function TakeOrderDialog({ order, open, onOpenChange }: TakeOrderDialogPr
           title: `${getOperationName(opId)} - #${order.order_number}`,
           description: order.notes || null,
           department_id: productionDept?.id || '',
-          assigned_to: null,
+          assigned_to: assignedTo || null,
           start_date: startDate,
           end_date: endDate,
           status: 'pending',
@@ -135,6 +148,7 @@ export function TakeOrderDialog({ order, open, onOpenChange }: TakeOrderDialogPr
     setStartDate('');
     setEndDate('');
     setDepartmentId('');
+    setAssignedTo('');
     setPriority('medium');
     setNotes('');
   };
@@ -197,7 +211,10 @@ export function TakeOrderDialog({ order, open, onOpenChange }: TakeOrderDialogPr
             {mode === 'single' && (
               <div className="space-y-2">
                 <Label>Departament</Label>
-                <Select value={departmentId} onValueChange={setDepartmentId}>
+                <Select value={departmentId} onValueChange={(val) => {
+                  setDepartmentId(val);
+                  setAssignedTo(''); // Reset employee when department changes
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selectează departament" />
                   </SelectTrigger>
@@ -211,6 +228,35 @@ export function TakeOrderDialog({ order, open, onOpenChange }: TakeOrderDialogPr
                 </Select>
               </div>
             )}
+
+            {/* Employee assignment */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <User className="h-3 w-3" />
+                Responsabil (opțional)
+              </Label>
+              <Select value={assignedTo} onValueChange={setAssignedTo}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selectează angajat" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Neasignat</SelectItem>
+                  {filteredEmployees.map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      <span className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={emp.avatar} />
+                          <AvatarFallback className="text-[10px]">
+                            {emp.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        {emp.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Date range */}
             <div className="grid grid-cols-2 gap-4">
