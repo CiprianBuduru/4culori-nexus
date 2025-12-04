@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -52,6 +53,8 @@ const contactPersonSchema = z.object({
 const clientSchema = z.object({
   cui: z.string().optional(),
   company: z.string().min(1, 'Compania este obligatorie'),
+  is_comercial: z.boolean().default(false),
+  is_unitate_protejata: z.boolean().default(false),
   contact_name: z.string().min(1, 'Persoana de contact este obligatorie'),
   contact_phone: z.string().optional(),
   contact_email: z.string().email('Email invalid').optional().or(z.literal('')),
@@ -77,6 +80,8 @@ interface Client {
   contact_method: string | null;
   notes: string | null;
   status: string;
+  is_comercial?: boolean | null;
+  is_unitate_protejata?: boolean | null;
 }
 
 interface ClientEditDialogProps {
@@ -95,6 +100,8 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
     defaultValues: {
       cui: '',
       company: '',
+      is_comercial: false,
+      is_unitate_protejata: false,
       contact_name: '',
       contact_phone: '',
       contact_email: '',
@@ -134,6 +141,8 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       form.reset({
         cui: client.cui || '',
         company: client.company || client.name || '',
+        is_comercial: client.is_comercial || false,
+        is_unitate_protejata: client.is_unitate_protejata || false,
         contact_name: contactData.main?.name || '',
         contact_phone: contactData.main?.phone || client.phone || '',
         contact_email: contactData.main?.email || client.email || '',
@@ -147,6 +156,8 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       form.reset({
         cui: '',
         company: '',
+        is_comercial: false,
+        is_unitate_protejata: false,
         contact_name: '',
         contact_phone: '',
         contact_email: '',
@@ -240,6 +251,8 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         email: data.contact_email || null,
         phone: data.contact_phone || null,
         company: data.company || null,
+        is_comercial: data.is_comercial || false,
+        is_unitate_protejata: data.is_unitate_protejata || false,
         address: data.delivery_address || null,
         contact_person: allContacts.length ? JSON.stringify(allContacts) : null,
         contact_method: data.contact_methods?.length ? data.contact_methods.join(',') : null,
@@ -326,6 +339,41 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                 </FormItem>
               )}
             />
+
+            <div className="flex gap-6">
+              <FormField
+                control={form.control}
+                name="is_comercial"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal cursor-pointer">Comercial</FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="is_unitate_protejata"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal cursor-pointer">Unitate Protejată</FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Main Contact Person Section */}
             <div className="space-y-3 p-3 border rounded-lg bg-muted/20">

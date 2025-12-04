@@ -54,6 +54,8 @@ export type Database = {
           cui: string | null
           email: string | null
           id: string
+          is_comercial: boolean | null
+          is_unitate_protejata: boolean | null
           name: string
           notes: string | null
           phone: string | null
@@ -69,6 +71,8 @@ export type Database = {
           cui?: string | null
           email?: string | null
           id?: string
+          is_comercial?: boolean | null
+          is_unitate_protejata?: boolean | null
           name: string
           notes?: string | null
           phone?: string | null
@@ -84,6 +88,8 @@ export type Database = {
           cui?: string | null
           email?: string | null
           id?: string
+          is_comercial?: boolean | null
+          is_unitate_protejata?: boolean | null
           name?: string
           notes?: string | null
           phone?: string | null
