@@ -4,12 +4,13 @@ import { DepartmentCard } from '@/components/departments/DepartmentCard';
 import { DepartmentEditDialog } from '@/components/departments/DepartmentEditDialog';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { departments as initialDepartments, employees } from '@/data/mockData';
+import { employees } from '@/data/mockData';
 import { Department } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { useDepartments } from '@/hooks/useDepartments';
 
 const Departments = () => {
-  const [departmentList, setDepartmentList] = useState<Department[]>(initialDepartments);
+  const { departments: departmentList, setDepartments: setDepartmentList } = useDepartments();
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
