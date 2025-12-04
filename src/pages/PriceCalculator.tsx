@@ -1,17 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calculator, RotateCcw, FileText } from 'lucide-react';
+import { Calculator, RotateCcw, FileText, Users } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RecipeSelector } from '@/components/calculator/RecipeSelector';
 import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorItem';
 import { BriefAnalyzer } from '@/components/calculator/BriefAnalyzer';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
 import { toast } from 'sonner';
 import { generateOfferPdf } from '@/lib/generateOfferPdf';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Client {
+  id: string;
+  name: string;
+  company: string | null;
+}
 
 interface AISuggestion {
   recipeId: string;
@@ -34,6 +42,36 @@ export default function PriceCalculator() {
   const [calculations, setCalculations] = useState<RecipeCalculation[]>([]);
   const [discount, setDiscount] = useState(0);
   const [clientName, setClientName] = useState('');
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, name, company')
+        .eq('status', 'active')
+        .order('name');
+      
+      if (!error && data) {
+        setClients(data);
+      }
+    };
+    fetchClients();
+  }, []);
+
+  const handleClientSelect = (value: string) => {
+    if (value === 'custom') {
+      setSelectedClientId('');
+      setClientName('');
+    } else {
+      setSelectedClientId(value);
+      const client = clients.find(c => c.id === value);
+      if (client) {
+        setClientName(client.company ? `${client.name} (${client.company})` : client.name);
+      }
+    }
+  };
 
   const handleSelectRecipe = (recipe: Recipe) => {
     const newCalculation: RecipeCalculation = {
@@ -94,6 +132,7 @@ export default function PriceCalculator() {
     setCalculations([]);
     setDiscount(0);
     setClientName('');
+    setSelectedClientId('');
   };
 
   const getRecipeById = (recipeId: string) => {
@@ -201,16 +240,36 @@ export default function PriceCalculator() {
 
               <Separator />
 
-              {/* Client Name */}
+              {/* Client Selection */}
               <div className="space-y-2">
-                <Label className="text-xs">Nume client (opțional)</Label>
-                <Input
-                  type="text"
-                  placeholder="ex: SC Exemplu SRL"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  maxLength={100}
-                />
+                <Label className="text-xs flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  Client
+                </Label>
+                <Select value={selectedClientId || 'custom'} onValueChange={handleClientSelect}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Selectează client..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="custom">
+                      <span className="text-muted-foreground">Introdu manual...</span>
+                    </SelectItem>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}{client.company && ` (${client.company})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!selectedClientId && (
+                  <Input
+                    type="text"
+                    placeholder="Nume client personalizat..."
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    maxLength={100}
+                  />
+                )}
               </div>
 
               <div className="flex justify-between font-medium">
