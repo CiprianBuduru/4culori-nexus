@@ -78,6 +78,15 @@ export function VacationCalendar({ employees }: VacationCalendarProps) {
   });
   
   const { toast } = useToast();
+  const { profile } = useAuth();
+  
+  // Check if current user can approve for a specific employee
+  const canApprove = (employeeId: string): boolean => {
+    const employee = employees.find(e => e.id === employeeId);
+    const approverName = employee?.company ? APPROVERS[employee.company] : APPROVERS.LMG;
+    // Compare current user's name with the required approver
+    return profile?.name === approverName;
+  };
   const queryClient = useQueryClient();
 
   const { data: vacations = [], isLoading } = useQuery({
@@ -533,27 +542,33 @@ export function VacationCalendar({ employees }: VacationCalendarProps) {
                       <p className="text-xs text-muted-foreground mb-3 italic">"{vacation.notes}"</p>
                     )}
                     
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        className="flex-1 gap-1 bg-green-600 hover:bg-green-700"
-                        onClick={() => approveVacation.mutate(vacation.id)}
-                        disabled={approveVacation.isPending}
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                        Aprobă
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="destructive"
-                        className="flex-1 gap-1"
-                        onClick={() => rejectVacation.mutate(vacation.id)}
-                        disabled={rejectVacation.isPending}
-                      >
-                        <XCircle className="h-4 w-4" />
-                        Respinge
-                      </Button>
-                    </div>
+                    {canApprove(vacation.employee_id) ? (
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          className="flex-1 gap-1 bg-green-600 hover:bg-green-700"
+                          onClick={() => approveVacation.mutate(vacation.id)}
+                          disabled={approveVacation.isPending}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                          Aprobă
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          className="flex-1 gap-1"
+                          onClick={() => rejectVacation.mutate(vacation.id)}
+                          disabled={rejectVacation.isPending}
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Respinge
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-center text-muted-foreground py-2 bg-muted/50 rounded">
+                        Așteaptă aprobare de la {approver}
+                      </p>
+                    )}
                   </div>
                 );
               })}
