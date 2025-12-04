@@ -419,6 +419,41 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
               )}
             />
 
+            <div className="flex gap-6">
+              <FormField
+                control={form.control}
+                name="is_comercial"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal cursor-pointer">Comercial</FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="is_unitate_protejata"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal cursor-pointer">Unitate Protejată</FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+
             {/* Contract Section */}
             <div className="space-y-3 p-3 border rounded-lg bg-muted/20">
               <FormLabel className="text-base font-medium flex items-center gap-2">
@@ -494,41 +529,6 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
                   )}
                 </div>
               </div>
-            </div>
-
-            <div className="flex gap-6">
-              <FormField
-                control={form.control}
-                name="is_comercial"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal cursor-pointer">Comercial</FormLabel>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="is_unitate_protejata"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal cursor-pointer">Unitate Protejată</FormLabel>
-                  </FormItem>
-                )}
-              />
             </div>
 
             {/* Main Contact Person Section */}
