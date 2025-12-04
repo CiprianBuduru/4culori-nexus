@@ -31,14 +31,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, X, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
-import { departments } from '@/data/mockData';
-
-// Get production operations from the Production department's subDepartments
-const productionDept = departments.find(d => d.name === 'Producție');
-const PRODUCTION_OPERATIONS = productionDept?.subDepartments?.map(sub => ({
-  id: sub.id,
-  name: sub.name,
-})) || [];
+import { useDepartments } from '@/hooks/useDepartments';
 
 const orderSchema = z.object({
   order_number: z.string().min(1, 'Numărul comenzii este obligatoriu'),
@@ -71,6 +64,7 @@ interface OrderEditDialogProps {
 
 export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogProps) {
   const { toast } = useToast();
+  const { productionOperations } = useDepartments();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
@@ -257,7 +251,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
 
   const isPdf = (url: string) => url.toLowerCase().endsWith('.pdf');
 
-  const getOperationName = (id: string) => PRODUCTION_OPERATIONS.find(op => op.id === id)?.name || id;
+  const getOperationName = (id: string) => productionOperations.find(op => op.id === id)?.name || id;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -371,7 +365,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
               <div className="border rounded-lg p-3 space-y-2 bg-muted/20">
                 <p className="text-xs text-muted-foreground mb-2">Selectează operațiunile necesare:</p>
                 <div className="flex flex-wrap gap-2">
-                  {PRODUCTION_OPERATIONS.map((op) => (
+                  {productionOperations.map((op) => (
                     <label
                       key={op.id}
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-colors text-sm ${
