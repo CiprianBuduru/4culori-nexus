@@ -112,6 +112,18 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
     },
   });
 
+  const { data: orderTypeDefaults = [] } = useQuery({
+    queryKey: ['order-type-defaults'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('order_type_defaults')
+        .select('order_type, order_type_label, default_production_days')
+        .order('order_type_label');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const form = useForm<OrderFormData>({
     resolver: zodResolver(orderSchema),
     defaultValues: {
@@ -131,6 +143,17 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
 
   const currentStatus = form.watch('status');
   const needsDtp = form.watch('needs_dtp');
+  const watchedOrderType = form.watch('order_type');
+
+  // Auto-update production_days when order_type changes (only for new orders)
+  useEffect(() => {
+    if (!order && watchedOrderType && orderTypeDefaults.length > 0) {
+      const typeDefault = orderTypeDefaults.find(t => t.order_type === watchedOrderType);
+      if (typeDefault) {
+        form.setValue('production_days', typeDefault.default_production_days);
+      }
+    }
+  }, [watchedOrderType, orderTypeDefaults, order, form]);
 
   useEffect(() => {
     if (order) {
@@ -381,20 +404,21 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tip Comandă</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ''}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ''}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selectează tipul" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="print">Tipărire</SelectItem>
-                      <SelectItem value="personalizare">Personalizare</SelectItem>
-                      <SelectItem value="gravura">Gravură</SelectItem>
-                      <SelectItem value="broderie">Broderie</SelectItem>
-                      <SelectItem value="dtf_uv">DTF/UV</SelectItem>
-                      <SelectItem value="print_3d">Print 3D</SelectItem>
-                      <SelectItem value="mixt">Mixt</SelectItem>
+                      {orderTypeDefaults.map((type) => (
+                        <SelectItem key={type.order_type} value={type.order_type}>
+                          {type.order_type_label} ({type.default_production_days} zile)
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

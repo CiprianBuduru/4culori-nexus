@@ -251,6 +251,33 @@ export type Database = {
           },
         ]
       }
+      order_type_defaults: {
+        Row: {
+          created_at: string
+          default_production_days: number
+          id: string
+          order_type: string
+          order_type_label: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_production_days?: number
+          id?: string
+          order_type: string
+          order_type_label: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_production_days?: number
+          id?: string
+          order_type?: string
+          order_type_label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           attachment_url: string | null
