@@ -23,7 +23,7 @@ const navigation = [
   { name: 'Calendar Producție', href: '/production-calendar', icon: CalendarDays },
   { name: 'Calendar To Do', href: '/tasks-calendar', icon: CheckSquare },
   { name: 'Clienți', href: '/clients', icon: UserCircle },
-  { name: 'Comenzi', href: '/orders', icon: ShoppingCart },
+  { name: 'Oferte / Comenzi', href: '/orders', icon: ShoppingCart },
   { name: 'Angajați', href: '/employees', icon: Users },
   { name: 'Departamente', href: '/departments', icon: Building2 },
   { name: 'Produse', href: '/products', icon: Package },

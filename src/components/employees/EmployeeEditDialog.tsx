@@ -58,21 +58,21 @@ const accessLevels = [
     level: 4, 
     label: 'Administrator', 
     color: 'bg-red-500',
-    access: ['Dashboard', 'Calendar', 'Clienți', 'Comenzi', 'Angajați', 'Departamente', 'Produse', 'Calculator', 'Setări'],
+    access: ['Dashboard', 'Calendar', 'Clienți', 'Oferte/Comenzi', 'Angajați', 'Departamente', 'Produse', 'Calculator', 'Setări'],
     permissions: 'Acces complet + gestionare utilizatori'
   },
   { 
     level: 3, 
     label: 'Director', 
     color: 'bg-orange-500',
-    access: ['Dashboard', 'Calendar', 'Clienți', 'Comenzi', 'Angajați', 'Departamente', 'Produse', 'Calculator'],
+    access: ['Dashboard', 'Calendar', 'Clienți', 'Oferte/Comenzi', 'Angajați', 'Departamente', 'Produse', 'Calculator'],
     permissions: 'Vizualizare/editare completă'
   },
   { 
     level: 2, 
     label: 'Șef Producție', 
     color: 'bg-yellow-500',
-    access: ['Dashboard', 'Calendar', 'Clienți', 'Comenzi', 'Angajați', 'Produse'],
+    access: ['Dashboard', 'Calendar', 'Clienți', 'Oferte/Comenzi', 'Angajați', 'Produse'],
     permissions: 'Editare date producție'
   },
   { 
