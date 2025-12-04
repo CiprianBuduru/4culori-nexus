@@ -36,8 +36,6 @@ const contactMethods = [
   { value: 'telefon', label: 'Telefon' },
   { value: 'email', label: 'Email' },
   { value: 'whatsapp', label: 'WhatsApp' },
-  { value: 'facebook', label: 'Facebook' },
-  { value: 'instagram', label: 'Instagram' },
   { value: 'website', label: 'Website' },
   { value: 'recomandare', label: 'Recomandare' },
   { value: 'vizita', label: 'Vizită directă' },
@@ -52,7 +50,7 @@ const clientSchema = z.object({
   company: z.string().optional(),
   address: z.string().optional(),
   contact_person: z.string().optional(),
-  contact_method: z.string().optional(),
+  contact_methods: z.array(z.string()).optional(),
   notes: z.string().optional(),
   status: z.enum(['active', 'inactive']),
 });
@@ -94,7 +92,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
       company: '',
       address: '',
       contact_person: '',
-      contact_method: '',
+      contact_methods: [],
       notes: '',
       status: 'active',
     },
@@ -110,7 +108,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         company: client.company || '',
         address: client.address || '',
         contact_person: client.contact_person || '',
-        contact_method: client.contact_method || '',
+        contact_methods: client.contact_method ? client.contact_method.split(',') : [],
         notes: client.notes || '',
         status: client.status as 'active' | 'inactive',
       });
@@ -123,7 +121,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         company: '',
         address: '',
         contact_person: '',
-        contact_method: '',
+        contact_methods: [],
         notes: '',
         status: 'active',
       });
@@ -208,7 +206,7 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
         company: data.company || null,
         address: data.address || null,
         contact_person: data.contact_person || null,
-        contact_method: data.contact_method || null,
+        contact_method: data.contact_methods?.length ? data.contact_methods.join(',') : null,
         notes: data.notes || null,
         status: data.status,
       };
@@ -368,24 +366,33 @@ export function ClientEditDialog({ client, open, onOpenChange }: ClientEditDialo
 
               <FormField
                 control={form.control}
-                name="contact_method"
+                name="contact_methods"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Modalitate contact</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selectează..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {contactMethods.map(method => (
-                          <SelectItem key={method.value} value={method.value}>
+                    <div className="flex flex-wrap gap-2">
+                      {contactMethods.map(method => {
+                        const isSelected = field.value?.includes(method.value);
+                        return (
+                          <Button
+                            key={method.value}
+                            type="button"
+                            variant={isSelected ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => {
+                              const current = field.value || [];
+                              if (isSelected) {
+                                field.onChange(current.filter(v => v !== method.value));
+                              } else {
+                                field.onChange([...current, method.value]);
+                              }
+                            }}
+                          >
                             {method.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </Button>
+                        );
+                      })}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
