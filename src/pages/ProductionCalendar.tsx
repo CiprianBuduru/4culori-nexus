@@ -74,22 +74,29 @@ export default function ProductionCalendar() {
   const [editingStatus, setEditingStatus] = useState(false);
   const [activeTask, setActiveTask] = useState<ProductionTask | null>(null);
 
-  // Fetch orders with production_days for alerts
-  const { data: ordersForAlerts = [] } = useQuery({
-    queryKey: ['orders-production-alerts'],
+  // Fetch all orders (comanda only) for calendar display
+  const { data: allOrders = [] } = useQuery({
+    queryKey: ['orders-calendar'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, due_date, production_days, status, client_id, clients(name)')
-        .gt('production_days', 0)
+        .select('id, order_number, due_date, production_days, status, client_id, name, clients(name)')
+        .eq('document_type', 'comanda')
         .not('due_date', 'is', null)
-        .in('status', ['bt_approved', 'production'])
         .order('due_date', { ascending: true });
       
       if (error) throw error;
       return data;
     },
   });
+
+  // Filter orders for alerts (only those needing production start)
+  const ordersForAlerts = useMemo(() => {
+    return allOrders.filter(order => 
+      order.production_days && order.production_days > 0 && 
+      ['bt_approved', 'production'].includes(order.status)
+    );
+  }, [allOrders]);
 
   // Calculate production alerts - orders that need to start production
   const productionAlerts = useMemo(() => {
@@ -222,6 +229,35 @@ export default function ProductionCalendar() {
       const current = new Date(dateStr);
       return current >= start && current <= end;
     });
+  };
+
+  // Get orders for a specific date (by due_date)
+  const getOrdersForDate = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return allOrders.filter(order => order.due_date === dateStr);
+  };
+
+  // Order status labels and colors
+  const orderStatusLabels: Record<string, string> = {
+    pending: 'În așteptare',
+    in_progress: 'În lucru',
+    completed: 'Finalizată',
+    cancelled: 'Anulată',
+    dtp: 'DTP',
+    bt_waiting: 'Așteaptă BT',
+    bt_approved: 'BT Aprobat',
+    production: 'În Producție',
+  };
+
+  const orderStatusColors: Record<string, string> = {
+    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    dtp: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+    bt_waiting: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+    bt_approved: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
+    production: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
   };
 
   // Navigation
@@ -500,11 +536,14 @@ export default function ProductionCalendar() {
                     <DroppableDay
                       date={date}
                       tasks={getTasksForDate(date)}
+                      orders={getOrdersForDate(date)}
                       size="large"
                       isToday={isToday(date)}
                       isCurrentMonth={isCurrentMonth(date)}
                       getDepartmentBorderColor={getDepartmentBorderColor}
                       onTaskClick={setSelectedTask}
+                      orderStatusLabels={orderStatusLabels}
+                      orderStatusColors={orderStatusColors}
                     />
                   </div>
                 ))}
@@ -514,11 +553,14 @@ export default function ProductionCalendar() {
                     <DroppableDay
                       date={date}
                       tasks={getTasksForDate(date)}
+                      orders={getOrdersForDate(date)}
                       size="medium"
                       isToday={isToday(date)}
                       isCurrentMonth={isCurrentMonth(date)}
                       getDepartmentBorderColor={getDepartmentBorderColor}
                       onTaskClick={setSelectedTask}
+                      orderStatusLabels={orderStatusLabels}
+                      orderStatusColors={orderStatusColors}
                     />
                   </div>
                 ))}
@@ -537,11 +579,14 @@ export default function ProductionCalendar() {
                         key={date.toISOString()}
                         date={date}
                         tasks={getTasksForDate(date)}
+                        orders={getOrdersForDate(date)}
                         size="small"
                         isToday={isToday(date)}
                         isCurrentMonth={isCurrentMonth(date)}
                         getDepartmentBorderColor={getDepartmentBorderColor}
                         onTaskClick={setSelectedTask}
+                        orderStatusLabels={orderStatusLabels}
+                        orderStatusColors={orderStatusColors}
                       />
                     ))}
                 </div>
