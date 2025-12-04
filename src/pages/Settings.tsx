@@ -8,7 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Check, X, ShieldAlert } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface CompanySettings {
   companyName: string;
@@ -40,6 +41,7 @@ const STORAGE_KEY = '4culori-settings';
 const Settings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { canManageSettings, loading: authLoading } = useAuth();
   const [settings, setSettings] = useState<CompanySettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -58,6 +60,7 @@ const Settings = () => {
       if (error) throw error;
       return data as OrderTypeDefault[];
     },
+    enabled: canManageSettings,
   });
 
   // Mutation for updating order type defaults
@@ -179,6 +182,34 @@ const Settings = () => {
     }
     addOrderTypeMutation.mutate(newForm);
   };
+
+  // Check access - show loading or restricted after all hooks
+  if (authLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!canManageSettings) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+          <ShieldAlert className="h-16 w-16 text-destructive" />
+          <h1 className="text-2xl font-bold text-foreground">Acces Restricționat</h1>
+          <p className="text-muted-foreground text-center max-w-md">
+            Nu ai permisiunea să accesezi această pagină. Doar administratorii pot modifica setările.
+          </p>
+          <Button variant="outline" onClick={() => window.history.back()}>
+            Înapoi
+          </Button>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
