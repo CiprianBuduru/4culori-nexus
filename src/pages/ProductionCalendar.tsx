@@ -14,13 +14,16 @@ import {
   User,
   Package,
   Trash2,
-  UserCheck
+  UserCheck,
+  AlertTriangle
 } from 'lucide-react';
 import { useDepartments } from '@/hooks/useDepartments';
 import { useProductionTasks, ProductionTask } from '@/hooks/useProductionTasks';
 import { useEmployees } from '@/hooks/useEmployees';
 import { sendTaskNotification } from '@/hooks/useNotifications';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   productionStatusLabels, 
   productionStatusColors,
@@ -37,6 +40,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import { DroppableDay } from '@/components/calendar/DroppableDay';
 import { DraggableTask } from '@/components/calendar/DraggableTask';
+import { format, differenceInDays, addDays } from 'date-fns';
+import { ro } from 'date-fns/locale';
 
 const departmentColors: Record<string, string> = {
   '1': 'bg-brand-blue',    // Vânzări
@@ -68,6 +73,43 @@ export default function ProductionCalendar() {
   const [editingAssignee, setEditingAssignee] = useState(false);
   const [editingStatus, setEditingStatus] = useState(false);
   const [activeTask, setActiveTask] = useState<ProductionTask | null>(null);
+
+  // Fetch orders with production_days for alerts
+  const { data: ordersForAlerts = [] } = useQuery({
+    queryKey: ['orders-production-alerts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, order_number, due_date, production_days, status, client_id, clients(name)')
+        .gt('production_days', 0)
+        .not('due_date', 'is', null)
+        .in('status', ['bt_approved', 'production'])
+        .order('due_date', { ascending: true });
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Calculate production alerts - orders that need to start production
+  const productionAlerts = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return ordersForAlerts.map(order => {
+      const dueDate = new Date(order.due_date!);
+      const productionStartDate = addDays(dueDate, -order.production_days!);
+      const daysUntilStart = differenceInDays(productionStartDate, today);
+      
+      return {
+        ...order,
+        productionStartDate,
+        daysUntilStart,
+        isUrgent: daysUntilStart <= 0,
+        isWarning: daysUntilStart > 0 && daysUntilStart <= 3,
+      };
+    }).filter(alert => alert.daysUntilStart <= 7); // Show alerts for next 7 days
+  }, [ordersForAlerts]);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -359,6 +401,71 @@ export default function ProductionCalendar() {
             </div>
           ))}
         </div>
+
+        {/* Production Alerts */}
+        {productionAlerts.length > 0 && (
+          <Card className="border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2 text-orange-800 dark:text-orange-200">
+                <AlertTriangle className="h-5 w-5" />
+                Alerte Început Producție ({productionAlerts.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                {productionAlerts.map((alert) => (
+                  <div
+                    key={alert.id}
+                    className={`p-3 rounded-lg border ${
+                      alert.isUrgent 
+                        ? 'bg-red-100 border-red-300 dark:bg-red-950/50 dark:border-red-800' 
+                        : alert.isWarning 
+                          ? 'bg-orange-100 border-orange-300 dark:bg-orange-950/50 dark:border-orange-800'
+                          : 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-mono font-semibold text-sm truncate">
+                          #{alert.order_number}
+                        </p>
+                        {alert.clients && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {(alert.clients as any).name}
+                          </p>
+                        )}
+                      </div>
+                      <Badge 
+                        variant={alert.isUrgent ? 'destructive' : alert.isWarning ? 'default' : 'secondary'}
+                        className="shrink-0"
+                      >
+                        {alert.isUrgent 
+                          ? 'Începe AZI!' 
+                          : alert.daysUntilStart === 1 
+                            ? 'Mâine' 
+                            : `${alert.daysUntilStart} zile`}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                      <p>
+                        <span className="font-medium">Start producție:</span>{' '}
+                        {format(alert.productionStartDate, 'd MMM', { locale: ro })}
+                      </p>
+                      <p>
+                        <span className="font-medium">Livrare:</span>{' '}
+                        {format(new Date(alert.due_date!), 'd MMM', { locale: ro })}
+                      </p>
+                      <p>
+                        <span className="font-medium">Durată:</span>{' '}
+                        {alert.production_days} zile
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Month Navigation */}
         <Card>

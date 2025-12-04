@@ -261,6 +261,7 @@ export type Database = {
           needs_dtp: boolean | null
           notes: string | null
           order_number: string
+          production_days: number | null
           production_operations: string[] | null
           status: string
           total_amount: number | null
@@ -275,6 +276,7 @@ export type Database = {
           needs_dtp?: boolean | null
           notes?: string | null
           order_number: string
+          production_days?: number | null
           production_operations?: string[] | null
           status?: string
           total_amount?: number | null
@@ -289,6 +291,7 @@ export type Database = {
           needs_dtp?: boolean | null
           notes?: string | null
           order_number?: string
+          production_days?: number | null
           production_operations?: string[] | null
           status?: string
           total_amount?: number | null

@@ -58,6 +58,7 @@ const orderSchema = z.object({
   notes: z.string().optional(),
   due_date: z.string().optional(),
   needs_dtp: z.boolean().optional(),
+  production_days: z.coerce.number().min(0).optional(),
 });
 
 type OrderFormData = z.infer<typeof orderSchema>;
@@ -73,6 +74,7 @@ interface Order {
   attachment_url?: string | null;
   production_operations?: string[] | null;
   needs_dtp?: boolean | null;
+  production_days?: number | null;
 }
 
 interface OrderEditDialogProps {
@@ -114,6 +116,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
       notes: '',
       due_date: '',
       needs_dtp: false,
+      production_days: 0,
     },
   });
 
@@ -130,6 +133,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
         notes: order.notes || '',
         due_date: order.due_date || '',
         needs_dtp: order.needs_dtp || false,
+        production_days: order.production_days || 0,
       });
       setExistingAttachment(order.attachment_url || null);
       setSelectedOperations(order.production_operations || []);
@@ -143,6 +147,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
         notes: '',
         due_date: '',
         needs_dtp: false,
+        production_days: 0,
       });
       setExistingAttachment(null);
       setSelectedOperations([]);
@@ -231,6 +236,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
         due_date: data.due_date || null,
         production_operations: selectedOperations,
         needs_dtp: data.needs_dtp || false,
+        production_days: data.production_days || 0,
       };
 
       let orderId: string;
@@ -444,13 +450,32 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
               )}
             />
 
-            {/* Production Operations Section - only shown after BT approved */}
+            {/* Production Days and Operations Section - only shown after BT approved */}
             {showProductionOperations && (
-              <div className="space-y-3">
-                <FormLabel>Operațiuni Producție</FormLabel>
-                <p className="text-xs text-muted-foreground">
-                  Directorul de producție selectează operațiunile necesare după aprobarea BT
-                </p>
+              <div className="space-y-4">
+                {/* Production Days Input */}
+                <FormField
+                  control={form.control}
+                  name="production_days"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Zile necesare producție</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="number" min="0" placeholder="0" />
+                      </FormControl>
+                      <FormDescription>
+                        Numărul de zile necesare pentru producție. Calendarul va afișa alertă de începere cu acest număr de zile înainte de termenul de livrare.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="space-y-3">
+                  <FormLabel>Operațiuni Producție</FormLabel>
+                  <p className="text-xs text-muted-foreground">
+                    Directorul de producție selectează operațiunile necesare după aprobarea BT
+                  </p>
                 
                 {/* Available operations to select */}
                 <div className="border rounded-lg p-3 space-y-2 bg-muted/20">
@@ -524,6 +549,7 @@ export function OrderEditDialog({ order, open, onOpenChange }: OrderEditDialogPr
                     ))}
                   </div>
                 )}
+                </div>
               </div>
             )}
 
