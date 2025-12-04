@@ -258,6 +258,7 @@ export type Database = {
           created_at: string
           due_date: string | null
           id: string
+          needs_dtp: boolean | null
           notes: string | null
           order_number: string
           production_operations: string[] | null
@@ -271,6 +272,7 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           id?: string
+          needs_dtp?: boolean | null
           notes?: string | null
           order_number: string
           production_operations?: string[] | null
@@ -284,6 +286,7 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           id?: string
+          needs_dtp?: boolean | null
           notes?: string | null
           order_number?: string
           production_operations?: string[] | null
