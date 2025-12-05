@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, Check, CheckCheck, Trash2, X, ClipboardList } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, X, ClipboardList, Volume2, VolumeX, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -8,9 +8,12 @@ import {
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { useNotifications, Notification } from '@/hooks/useNotifications';
+import { useRealtimeNotificationSettings } from '@/providers/RealtimeNotificationProvider';
 import { formatDistanceToNow } from 'date-fns';
 import { ro } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const notificationTypeIcons: Record<string, React.ReactNode> = {
   task_assigned: <ClipboardList className="h-4 w-4 text-primary" />,
@@ -23,6 +26,14 @@ const notificationTypeIcons: Record<string, React.ReactNode> = {
 export function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
+  const {
+    soundEnabled,
+    setSoundEnabled,
+    browserNotificationsEnabled,
+    setBrowserNotificationsEnabled,
+    requestBrowserPermission,
+    browserPermissionStatus,
+  } = useRealtimeNotificationSettings();
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.is_read) {
@@ -30,14 +41,22 @@ export function NotificationCenter() {
     }
   };
 
+  const handleBrowserNotificationToggle = async (enabled: boolean) => {
+    if (enabled && browserPermissionStatus !== 'granted') {
+      const granted = await requestBrowserPermission();
+      if (!granted) return;
+    }
+    setBrowserNotificationsEnabled(enabled);
+  };
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+          <Bell className={cn("h-5 w-5", unreadCount > 0 && "animate-pulse")} />
           {unreadCount > 0 && (
             <Badge 
-              className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px] bg-destructive"
+              className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px] bg-destructive animate-bounce"
             >
               {unreadCount > 9 ? '9+' : unreadCount}
             </Badge>
@@ -60,7 +79,36 @@ export function NotificationCenter() {
           )}
         </div>
         
-        <ScrollArea className="h-[300px]">
+        {/* Settings Row */}
+        <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              {soundEnabled ? (
+                <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
+              ) : (
+                <VolumeX className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+              <span className="text-xs text-muted-foreground">Sunet</span>
+              <Switch
+                checked={soundEnabled}
+                onCheckedChange={setSoundEnabled}
+                className="scale-75"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <BellRing className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Browser</span>
+              <Switch
+                checked={browserNotificationsEnabled}
+                onCheckedChange={handleBrowserNotificationToggle}
+                className="scale-75"
+                disabled={browserPermissionStatus === 'denied'}
+              />
+            </div>
+          </div>
+        </div>
+        
+        <ScrollArea className="h-[280px]">
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full py-8 text-muted-foreground">
               <Bell className="h-8 w-8 mb-2 opacity-50" />
@@ -71,9 +119,10 @@ export function NotificationCenter() {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-3 hover:bg-muted/50 cursor-pointer transition-colors ${
-                    !notification.is_read ? 'bg-primary/5' : ''
-                  }`}
+                  className={cn(
+                    "p-3 hover:bg-muted/50 cursor-pointer transition-colors group",
+                    !notification.is_read && "bg-primary/5"
+                  )}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex items-start gap-3">
@@ -84,7 +133,7 @@ export function NotificationCenter() {
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium truncate">{notification.title}</p>
                         {!notification.is_read && (
-                          <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
+                          <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0 animate-pulse" />
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
@@ -100,7 +149,7 @@ export function NotificationCenter() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteNotification.mutate(notification.id);
