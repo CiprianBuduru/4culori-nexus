@@ -27,7 +27,27 @@
 </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="initial-loader" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f0f4f8;">
+        <div style="text-align: center; padding: 20px;">
+          <div id="spinner" style="width: 40px; height: 40px; border: 3px solid #3b82f6; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+          <p style="color: #64748b; margin-bottom: 16px;">Se încarcă aplicația...</p>
+          <button id="reload-btn" onclick="window.location.reload()" style="display: none; background: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">
+            🔄 Reîncarcă pagina
+          </button>
+        </div>
+      </div>
+      <style>
+        @keyframes spin { to { transform: rotate(360deg); }}
+      </style>
+      <script>
+        // Show reload button after 5 seconds if app hasn't loaded
+        setTimeout(function() {
+          var btn = document.getElementById('reload-btn');
+          if (btn) btn.style.display = 'inline-block';
+        }, 5000);
+      </script>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
