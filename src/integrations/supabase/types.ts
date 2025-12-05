@@ -457,6 +457,48 @@ export type Database = {
           },
         ]
       }
+      products: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          image: string | null
+          name: string
+          price: number
+          sku: string
+          status: string
+          stock: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image?: string | null
+          name: string
+          price?: number
+          sku: string
+          status?: string
+          stock?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image?: string | null
+          name?: string
+          price?: number
+          sku?: string
+          status?: string
+          stock?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
