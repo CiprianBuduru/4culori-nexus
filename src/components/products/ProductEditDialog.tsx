@@ -177,20 +177,20 @@ export function ProductEditDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categorie</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selectează categoria" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        placeholder="Introdu sau selectează categoria"
+                        list="category-suggestions"
+                        {...field}
+                      />
+                      <datalist id="category-suggestions">
+                        {categories.map((cat) => (
+                          <option key={cat} value={cat} />
+                        ))}
+                      </datalist>
+                    </div>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
