@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { EmployeeCard } from '@/components/employees/EmployeeCard';
 import { EmployeeEditDialog } from '@/components/employees/EmployeeEditDialog';
@@ -8,13 +8,17 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Users, CalendarDays, Loader2 } from 'lucide-react';
+import { Plus, Search, Users, CalendarDays, Loader2, Upload, Download } from 'lucide-react';
 import { departments } from '@/data/mockData';
 import { Employee } from '@/types';
 import { useEmployees } from '@/hooks/useEmployees';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import * as XLSX from 'xlsx';
 
 const Employees = () => {
-  const { employees: employeeList, loading, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
+  const { employees: employeeList, loading, addEmployee, updateEmployee, deleteEmployee, refetch } = useEmployees();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -22,6 +26,110 @@ const Employees = () => {
   const [filterLMG, setFilterLMG] = useState(false);
   const [filterEQS, setFilterEQS] = useState(false);
   const [activeTab, setActiveTab] = useState('employees');
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    const exportData = employeeList.map(emp => ({
+      'ID': emp.id,
+      'Nume': emp.name,
+      'Email': emp.email,
+      'Telefon': emp.phone || '',
+      'Poziție': emp.position,
+      'Departament': departments.find(d => d.id === emp.departmentId)?.name || emp.departmentId,
+      'Data angajării': emp.hireDate || '',
+      'Data nașterii': emp.birthDate || '',
+      'Zile concediu/an': emp.vacationDays || 21,
+      'Status': emp.status,
+      'Companie': emp.company || '',
+      'Unitate Protejată': emp.isProtectedUnit ? 'Da' : 'Nu',
+      'Nivel acces': emp.accessLevel || 0,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Angajați');
+    ws['!cols'] = [
+      { wch: 36 }, { wch: 25 }, { wch: 30 }, { wch: 15 }, { wch: 20 },
+      { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 10 },
+      { wch: 10 }, { wch: 15 }, { wch: 10 }
+    ];
+    XLSX.writeFile(wb, `angajati_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast({ title: 'Export realizat cu succes!' });
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(sheet) as any[];
+
+      let updated = 0, added = 0, errors = 0;
+
+      for (const row of jsonData) {
+        const name = row['Nume'] || row['name'] || '';
+        const email = row['Email'] || row['email'] || '';
+        if (!name || !email) continue;
+
+        // Find department ID by name or use directly if it's an ID
+        const deptName = row['Departament'] || row['department'] || '';
+        const dept = departments.find(d => 
+          d.name.toLowerCase() === String(deptName).toLowerCase() || d.id === deptName
+        );
+        const departmentId = dept?.id || 'management';
+
+        const employeeData = {
+          name: String(name).trim(),
+          email: String(email).trim().toLowerCase(),
+          phone: row['Telefon'] || row['phone'] || '',
+          position: row['Poziție'] || row['position'] || 'Angajat',
+          department_id: departmentId,
+          hire_date: row['Data angajării'] || row['hire_date'] || null,
+          birth_date: row['Data nașterii'] || row['birth_date'] || null,
+          vacation_days_per_year: parseInt(row['Zile concediu/an'] || row['vacation_days'] || 21) || 21,
+          status: (row['Status'] || row['status'] || 'active').toLowerCase() === 'inactive' ? 'inactive' : 'active',
+          company: row['Companie'] || row['company'] || null,
+          is_protected_unit: String(row['Unitate Protejată'] || row['is_protected_unit'] || '').toLowerCase() === 'da' || row['is_protected_unit'] === true,
+          access_level: parseInt(row['Nivel acces'] || row['access_level'] || 0) || 0,
+          service_ids: [],
+        };
+
+        const existingId = row['ID'] || row['id'];
+        const existing = existingId 
+          ? employeeList.find(emp => emp.id === existingId)
+          : employeeList.find(emp => emp.email.toLowerCase() === employeeData.email);
+
+        try {
+          if (existing) {
+            await supabase.from('employees').update(employeeData).eq('id', existing.id);
+            updated++;
+          } else {
+            await supabase.from('employees').insert(employeeData);
+            added++;
+          }
+        } catch {
+          errors++;
+        }
+      }
+
+      await refetch();
+      toast({ 
+        title: 'Import finalizat!',
+        description: `${added} adăugați, ${updated} actualizați${errors > 0 ? `, ${errors} erori` : ''}`
+      });
+    } catch (err) {
+      console.error('Import error:', err);
+      toast({ title: 'Eroare la import', variant: 'destructive' });
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const filteredEmployees = employeeList.filter((emp) => {
     const matchesSearch =
@@ -65,6 +173,13 @@ const Employees = () => {
 
   return (
     <MainLayout>
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept=".xlsx,.xls"
+        onChange={handleImport}
+        className="hidden"
+      />
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -75,10 +190,19 @@ const Employees = () => {
             </p>
           </div>
           {activeTab === 'employees' && (
-            <Button className="gap-2" onClick={handleAddNew}>
-              <Plus className="h-4 w-4" />
-              Adaugă Angajat
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={employeeList.length === 0}>
+                <Download className="mr-1 h-4 w-4" /> Export
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
+                {isImporting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />}
+                Import
+              </Button>
+              <Button className="gap-2" onClick={handleAddNew}>
+                <Plus className="h-4 w-4" />
+                Adaugă Angajat
+              </Button>
+            </div>
           )}
         </div>
 
