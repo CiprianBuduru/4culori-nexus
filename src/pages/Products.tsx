@@ -1,14 +1,21 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProductCard } from '@/components/products/ProductCard';
 import { ProductEditDialog } from '@/components/products/ProductEditDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, Loader2, Download, Upload } from 'lucide-react';
+import { Plus, Search, Loader2, Download, Upload, Filter } from 'lucide-react';
 import { Product } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useProducts } from '@/hooks/useProducts';
 import * as XLSX from 'xlsx';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,8 +27,17 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+const CATEGORIES = ['Papetărie', 'Hârtie', 'Artă', 'Textile', 'Ambalaje', 'Consumabile', 'Altele'];
+const STATUSES = [
+  { value: 'active', label: 'Activ' },
+  { value: 'inactive', label: 'Inactiv' },
+  { value: 'discontinued', label: 'Discontinuat' },
+];
+
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -31,12 +47,23 @@ const Products = () => {
   const { toast } = useToast();
   const { products, isLoading, addProduct, updateProduct, deleteProduct, refetch } = useProducts();
 
-  const filteredProducts = products.filter(
-    (prod) =>
+  // Get unique categories from products
+  const availableCategories = useMemo(() => {
+    const cats = new Set(products.map((p) => p.category));
+    return Array.from(cats).sort();
+  }, [products]);
+
+  const filteredProducts = products.filter((prod) => {
+    const matchesSearch =
       prod.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       prod.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      prod.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      prod.category.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = categoryFilter === 'all' || prod.category === categoryFilter;
+    const matchesStatus = statusFilter === 'all' || prod.status === statusFilter;
+
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
 
   const handleExport = () => {
     const exportData = products.map((p) => ({
@@ -259,16 +286,77 @@ const Products = () => {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Caută produse..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+        {/* Search and Filters */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Caută produse..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[160px] bg-background">
+                <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Categorie" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover">
+                <SelectItem value="all">Toate categoriile</SelectItem>
+                {availableCategories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px] bg-background">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover">
+                <SelectItem value="all">Toate</SelectItem>
+                {STATUSES.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+
+        {/* Active filters indicator */}
+        {(categoryFilter !== 'all' || statusFilter !== 'all') && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Filtre active:</span>
+            {categoryFilter !== 'all' && (
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-secondary-foreground">
+                {categoryFilter}
+              </span>
+            )}
+            {statusFilter !== 'all' && (
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-secondary-foreground">
+                {STATUSES.find((s) => s.value === statusFilter)?.label}
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => {
+                setCategoryFilter('all');
+                setStatusFilter('all');
+              }}
+            >
+              Resetează
+            </Button>
+          </div>
+        )}
 
         {/* Products Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
