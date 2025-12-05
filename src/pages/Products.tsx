@@ -1,3 +1,4 @@
+// Products Stock v2.0
 import { useState, useRef, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProductCard } from '@/components/products/ProductCard';
