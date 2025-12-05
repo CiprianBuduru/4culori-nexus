@@ -7,10 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calculator, RotateCcw, FileText, Users, Mail, Loader2, Save } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RecipeSelector } from '@/components/calculator/RecipeSelector';
 import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorItem';
 import { BriefAnalyzer } from '@/components/calculator/BriefAnalyzer';
 import { DTFCalculator } from '@/components/calculator/DTFCalculator';
+import { LargeFormatCalculator } from '@/components/calculator/LargeFormatCalculator';
+import { TransferCalculator } from '@/components/calculator/TransferCalculator';
+import { TypographyCalculator } from '@/components/calculator/TypographyCalculator';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
 import { toast } from 'sonner';
 import { generateOfferPdf } from '@/lib/generateOfferPdf';
@@ -117,18 +121,18 @@ export default function PriceCalculator() {
     toast.success(`Adăugat: ${suggestion.recipeName} x${suggestion.quantity}`);
   };
 
-  const handleAddDTFToOffer = (item: {
+  const handleAddCalculatorItem = (item: {
     name: string;
     quantity: number;
     unitPrice: number;
     totalPrice: number;
     details: string;
-  }) => {
+  }, category: RecipeCategory = 'personalized') => {
     const newCalculation: RecipeCalculation = {
       id: crypto.randomUUID(),
-      recipeId: 'dtf-custom',
+      recipeId: `custom-${Date.now()}`,
       recipeName: item.name,
-      category: 'personalized' as RecipeCategory,
+      category,
       quantity: item.quantity,
       materialCost: 0,
       personalizationCost: 0,
@@ -302,10 +306,29 @@ export default function PriceCalculator() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left Column - AI Analyzer, Recipe Selector & Items */}
+          {/* Left Column - Calculators, AI Analyzer, Recipe Selector & Items */}
           <div className="lg:col-span-2 space-y-4">
-            {/* DTF Calculator */}
-            <DTFCalculator onAddToOffer={handleAddDTFToOffer} />
+            {/* Dedicated Calculators */}
+            <Tabs defaultValue="large-format" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="large-format" className="text-xs">Print Mare</TabsTrigger>
+                <TabsTrigger value="transfer" className="text-xs">Transfer</TabsTrigger>
+                <TabsTrigger value="dtf" className="text-xs">DTF</TabsTrigger>
+                <TabsTrigger value="typography" className="text-xs">Tipografie</TabsTrigger>
+              </TabsList>
+              <TabsContent value="large-format" className="mt-4">
+                <LargeFormatCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'large-print')} />
+              </TabsContent>
+              <TabsContent value="transfer" className="mt-4">
+                <TransferCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'personalized')} />
+              </TabsContent>
+              <TabsContent value="dtf" className="mt-4">
+                <DTFCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'personalized')} />
+              </TabsContent>
+              <TabsContent value="typography" className="mt-4">
+                <TypographyCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')} />
+              </TabsContent>
+            </Tabs>
 
             {/* AI Brief Analyzer */}
             <BriefAnalyzer onAddSuggestion={handleAddAISuggestion} />
