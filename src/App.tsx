@@ -1,5 +1,5 @@
 // 4culori CRM/ERP - v1.0
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,19 +11,19 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Loader2 } from "lucide-react";
 
-// Direct imports for stability
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Employees from "./pages/Employees";
-import Departments from "./pages/Departments";
-import Products from "./pages/Products";
-import PriceCalculator from "./pages/PriceCalculator";
-import ProductionCalendar from "./pages/ProductionCalendar";
-import TasksCalendar from "./pages/TasksCalendar";
-import Settings from "./pages/Settings";
-import Clients from "./pages/Clients";
-import Orders from "./pages/Orders";
-import NotFound from "./pages/NotFound";
+// Lazy load pages for better performance
+const Index = lazy(() => import("./pages/Index"));
+const Auth = lazy(() => import("./pages/Auth"));
+const Employees = lazy(() => import("./pages/Employees"));
+const Departments = lazy(() => import("./pages/Departments"));
+const Products = lazy(() => import("./pages/Products"));
+const PriceCalculator = lazy(() => import("./pages/PriceCalculator"));
+const ProductionCalendar = lazy(() => import("./pages/ProductionCalendar"));
+const TasksCalendar = lazy(() => import("./pages/TasksCalendar"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Clients = lazy(() => import("./pages/Clients"));
+const Orders = lazy(() => import("./pages/Orders"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -31,8 +31,6 @@ const LoadingFallback = () => (
     <Loader2 className="h-8 w-8 animate-spin text-primary" />
   </div>
 );
-
-console.log("App.tsx loaded");
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,8 +42,6 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  console.log("App component rendering");
-  
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
