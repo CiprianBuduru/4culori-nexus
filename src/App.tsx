@@ -1,4 +1,4 @@
-// 4culori CRM/ERP - v2.0 (Direct imports)
+// 4culori CRM/ERP - v2.1 (Cache bypass with new file names)
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,13 +9,13 @@ import { DepartmentsProvider } from "@/hooks/useDepartments";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-// All direct imports - no lazy loading
+// Direct imports with new file names to bypass cache
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Employees from "./pages/Employees";
 import Departments from "./pages/Departments";
-import Products from "./pages/Products";
-import PriceCalculator from "./pages/PriceCalculator";
+import ProductsPage from "./pages/ProductsPage";
+import PriceCalculatorPage from "./pages/PriceCalculatorPage";
 import ProductionCalendar from "./pages/ProductionCalendar";
 import TasksCalendar from "./pages/TasksCalendar";
 import Settings from "./pages/Settings";
@@ -51,8 +51,8 @@ const App = () => {
                   <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
                   <Route path="/employees" element={<ProtectedRoute><Employees /></ProtectedRoute>} />
                   <Route path="/departments" element={<ProtectedRoute><Departments /></ProtectedRoute>} />
-                  <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
-                  <Route path="/price-calculator" element={<ProtectedRoute><PriceCalculator /></ProtectedRoute>} />
+                  <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
+                  <Route path="/price-calculator" element={<ProtectedRoute><PriceCalculatorPage /></ProtectedRoute>} />
                   <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
