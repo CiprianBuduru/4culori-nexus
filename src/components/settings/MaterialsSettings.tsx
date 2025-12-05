@@ -16,13 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Plus, Pencil, Trash2, Check, X, Loader2, Package, Search, Filter, Download, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, Loader2, Search, Download, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface Material {
@@ -73,7 +67,6 @@ export function MaterialsSettings() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'table' | 'categories'>('categories');
   const [form, setForm] = useState({ name: '', unit: 'buc', unit_price: 0, category: '', description: '' });
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,13 +80,11 @@ export function MaterialsSettings() {
     },
   });
 
-  // Get unique categories from materials
   const categories = useMemo(() => {
     const cats = [...new Set(materials.map(m => m.category).filter(Boolean))] as string[];
     return cats.sort();
   }, [materials]);
 
-  // Filter materials
   const filteredMaterials = useMemo(() => {
     return materials.filter(m => {
       const matchesSearch = !searchTerm || 
@@ -104,16 +95,9 @@ export function MaterialsSettings() {
     });
   }, [materials, searchTerm, filterCategory]);
 
-  // Group materials by category
-  const groupedMaterials = useMemo(() => {
-    const grouped: Record<string, Material[]> = {};
-    filteredMaterials.forEach(m => {
-      const cat = m.category || 'Fără categorie';
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(m);
-    });
-    return grouped;
-  }, [filteredMaterials]);
+  const countMaterialsWithPrice = useMemo(() => {
+    return materials.filter(m => m.unit_price > 0).length;
+  }, [materials]);
 
   const addMutation = useMutation({
     mutationFn: async (item: Omit<Material, 'id'>) => {
@@ -168,11 +152,6 @@ export function MaterialsSettings() {
     }
   };
 
-  const countMaterialsWithPrice = useMemo(() => {
-    return materials.filter(m => m.unit_price > 0).length;
-  }, [materials]);
-
-  // Export materials to Excel
   const handleExport = () => {
     const exportData = materials.map(m => ({
       'ID': m.id,
@@ -186,16 +165,11 @@ export function MaterialsSettings() {
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Materiale');
-    
-    ws['!cols'] = [
-      { wch: 36 }, { wch: 40 }, { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 30 },
-    ];
-
+    ws['!cols'] = [{ wch: 36 }, { wch: 40 }, { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 30 }];
     XLSX.writeFile(wb, `materiale_${new Date().toISOString().split('T')[0]}.xlsx`);
     toast({ title: 'Export realizat cu succes!' });
   };
 
-  // Import materials from Excel
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -252,50 +226,8 @@ export function MaterialsSettings() {
     }
   };
 
-  const MaterialRow = ({ m, showCategory = false }: { m: Material; showCategory?: boolean }) => (
-    <TableRow key={m.id} className={m.unit_price === 0 ? 'bg-destructive/5' : ''}>
-      <TableCell className="font-medium">
-        {m.name}
-        {m.unit_price === 0 && <Badge variant="destructive" className="ml-2 text-xs">Fără preț</Badge>}
-      </TableCell>
-      {showCategory && <TableCell className="text-muted-foreground">{m.category || '-'}</TableCell>}
-      <TableCell className="text-right font-mono">
-        {editingId === m.id ? (
-          <Input
-            type="number"
-            step="0.001"
-            min="0"
-            className="w-24 text-right"
-            value={form.unit_price}
-            onChange={(e) => setForm(p => ({ ...p, unit_price: parseFloat(e.target.value) || 0 }))}
-            autoFocus
-          />
-        ) : (
-          <span className={m.unit_price === 0 ? 'text-destructive' : ''}>
-            {m.unit_price.toFixed(3)} €
-          </span>
-        )}
-      </TableCell>
-      <TableCell className="text-right">{m.unit}</TableCell>
-      <TableCell className="text-right">
-        {editingId === m.id ? (
-          <div className="flex justify-end gap-1">
-            <Button size="icon" variant="ghost" onClick={handleSave}><Check className="h-4 w-4 text-green-500" /></Button>
-            <Button size="icon" variant="ghost" onClick={() => setEditingId(null)}><X className="h-4 w-4" /></Button>
-          </div>
-        ) : (
-          <div className="flex justify-end gap-1">
-            <Button size="icon" variant="ghost" onClick={() => startEdit(m)}><Pencil className="h-4 w-4" /></Button>
-            <Button size="icon" variant="ghost" onClick={() => deleteMutation.mutate(m.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-          </div>
-        )}
-      </TableCell>
-    </TableRow>
-  );
-
   return (
-    <div className="rounded-xl border border-border bg-card p-6">
-      {/* Hidden file input for import */}
+    <div className="space-y-4">
       <input
         type="file"
         ref={fileInputRef}
@@ -306,48 +238,30 @@ export function MaterialsSettings() {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Package className="h-5 w-5 text-brand-blue" />
-          <div>
-            <h2 className="text-lg font-semibold">Materiale Prime</h2>
-            <p className="text-sm text-muted-foreground">
-              {countMaterialsWithPrice}/{materials.length} materiale cu preț completat
-            </p>
-          </div>
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Materiale Prime</h2>
+          <p className="text-sm text-muted-foreground">
+            {countMaterialsWithPrice}/{materials.length} materiale cu preț completat
+          </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleExport}
-            disabled={materials.length === 0}
-          >
-            <Download className="mr-1 h-4 w-4" /> Export Excel
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={materials.length === 0}>
+            <Download className="mr-1 h-4 w-4" /> Export
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isImporting}
-          >
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
             {isImporting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />}
-            Import Excel
+            Import
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => { setIsAdding(true); setEditingId(null); setForm({ name: '', unit: 'buc', unit_price: 0, category: '', description: '' }); }} 
-            disabled={isAdding}
-          >
+          <Button variant="outline" size="sm" onClick={() => { setIsAdding(true); setEditingId(null); setForm({ name: '', unit: 'buc', unit_price: 0, category: '', description: '' }); }} disabled={isAdding}>
             <Plus className="mr-1 h-4 w-4" /> Adaugă
           </Button>
         </div>
       </div>
 
-      <Separator className="my-4" />
+      <Separator />
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4">
+      <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -359,7 +273,6 @@ export function MaterialsSettings() {
         </div>
         <Select value={filterCategory} onValueChange={setFilterCategory}>
           <SelectTrigger className="w-[180px]">
-            <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Categorie" />
           </SelectTrigger>
           <SelectContent>
@@ -369,22 +282,6 @@ export function MaterialsSettings() {
             ))}
           </SelectContent>
         </Select>
-        <div className="flex gap-1 border rounded-md p-1">
-          <Button 
-            variant={viewMode === 'categories' ? 'secondary' : 'ghost'} 
-            size="sm"
-            onClick={() => setViewMode('categories')}
-          >
-            Categorii
-          </Button>
-          <Button 
-            variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
-            size="sm"
-            onClick={() => setViewMode('table')}
-          >
-            Tabel
-          </Button>
-        </div>
       </div>
 
       {isLoading ? (
@@ -393,7 +290,7 @@ export function MaterialsSettings() {
         <>
           {/* Add/Edit Form */}
           {isAdding && (
-            <div className="mb-4 p-4 border rounded-lg bg-muted/30 space-y-3">
+            <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div>
                   <Label>Nume *</Label>
@@ -451,56 +348,98 @@ export function MaterialsSettings() {
             </div>
           )}
 
-          {/* Category View */}
-          {viewMode === 'categories' && (
-            <Accordion type="multiple" defaultValue={Object.keys(groupedMaterials)} className="space-y-2">
-              {Object.entries(groupedMaterials).map(([category, mats]) => {
-                const withPrice = mats.filter(m => m.unit_price > 0).length;
-                return (
-                  <AccordionItem key={category} value={category} className="border rounded-lg px-4">
-                    <AccordionTrigger className="hover:no-underline">
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium">{category}</span>
-                        <Badge variant={withPrice === mats.length ? 'secondary' : 'destructive'} className="text-xs">
-                          {withPrice}/{mats.length} completate
-                        </Badge>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Nume</TableHead>
-                            <TableHead className="text-right w-32">Preț/Unitate</TableHead>
-                            <TableHead className="text-right w-20">Unitate</TableHead>
-                            <TableHead className="w-24"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {mats.map((m) => <MaterialRow key={m.id} m={m} />)}
-                        </TableBody>
-                      </Table>
-                    </AccordionContent>
-                  </AccordionItem>
-                );
-              })}
-            </Accordion>
-          )}
-
-          {/* Table View */}
-          {viewMode === 'table' && (
+          {/* Table */}
+          <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/50">
                   <TableHead>Nume</TableHead>
                   <TableHead>Categorie</TableHead>
-                  <TableHead className="text-right">Preț/Unitate</TableHead>
-                  <TableHead className="text-right">Unitate</TableHead>
+                  <TableHead className="text-right w-32">Preț/Unitate</TableHead>
+                  <TableHead className="text-right w-20">Unitate</TableHead>
                   <TableHead className="w-24"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredMaterials.map((m) => <MaterialRow key={m.id} m={m} showCategory />)}
+                {filteredMaterials.map((m) => (
+                  <TableRow key={m.id} className={m.unit_price === 0 ? 'bg-destructive/5' : ''}>
+                    <TableCell className="font-medium">
+                      {editingId === m.id ? (
+                        <Input
+                          value={form.name}
+                          onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
+                          className="h-8"
+                        />
+                      ) : (
+                        <>
+                          {m.name}
+                          {m.unit_price === 0 && <Badge variant="destructive" className="ml-2 text-xs">Fără preț</Badge>}
+                        </>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {editingId === m.id ? (
+                        <Select value={form.category} onValueChange={(v) => setForm(p => ({ ...p, category: v }))}>
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CATEGORY_OPTIONS.map(cat => (
+                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        m.category || '-'
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {editingId === m.id ? (
+                        <Input
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          className="w-24 text-right h-8"
+                          value={form.unit_price}
+                          onChange={(e) => setForm(p => ({ ...p, unit_price: parseFloat(e.target.value) || 0 }))}
+                        />
+                      ) : (
+                        <span className={m.unit_price === 0 ? 'text-destructive' : ''}>
+                          {m.unit_price.toFixed(3)} €
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {editingId === m.id ? (
+                        <Select value={form.unit} onValueChange={(v) => setForm(p => ({ ...p, unit: v }))}>
+                          <SelectTrigger className="h-8 w-20">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {UNIT_OPTIONS.map(u => (
+                              <SelectItem key={u.value} value={u.value}>{u.value}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        m.unit
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {editingId === m.id ? (
+                        <div className="flex justify-end gap-1">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSave}><Check className="h-4 w-4 text-green-500" /></Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingId(null)}><X className="h-4 w-4" /></Button>
+                        </div>
+                      ) : (
+                        <div className="flex justify-end gap-1">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(m)}><Pencil className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => deleteMutation.mutate(m.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
                 {filteredMaterials.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
@@ -510,7 +449,7 @@ export function MaterialsSettings() {
                 )}
               </TableBody>
             </Table>
-          )}
+          </div>
         </>
       )}
     </div>

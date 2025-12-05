@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Check, X, Loader2, Clock } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react';
 
 interface ServiceTariff {
   id: string;
@@ -95,27 +95,27 @@ export function ServiceTariffsSettings() {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6">
+    <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-brand-orange" />
-          <div>
-            <h2 className="text-lg font-semibold">Tarife Servicii</h2>
-            <p className="text-sm text-muted-foreground">Costurile pentru servicii și manoperă</p>
-          </div>
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Tarife Servicii</h2>
+          <p className="text-sm text-muted-foreground">Costurile pentru servicii și manoperă</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => { setIsAdding(true); setEditingId(null); setForm({ name: '', unit: 'ora', unit_price: 0, department_id: '', description: '' }); }} disabled={isAdding}>
           <Plus className="mr-1 h-4 w-4" /> Adaugă
         </Button>
       </div>
-      <Separator className="my-4" />
+
+      <Separator />
 
       {isLoading ? (
         <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
       ) : (
         <>
-          {(isAdding || editingId) && (
-            <div className="mb-4 p-4 border rounded-lg bg-muted/30 space-y-3">
+          {/* Add Form */}
+          {isAdding && (
+            <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <Label>Nume Serviciu *</Label>
@@ -132,37 +132,83 @@ export function ServiceTariffsSettings() {
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" size="sm" onClick={() => { setIsAdding(false); setEditingId(null); }}><X className="h-4 w-4 mr-1" />Anulează</Button>
-                <Button size="sm" onClick={handleSave}><Check className="h-4 w-4 mr-1" />{editingId ? 'Salvează' : 'Adaugă'}</Button>
+                <Button size="sm" onClick={handleSave}><Check className="h-4 w-4 mr-1" />Adaugă</Button>
               </div>
             </div>
           )}
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Serviciu</TableHead>
-                <TableHead className="text-right">Preț/Unitate</TableHead>
-                <TableHead className="text-right">Unitate</TableHead>
-                <TableHead className="w-24"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tariffs.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium">{t.name}</TableCell>
-                  <TableCell className="text-right">{t.unit_price.toFixed(2)} €</TableCell>
-                  <TableCell className="text-right">{t.unit}</TableCell>
-                  <TableCell className="text-right">
-                    <Button size="icon" variant="ghost" onClick={() => startEdit(t)}><Pencil className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => deleteMutation.mutate(t.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                  </TableCell>
+          {/* Table */}
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead>Serviciu</TableHead>
+                  <TableHead className="text-right w-32">Preț/Unitate</TableHead>
+                  <TableHead className="text-right w-24">Unitate</TableHead>
+                  <TableHead className="w-24"></TableHead>
                 </TableRow>
-              ))}
-              {tariffs.length === 0 && (
-                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nu există tarife definite</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {tariffs.map((t) => (
+                  <TableRow key={t.id}>
+                    <TableCell className="font-medium">
+                      {editingId === t.id ? (
+                        <Input
+                          value={form.name}
+                          onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
+                          className="h-8"
+                        />
+                      ) : (
+                        t.name
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {editingId === t.id ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="w-24 text-right h-8"
+                          value={form.unit_price}
+                          onChange={(e) => setForm(p => ({ ...p, unit_price: parseFloat(e.target.value) || 0 }))}
+                        />
+                      ) : (
+                        `${t.unit_price.toFixed(2)} €`
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {editingId === t.id ? (
+                        <Input
+                          value={form.unit}
+                          onChange={(e) => setForm(p => ({ ...p, unit: e.target.value }))}
+                          className="w-20 h-8"
+                        />
+                      ) : (
+                        t.unit
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {editingId === t.id ? (
+                        <div className="flex justify-end gap-1">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSave}><Check className="h-4 w-4 text-green-500" /></Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingId(null)}><X className="h-4 w-4" /></Button>
+                        </div>
+                      ) : (
+                        <div className="flex justify-end gap-1">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(t)}><Pencil className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => deleteMutation.mutate(t.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {tariffs.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">Nu există tarife definite</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </>
       )}
     </div>

@@ -8,7 +8,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Check, X, Loader2, BookOpen, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Plus, Pencil, Trash2, Check, X, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Recipe {
@@ -133,25 +141,25 @@ export function RecipesSettings() {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6">
+    <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-brand-teal" />
-          <div>
-            <h2 className="text-lg font-semibold">Rețete de Calcul</h2>
-            <p className="text-sm text-muted-foreground">Definește rețete pentru calculul automat al costurilor</p>
-          </div>
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Rețete de Calcul</h2>
+          <p className="text-sm text-muted-foreground">Definește rețete pentru calculul automat al costurilor</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => { setIsAdding(true); setEditingId(null); resetForm(); }} disabled={isAdding}>
           <Plus className="mr-1 h-4 w-4" /> Adaugă
         </Button>
       </div>
-      <Separator className="my-4" />
+
+      <Separator />
 
       {isLoading ? (
         <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
       ) : (
-        <div className="space-y-3">
+        <>
+          {/* Add/Edit Form */}
           {(isAdding || editingId) && (
             <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -166,7 +174,7 @@ export function RecipesSettings() {
               </div>
 
               <div>
-                <Label>Cuvinte cheie pentru brief (AI le va folosi pentru a sugera rețeta)</Label>
+                <Label>Cuvinte cheie pentru brief</Label>
                 <div className="flex gap-2 mt-1">
                   <Input
                     value={keywordInput}
@@ -218,46 +226,71 @@ export function RecipesSettings() {
             </div>
           )}
 
-          {recipes.map((r) => (
-            <Collapsible key={r.id} open={expandedId === r.id && editingId !== r.id} onOpenChange={() => setExpandedId(expandedId === r.id ? null : r.id)}>
-              <div className="rounded-lg border">
-                <CollapsibleTrigger asChild>
-                  <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50">
-                    <div className="flex-1">
-                      <p className="font-medium">{r.name}</p>
-                      {r.description && <p className="text-sm text-muted-foreground">{r.description}</p>}
-                      <div className="flex gap-1 mt-1">
-                        {r.brief_keywords?.slice(0, 3).map(kw => (
-                          <Badge key={kw} variant="outline" className="text-xs">{kw}</Badge>
-                        ))}
-                        {(r.brief_keywords?.length || 0) > 3 && <Badge variant="outline" className="text-xs">+{r.brief_keywords!.length - 3}</Badge>}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{r.base_price.toFixed(2)} + {r.price_per_unit.toFixed(2)}/buc</span>
-                      <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); startEdit(r); }}><Pencil className="h-4 w-4" /></Button>
-                      <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(r.id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      {expandedId === r.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </div>
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="px-3 pb-3 space-y-2">
-                    <Separator />
-                    <div className="text-sm">
-                      <p><strong>Cuvinte cheie:</strong> {r.brief_keywords?.join(', ') || 'Niciuna'}</p>
-                      <p><strong>Formulă:</strong> {r.formula || 'base_price + (quantity × price_per_unit)'}</p>
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </div>
-            </Collapsible>
-          ))}
-
-          {recipes.length === 0 && !isAdding && (
-            <div className="text-center text-muted-foreground py-8">Nu există rețete definite</div>
-          )}
-        </div>
+          {/* Table */}
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead>Rețetă</TableHead>
+                  <TableHead>Cuvinte Cheie</TableHead>
+                  <TableHead className="text-right w-28">Preț Bază</TableHead>
+                  <TableHead className="text-right w-28">Preț/Buc</TableHead>
+                  <TableHead className="w-24"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recipes.map((r) => (
+                  <Collapsible key={r.id} asChild open={expandedId === r.id && editingId !== r.id}>
+                    <>
+                      <TableRow className="cursor-pointer hover:bg-muted/30" onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}>
+                        <TableCell className="font-medium">
+                          <div>
+                            {r.name}
+                            {r.description && <p className="text-xs text-muted-foreground">{r.description}</p>}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {r.brief_keywords?.slice(0, 2).map(kw => (
+                              <Badge key={kw} variant="outline" className="text-xs">{kw}</Badge>
+                            ))}
+                            {(r.brief_keywords?.length || 0) > 2 && (
+                              <Badge variant="outline" className="text-xs">+{r.brief_keywords!.length - 2}</Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-mono">{r.base_price.toFixed(2)} €</TableCell>
+                        <TableCell className="text-right font-mono">{r.price_per_unit.toFixed(2)} €</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEdit(r)}><Pencil className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => deleteMutation.mutate(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            {expandedId === r.id ? <ChevronUp className="h-4 w-4 mt-2" /> : <ChevronDown className="h-4 w-4 mt-2" />}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      <CollapsibleContent asChild>
+                        <TableRow className="bg-muted/20">
+                          <TableCell colSpan={5} className="py-3">
+                            <div className="text-sm space-y-1 px-2">
+                              <p><strong>Cuvinte cheie:</strong> {r.brief_keywords?.join(', ') || 'Niciuna'}</p>
+                              <p><strong>Formulă:</strong> <code className="bg-muted px-1 rounded">{r.formula || 'base_price + (quantity × price_per_unit)'}</code></p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      </CollapsibleContent>
+                    </>
+                  </Collapsible>
+                ))}
+                {recipes.length === 0 && !isAdding && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nu există rețete definite</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
     </div>
   );
