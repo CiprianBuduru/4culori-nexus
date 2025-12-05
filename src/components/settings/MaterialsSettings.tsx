@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -22,7 +22,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Plus, Pencil, Trash2, Check, X, Loader2, Package, Search, Filter } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, Loader2, Package, Search, Filter, Download, Upload } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface Material {
   id: string;
@@ -74,6 +75,8 @@ export function MaterialsSettings() {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'table' | 'categories'>('categories');
   const [form, setForm] = useState({ name: '', unit: 'buc', unit_price: 0, category: '', description: '' });
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: materials = [], isLoading } = useQuery({
     queryKey: ['materials'],
@@ -169,6 +172,86 @@ export function MaterialsSettings() {
     return materials.filter(m => m.unit_price > 0).length;
   }, [materials]);
 
+  // Export materials to Excel
+  const handleExport = () => {
+    const exportData = materials.map(m => ({
+      'ID': m.id,
+      'Nume': m.name,
+      'Categorie': m.category || '',
+      'Preț/Unitate (€)': m.unit_price,
+      'Unitate': m.unit,
+      'Descriere': m.description || '',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Materiale');
+    
+    ws['!cols'] = [
+      { wch: 36 }, { wch: 40 }, { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 30 },
+    ];
+
+    XLSX.writeFile(wb, `materiale_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast({ title: 'Export realizat cu succes!' });
+  };
+
+  // Import materials from Excel
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(sheet) as any[];
+
+      let updated = 0, added = 0, errors = 0;
+
+      for (const row of jsonData) {
+        const name = row['Nume'] || row['name'] || '';
+        if (!name) continue;
+
+        const materialData = {
+          name: String(name).trim(),
+          category: row['Categorie'] || row['category'] || null,
+          unit_price: parseFloat(row['Preț/Unitate (€)'] || row['unit_price'] || row['pret'] || 0) || 0,
+          unit: row['Unitate'] || row['unit'] || 'buc',
+          description: row['Descriere'] || row['description'] || null,
+        };
+
+        const existingId = row['ID'] || row['id'];
+        const existing = existingId 
+          ? materials.find(m => m.id === existingId)
+          : materials.find(m => m.name.toLowerCase() === materialData.name.toLowerCase());
+
+        try {
+          if (existing) {
+            await supabase.from('materials').update(materialData).eq('id', existing.id);
+            updated++;
+          } else {
+            await supabase.from('materials').insert(materialData);
+            added++;
+          }
+        } catch {
+          errors++;
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['materials'] });
+      toast({ 
+        title: 'Import finalizat!',
+        description: `${added} adăugate, ${updated} actualizate${errors > 0 ? `, ${errors} erori` : ''}`
+      });
+    } catch {
+      toast({ title: 'Eroare la import', variant: 'destructive' });
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const MaterialRow = ({ m, showCategory = false }: { m: Material; showCategory?: boolean }) => (
     <TableRow key={m.id} className={m.unit_price === 0 ? 'bg-destructive/5' : ''}>
       <TableCell className="font-medium">
@@ -212,6 +295,15 @@ export function MaterialsSettings() {
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
+      {/* Hidden file input for import */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept=".xlsx,.xls"
+        onChange={handleImport}
+        className="hidden"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -223,14 +315,33 @@ export function MaterialsSettings() {
             </p>
           </div>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => { setIsAdding(true); setEditingId(null); setForm({ name: '', unit: 'buc', unit_price: 0, category: '', description: '' }); }} 
-          disabled={isAdding}
-        >
-          <Plus className="mr-1 h-4 w-4" /> Adaugă Material
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleExport}
+            disabled={materials.length === 0}
+          >
+            <Download className="mr-1 h-4 w-4" /> Export Excel
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+          >
+            {isImporting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />}
+            Import Excel
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => { setIsAdding(true); setEditingId(null); setForm({ name: '', unit: 'buc', unit_price: 0, category: '', description: '' }); }} 
+            disabled={isAdding}
+          >
+            <Plus className="mr-1 h-4 w-4" /> Adaugă
+          </Button>
+        </div>
       </div>
 
       <Separator className="my-4" />
