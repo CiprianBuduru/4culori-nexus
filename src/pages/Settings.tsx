@@ -9,12 +9,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Plus, Pencil, Trash2, Check, X, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Check, X, ShieldAlert, ChevronDown, ChevronUp, FileText, Package, Wrench, BookOpen, Building2, Bell } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { MaterialsSettings } from '@/components/settings/MaterialsSettings';
 import { ServiceTariffsSettings } from '@/components/settings/ServiceTariffsSettings';
 import { RecipesSettings } from '@/components/settings/RecipesSettings';
+import { cn } from '@/lib/utils';
 
 interface CompanySettings {
   companyName: string;
@@ -44,6 +45,17 @@ const defaultSettings: CompanySettings = {
 
 const STORAGE_KEY = '4culori-settings';
 
+type SettingsCategory = 'order-types' | 'materials' | 'services' | 'recipes' | 'company' | 'notifications';
+
+const menuItems: { id: SettingsCategory; label: string; icon: React.ElementType }[] = [
+  { id: 'order-types', label: 'Tipuri Comenzi', icon: FileText },
+  { id: 'materials', label: 'Materiale', icon: Package },
+  { id: 'services', label: 'Tarife Servicii', icon: Wrench },
+  { id: 'recipes', label: 'Rețete', icon: BookOpen },
+  { id: 'company', label: 'Companie', icon: Building2 },
+  { id: 'notifications', label: 'Notificări', icon: Bell },
+];
+
 const Settings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -55,6 +67,7 @@ const Settings = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [newForm, setNewForm] = useState({ order_type: '', order_type_label: '', default_production_days: 7, default_brief: '' });
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('order-types');
 
   // Fetch order type defaults
   const { data: orderTypeDefaults, isLoading: isLoadingOrderTypes } = useQuery({
@@ -233,9 +246,311 @@ const Settings = () => {
     );
   }
 
+  const renderOrderTypesContent = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Tipuri de Oferte / Comenzi</h2>
+          <p className="text-sm text-muted-foreground">
+            Gestionează tipurile de oferte/comenzi, zilele de producție și brief-ul implicit
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsAdding(true)}
+          disabled={isAdding}
+        >
+          <Plus className="mr-1 h-4 w-4" />
+          Adaugă
+        </Button>
+      </div>
+      <Separator />
+      
+      {isLoadingOrderTypes ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Add new form */}
+          {isAdding && (
+            <div className="rounded-lg border border-primary/50 bg-primary/5 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Cod (ex: tiparire)"
+                  className="flex-1"
+                  value={newForm.order_type}
+                  onChange={(e) => setNewForm(prev => ({ ...prev, order_type: e.target.value }))}
+                />
+                <Input
+                  placeholder="Nume (ex: Tipărire)"
+                  className="flex-1"
+                  value={newForm.order_type_label}
+                  onChange={(e) => setNewForm(prev => ({ ...prev, order_type_label: e.target.value }))}
+                />
+                <Input
+                  type="number"
+                  min={1}
+                  className="w-24 text-center"
+                  placeholder="Zile"
+                  value={newForm.default_production_days}
+                  onChange={(e) => setNewForm(prev => ({ ...prev, default_production_days: parseInt(e.target.value) || 1 }))}
+                />
+              </div>
+              <div>
+                <Label className="text-sm text-muted-foreground mb-1 block">Brief implicit (opțional)</Label>
+                <Textarea
+                  placeholder="Introduceți template-ul pentru brief..."
+                  className="min-h-[80px]"
+                  value={newForm.default_brief}
+                  onChange={(e) => setNewForm(prev => ({ ...prev, default_brief: e.target.value }))}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" size="sm" onClick={() => { setIsAdding(false); setNewForm({ order_type: '', order_type_label: '', default_production_days: 7, default_brief: '' }); }}>
+                  <X className="h-4 w-4 mr-1" /> Anulează
+                </Button>
+                <Button size="sm" onClick={handleAdd} disabled={addOrderTypeMutation.isPending}>
+                  <Check className="h-4 w-4 mr-1" /> Adaugă
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Existing items */}
+          {orderTypeDefaults?.map((item) => (
+            <Collapsible 
+              key={item.id} 
+              open={expandedItems.has(item.id) || editingId === item.id}
+              onOpenChange={() => editingId !== item.id && toggleExpanded(item.id)}
+            >
+              <div className="rounded-lg border border-border overflow-hidden">
+                {editingId === item.id ? (
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        className="flex-1"
+                        value={editForm.order_type}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, order_type: e.target.value }))}
+                      />
+                      <Input
+                        className="flex-1"
+                        value={editForm.order_type_label}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, order_type_label: e.target.value }))}
+                      />
+                      <Input
+                        type="number"
+                        min={1}
+                        className="w-24 text-center"
+                        value={editForm.default_production_days}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, default_production_days: parseInt(e.target.value) || 1 }))}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground mb-1 block">Brief implicit</Label>
+                      <Textarea
+                        placeholder="Introduceți template-ul pentru brief..."
+                        className="min-h-[100px]"
+                        value={editForm.default_brief}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, default_brief: e.target.value }))}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="sm" onClick={cancelEdit}>
+                        <X className="h-4 w-4 mr-1" /> Anulează
+                      </Button>
+                      <Button size="sm" onClick={() => saveEdit(item.id)} disabled={updateOrderTypeMutation.isPending}>
+                        <Check className="h-4 w-4 mr-1" /> Salvează
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <CollapsibleTrigger asChild>
+                      <div className="flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground">{item.order_type_label}</p>
+                          <p className="text-sm text-muted-foreground">{item.order_type}</p>
+                          {item.default_brief && (
+                            <p className="text-xs text-muted-foreground/70 truncate mt-1 italic">
+                              Brief: {item.default_brief.slice(0, 60)}{item.default_brief.length > 60 ? '...' : ''}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">{item.default_production_days} zile</span>
+                        <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); startEdit(item); }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          onClick={(e) => { e.stopPropagation(); deleteOrderTypeMutation.mutate(item.id); }}
+                          disabled={deleteOrderTypeMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                        {expandedItems.has(item.id) ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="px-3 pb-3 pt-0">
+                        <div className="rounded-md bg-muted/50 p-3">
+                          <Label className="text-xs text-muted-foreground mb-1 block">Brief implicit:</Label>
+                          {item.default_brief ? (
+                            <p className="text-sm whitespace-pre-wrap">{item.default_brief}</p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground italic">Niciun brief implicit configurat</p>
+                          )}
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </>
+                )}
+              </div>
+            </Collapsible>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderCompanyContent = () => (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Informații Companie</h2>
+        <p className="text-sm text-muted-foreground">
+          Informațiile companiei tale
+        </p>
+      </div>
+      <Separator />
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="company-name">Nume Companie</Label>
+          <Input
+            id="company-name"
+            value={settings.companyName}
+            onChange={(e) => updateSetting('companyName', e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="company-email">Email</Label>
+          <Input
+            id="company-email"
+            type="email"
+            value={settings.companyEmail}
+            onChange={(e) => updateSetting('companyEmail', e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="company-phone">Telefon</Label>
+          <Input
+            id="company-phone"
+            value={settings.companyPhone}
+            onChange={(e) => updateSetting('companyPhone', e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="company-address">Adresă</Label>
+          <Textarea
+            id="company-address"
+            value={settings.companyAddress}
+            onChange={(e) => updateSetting('companyAddress', e.target.value)}
+            rows={2}
+          />
+        </div>
+      </div>
+      
+      {hasChanges && (
+        <div className="flex justify-end pt-4">
+          <Button onClick={handleSave}>
+            <Check className="mr-2 h-4 w-4" />
+            Salvează
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderNotificationsContent = () => (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Notificări</h2>
+        <p className="text-sm text-muted-foreground">
+          Configurează preferințele de notificare
+        </p>
+      </div>
+      <Separator />
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="email-notifications">Notificări Email</Label>
+            <p className="text-sm text-muted-foreground">
+              Primește notificări prin email pentru activități importante
+            </p>
+          </div>
+          <Switch
+            id="email-notifications"
+            checked={settings.emailNotifications}
+            onCheckedChange={(checked) => updateSetting('emailNotifications', checked)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="weekly-reports">Rapoarte Săptămânale</Label>
+            <p className="text-sm text-muted-foreground">
+              Primește un rezumat săptămânal al activității
+            </p>
+          </div>
+          <Switch
+            id="weekly-reports"
+            checked={settings.weeklyReports}
+            onCheckedChange={(checked) => updateSetting('weeklyReports', checked)}
+          />
+        </div>
+      </div>
+      
+      {hasChanges && (
+        <div className="flex justify-end pt-4">
+          <Button onClick={handleSave}>
+            <Check className="mr-2 h-4 w-4" />
+            Salvează
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderContent = () => {
+    switch (activeCategory) {
+      case 'order-types':
+        return renderOrderTypesContent();
+      case 'materials':
+        return <MaterialsSettings />;
+      case 'services':
+        return <ServiceTariffsSettings />;
+      case 'recipes':
+        return <RecipesSettings />;
+      case 'company':
+        return renderCompanyContent();
+      case 'notifications':
+        return renderNotificationsContent();
+      default:
+        return null;
+    }
+  };
+
   return (
     <MainLayout>
-      <div className="max-w-3xl space-y-8">
+      <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-foreground">Setări</h1>
@@ -244,280 +559,38 @@ const Settings = () => {
           </p>
         </div>
 
-        {/* Order Type Production Days */}
-        <div className="rounded-xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">Tipuri de Oferte / Comenzi</h2>
-              <p className="text-sm text-muted-foreground">
-                Gestionează tipurile de oferte/comenzi, zilele de producție și brief-ul implicit
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsAdding(true)}
-              disabled={isAdding}
-            >
-              <Plus className="mr-1 h-4 w-4" />
-              Adaugă
-            </Button>
-          </div>
-          <Separator className="my-4" />
-          
-          {isLoadingOrderTypes ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {/* Add new form */}
-              {isAdding && (
-                <div className="rounded-lg border border-primary/50 bg-primary/5 p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      placeholder="Cod (ex: tiparire)"
-                      className="flex-1"
-                      value={newForm.order_type}
-                      onChange={(e) => setNewForm(prev => ({ ...prev, order_type: e.target.value }))}
-                    />
-                    <Input
-                      placeholder="Nume (ex: Tipărire)"
-                      className="flex-1"
-                      value={newForm.order_type_label}
-                      onChange={(e) => setNewForm(prev => ({ ...prev, order_type_label: e.target.value }))}
-                    />
-                    <Input
-                      type="number"
-                      min={1}
-                      className="w-24 text-center"
-                      placeholder="Zile"
-                      value={newForm.default_production_days}
-                      onChange={(e) => setNewForm(prev => ({ ...prev, default_production_days: parseInt(e.target.value) || 1 }))}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-sm text-muted-foreground mb-1 block">Brief implicit (opțional)</Label>
-                    <Textarea
-                      placeholder="Introduceți template-ul pentru brief..."
-                      className="min-h-[80px]"
-                      value={newForm.default_brief}
-                      onChange={(e) => setNewForm(prev => ({ ...prev, default_brief: e.target.value }))}
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => { setIsAdding(false); setNewForm({ order_type: '', order_type_label: '', default_production_days: 7, default_brief: '' }); }}>
-                      <X className="h-4 w-4 mr-1" /> Anulează
-                    </Button>
-                    <Button size="sm" onClick={handleAdd} disabled={addOrderTypeMutation.isPending}>
-                      <Check className="h-4 w-4 mr-1" /> Adaugă
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Existing items */}
-              {orderTypeDefaults?.map((item) => (
-                <Collapsible 
-                  key={item.id} 
-                  open={expandedItems.has(item.id) || editingId === item.id}
-                  onOpenChange={() => editingId !== item.id && toggleExpanded(item.id)}
-                >
-                  <div className="rounded-lg border border-border overflow-hidden">
-                    {editingId === item.id ? (
-                      <div className="p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Input
-                            className="flex-1"
-                            value={editForm.order_type}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, order_type: e.target.value }))}
-                          />
-                          <Input
-                            className="flex-1"
-                            value={editForm.order_type_label}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, order_type_label: e.target.value }))}
-                          />
-                          <Input
-                            type="number"
-                            min={1}
-                            className="w-24 text-center"
-                            value={editForm.default_production_days}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, default_production_days: parseInt(e.target.value) || 1 }))}
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-sm text-muted-foreground mb-1 block">Brief implicit</Label>
-                          <Textarea
-                            placeholder="Introduceți template-ul pentru brief..."
-                            className="min-h-[100px]"
-                            value={editForm.default_brief}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, default_brief: e.target.value }))}
-                          />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={cancelEdit}>
-                            <X className="h-4 w-4 mr-1" /> Anulează
-                          </Button>
-                          <Button size="sm" onClick={() => saveEdit(item.id)} disabled={updateOrderTypeMutation.isPending}>
-                            <Check className="h-4 w-4 mr-1" /> Salvează
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <CollapsibleTrigger asChild>
-                          <div className="flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/50 transition-colors">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-foreground">{item.order_type_label}</p>
-                              <p className="text-sm text-muted-foreground">{item.order_type}</p>
-                              {item.default_brief && (
-                                <p className="text-xs text-muted-foreground/70 truncate mt-1 italic">
-                                  Brief: {item.default_brief.slice(0, 60)}{item.default_brief.length > 60 ? '...' : ''}
-                                </p>
-                              )}
-                            </div>
-                            <span className="text-sm text-muted-foreground whitespace-nowrap">{item.default_production_days} zile</span>
-                            <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); startEdit(item); }}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="icon" 
-                              variant="ghost" 
-                              onClick={(e) => { e.stopPropagation(); deleteOrderTypeMutation.mutate(item.id); }}
-                              disabled={deleteOrderTypeMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                            {expandedItems.has(item.id) ? (
-                              <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </div>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <div className="px-3 pb-3 pt-0">
-                            <div className="rounded-md bg-muted/50 p-3">
-                              <Label className="text-xs text-muted-foreground mb-1 block">Brief implicit:</Label>
-                              {item.default_brief ? (
-                                <p className="text-sm whitespace-pre-wrap">{item.default_brief}</p>
-                              ) : (
-                                <p className="text-sm text-muted-foreground italic">Niciun brief implicit configurat</p>
-                              )}
-                            </div>
-                          </div>
-                        </CollapsibleContent>
-                      </>
+        {/* Main content with sidebar */}
+        <div className="flex gap-6">
+          {/* Sidebar Menu */}
+          <div className="w-56 shrink-0">
+            <nav className="space-y-1 rounded-xl border border-border bg-card p-2">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveCategory(item.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                      activeCategory === item.id
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
-                  </div>
-                </Collapsible>
-              ))}
-            </div>
-          )}
-        </div>
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
 
-        {/* Materials Settings */}
-        <MaterialsSettings />
-
-        {/* Service Tariffs Settings */}
-        <ServiceTariffsSettings />
-
-        {/* Recipes Settings */}
-        <RecipesSettings />
-
-        {/* Company Info */}
-        <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-lg font-semibold text-foreground">Informații Companie</h2>
-          <p className="text-sm text-muted-foreground">
-            Datele companiei tale
-          </p>
-          <Separator className="my-4" />
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="company-name">Numele Companiei</Label>
-              <Input 
-                id="company-name" 
-                value={settings.companyName}
-                onChange={(e) => updateSetting('companyName', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="company-email">Email</Label>
-              <Input 
-                id="company-email" 
-                type="email" 
-                value={settings.companyEmail}
-                onChange={(e) => updateSetting('companyEmail', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="company-phone">Telefon</Label>
-              <Input 
-                id="company-phone" 
-                value={settings.companyPhone}
-                onChange={(e) => updateSetting('companyPhone', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="company-address">Adresă</Label>
-              <Input 
-                id="company-address" 
-                value={settings.companyAddress}
-                onChange={(e) => updateSetting('companyAddress', e.target.value)}
-              />
+          {/* Content Area */}
+          <div className="flex-1 min-w-0">
+            <div className="rounded-xl border border-border bg-card p-6">
+              {renderContent()}
             </div>
           </div>
-        </div>
-
-        {/* Notifications */}
-        <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-lg font-semibold text-foreground">Notificări</h2>
-          <p className="text-sm text-muted-foreground">
-            Configurează notificările
-          </p>
-          <Separator className="my-4" />
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-foreground">Notificări Email</p>
-                <p className="text-sm text-muted-foreground">
-                  Primește notificări pe email
-                </p>
-              </div>
-              <Switch
-                checked={settings.emailNotifications}
-                onCheckedChange={(checked) => updateSetting('emailNotifications', checked)}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-foreground">Rapoarte Săptămânale</p>
-                <p className="text-sm text-muted-foreground">
-                  Primește un sumar săptămânal
-                </p>
-              </div>
-              <Switch
-                checked={settings.weeklyReports}
-                onCheckedChange={(checked) => updateSetting('weeklyReports', checked)}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Save Button */}
-        <div className="flex justify-end gap-3">
-          {hasChanges && (
-            <p className="self-center text-sm text-muted-foreground">
-              Ai modificări nesalvate
-            </p>
-          )}
-          <Button 
-            onClick={handleSave} 
-            className="px-8"
-            disabled={!hasChanges}
-          >
-            Salvează Modificările
-          </Button>
         </div>
       </div>
     </MainLayout>
