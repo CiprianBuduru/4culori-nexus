@@ -34,6 +34,7 @@ import { Upload, FileText, X, ChevronUp, ChevronDown, GripVertical, ArrowRight, 
 import { useDepartments } from '@/hooks/useDepartments';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { OrderProductsSelector, OrderProduct } from './OrderProductsSelector';
 
 interface RecipeSuggestion {
   recipeId: string;
@@ -116,6 +117,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [existingAttachment, setExistingAttachment] = useState<string | null>(null);
   const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<OrderProduct[]>([]);
   
   // AI Brief Analysis state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -202,6 +204,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
       });
       setExistingAttachment(order.attachment_url || null);
       setSelectedOperations(order.production_operations || []);
+      setSelectedProducts([]);
     } else {
       const prefix = documentType === 'oferta' ? 'OFR' : 'CMD';
       const nextOrderNumber = `${prefix}-${Date.now().toString().slice(-6)}`;
@@ -221,6 +224,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
       });
       setExistingAttachment(null);
       setSelectedOperations([]);
+      setSelectedProducts([]);
     }
     setAttachmentFile(null);
     setAttachmentPreview(null);
@@ -396,9 +400,61 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
             .eq('id', orderId);
         }
       }
+
+      // Handle order products and stock deduction
+      if (selectedProducts.length > 0) {
+        // Delete existing order products if editing
+        if (order) {
+          await supabase.from('order_products').delete().eq('order_id', orderId);
+        }
+
+        // Insert new order products
+        const orderProductsData = selectedProducts.map((sp) => ({
+          order_id: orderId,
+          product_id: sp.product_id,
+          quantity: sp.quantity,
+          unit_price: sp.unit_price,
+        }));
+
+        const { error: productsError } = await supabase
+          .from('order_products')
+          .insert(orderProductsData);
+
+        if (productsError) throw productsError;
+
+        // Deduct stock and record movements (only for new orders or when not editing)
+        if (!order) {
+          for (const sp of selectedProducts) {
+            // Get current stock
+            const { data: productData } = await supabase
+              .from('products')
+              .select('stock')
+              .eq('id', sp.product_id)
+              .single();
+
+            const currentStock = productData?.stock || 0;
+
+            // Update product stock
+            await supabase
+              .from('products')
+              .update({ stock: currentStock - sp.quantity })
+              .eq('id', sp.product_id);
+
+            // Record stock movement
+            await supabase.from('stock_movements').insert({
+              product_id: sp.product_id,
+              quantity: -sp.quantity,
+              movement_type: 'order',
+              reason: `Comandă ${data.order_number}`,
+              order_id: orderId,
+            });
+          }
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success(order ? `${docLabel} actualizată` : `${docLabel} adăugată`);
       onOpenChange(false);
     },
@@ -616,6 +672,14 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
                 </FormItem>
               )}
             />
+
+            {/* Produse din stoc */}
+            {!isOffer && (
+              <OrderProductsSelector
+                selectedProducts={selectedProducts}
+                onChange={setSelectedProducts}
+              />
+            )}
 
             <div className="grid grid-cols-3 gap-4">
               <FormField

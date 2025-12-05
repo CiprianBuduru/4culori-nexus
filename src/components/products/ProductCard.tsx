@@ -1,11 +1,12 @@
 import { Product } from '@/types';
-import { Package, MoreVertical, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Package, MoreVertical, TrendingUp, AlertTriangle, PackagePlus, PackageMinus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -14,9 +15,10 @@ interface ProductCardProps {
   product: Product;
   onEdit?: (product: Product) => void;
   onDelete?: (product: Product) => void;
+  onStockAdjust?: (product: Product) => void;
 }
 
-export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
+export function ProductCard({ product, onEdit, onDelete, onStockAdjust }: ProductCardProps) {
   const isLowStock = product.stock < 100;
 
   return (
@@ -47,7 +49,12 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="bg-popover">
+            <DropdownMenuItem onClick={() => onStockAdjust?.(product)}>
+              <PackagePlus className="mr-2 h-4 w-4" />
+              Ajustare stoc
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onEdit?.(product)}>
               Editează
             </DropdownMenuItem>
