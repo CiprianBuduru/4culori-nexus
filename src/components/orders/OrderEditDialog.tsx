@@ -30,10 +30,25 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, X, ChevronUp, ChevronDown, GripVertical, ArrowRight } from 'lucide-react';
+import { Upload, FileText, X, ChevronUp, ChevronDown, GripVertical, ArrowRight, Sparkles, Loader2, Calculator } from 'lucide-react';
 import { useDepartments } from '@/hooks/useDepartments';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+
+interface RecipeSuggestion {
+  recipeId: string;
+  recipeName: string;
+  quantity: number;
+  confidence: number;
+  reasoning: string;
+  recipe: {
+    id: string;
+    name: string;
+    description: string;
+    base_price: number;
+    price_per_unit: number;
+  };
+}
 
 // Order workflow statuses in order
 const ORDER_STATUSES = [
@@ -94,7 +109,6 @@ interface OrderEditDialogProps {
 }
 
 export function OrderEditDialog({ order, open, onOpenChange, documentType = 'comanda' }: OrderEditDialogProps) {
-  const { toast } = useToast();
   const { productionOperations } = useDepartments();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,6 +116,11 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [existingAttachment, setExistingAttachment] = useState<string | null>(null);
   const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
+  
+  // AI Brief Analysis state
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [suggestions, setSuggestions] = useState<RecipeSuggestion[]>([]);
+  const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-select'],
@@ -205,6 +224,9 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
     }
     setAttachmentFile(null);
     setAttachmentPreview(null);
+    // Reset AI analysis state
+    setSuggestions([]);
+    setCalculatedPrice(null);
   }, [order, form, documentType]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -213,12 +235,12 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
 
     const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      toast({ title: 'Tip de fișier invalid. Acceptăm PDF sau imagini.', variant: 'destructive' });
+      toast.error('Tip de fișier invalid. Acceptăm PDF sau imagini.');
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      toast({ title: 'Fișierul este prea mare. Maxim 10MB.', variant: 'destructive' });
+      toast.error('Fișierul este prea mare. Maxim 10MB.');
       return;
     }
 
@@ -280,6 +302,54 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
   const docLabel = isOffer ? 'Ofertă' : 'Comandă';
   const docLabelLower = isOffer ? 'ofertă' : 'comandă';
 
+  // Analyze brief function for AI price calculation
+  const analyzeBrief = async () => {
+    const briefValue = form.getValues('brief');
+    if (!briefValue?.trim()) {
+      toast.error('Introduceți un brief pentru analiză');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setSuggestions([]);
+    setCalculatedPrice(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-brief', {
+        body: { brief: briefValue }
+      });
+
+      if (error) throw error;
+
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      const newSuggestions = data.suggestions || [];
+      setSuggestions(newSuggestions);
+
+      // Calculate total price from suggestions
+      if (newSuggestions.length > 0) {
+        const totalPrice = newSuggestions.reduce((sum: number, s: RecipeSuggestion) => {
+          const basePrice = s.recipe?.base_price || 0;
+          const pricePerUnit = s.recipe?.price_per_unit || 0;
+          return sum + basePrice + (pricePerUnit * s.quantity);
+        }, 0);
+        setCalculatedPrice(totalPrice);
+        form.setValue('total_amount', totalPrice);
+        toast.success(`Am calculat prețul estimat: ${totalPrice.toFixed(2)} RON`);
+      } else {
+        toast.info(data.message || 'Nu am găsit rețete potrivite pentru acest brief');
+      }
+    } catch (error) {
+      console.error('Error analyzing brief:', error);
+      toast.error('Eroare la analiza brief-ului');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const mutation = useMutation({
     mutationFn: async (data: OrderFormData) => {
       const payload = {
@@ -329,11 +399,11 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast({ title: order ? `${docLabel} actualizată` : `${docLabel} adăugată` });
+      toast.success(order ? `${docLabel} actualizată` : `${docLabel} adăugată`);
       onOpenChange(false);
     },
     onError: () => {
-      toast({ title: `Eroare la salvarea ${docLabelLower}`, variant: 'destructive' });
+      toast.error(`Eroare la salvarea ${docLabelLower}`);
     },
   });
 
@@ -450,7 +520,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
               name="brief"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Brief Comandă</FormLabel>
+                  <FormLabel>Brief {docLabel}</FormLabel>
                   <FormControl>
                     <Textarea {...field} placeholder="Descrierea detaliată a comenzii..." rows={3} />
                   </FormControl>
@@ -458,6 +528,69 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
                 </FormItem>
               )}
             />
+
+            {/* AI Price Calculator - only for offers */}
+            {isOffer && (
+              <div className="space-y-3 p-3 rounded-lg border border-brand-blue/20 bg-brand-blue/5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-brand-blue" />
+                    <span className="text-sm font-medium">Calcul Preț AI</span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={analyzeBrief}
+                    disabled={isAnalyzing || !form.watch('brief')?.trim()}
+                    className="gap-2"
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Analizez...
+                      </>
+                    ) : (
+                      <>
+                        <Calculator className="h-3 w-3" />
+                        Calculează Preț
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Show suggestions if any */}
+                {suggestions.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Rețete identificate:</p>
+                    {suggestions.map((suggestion, index) => (
+                      <div 
+                        key={`${suggestion.recipeId}-${index}`}
+                        className="flex items-center justify-between p-2 rounded bg-background/80 text-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span>{suggestion.recipeName}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {suggestion.quantity} buc
+                          </Badge>
+                        </div>
+                        <span className="font-medium">
+                          {((suggestion.recipe?.base_price || 0) + (suggestion.recipe?.price_per_unit || 0) * suggestion.quantity).toFixed(2)} RON
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Show calculated price */}
+                {calculatedPrice !== null && (
+                  <div className="flex items-center justify-between pt-2 border-t border-brand-blue/20">
+                    <span className="text-sm font-medium">Preț Estimat Total:</span>
+                    <span className="text-lg font-bold text-brand-blue">{calculatedPrice.toFixed(2)} RON</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <FormField
               control={form.control}
