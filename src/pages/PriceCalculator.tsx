@@ -1,3 +1,4 @@
+// Price Calculator v2.0
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
