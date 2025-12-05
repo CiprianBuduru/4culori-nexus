@@ -43,4 +43,5 @@ export interface Product {
   stock: number;
   category: string;
   status: 'active' | 'inactive' | 'discontinued';
+  image?: string;
 }
