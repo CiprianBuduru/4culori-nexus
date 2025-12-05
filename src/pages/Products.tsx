@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProductCard } from '@/components/products/ProductCard';
 import { ProductEditDialog } from '@/components/products/ProductEditDialog';
+import { StockAdjustmentDialog } from '@/components/products/StockAdjustmentDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, Loader2, Download, Upload, Filter } from 'lucide-react';
@@ -40,6 +41,7 @@ const Products = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [stockAdjustDialogOpen, setStockAdjustDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -366,6 +368,10 @@ const Products = () => {
               product={product}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onStockAdjust={(p) => {
+                setSelectedProduct(p);
+                setStockAdjustDialogOpen(true);
+              }}
             />
           ))}
         </div>
@@ -391,6 +397,14 @@ const Products = () => {
         onOpenChange={setEditDialogOpen}
         onSave={handleSave}
         isLoading={isSaving}
+      />
+
+      {/* Stock Adjustment Dialog */}
+      <StockAdjustmentDialog
+        product={selectedProduct}
+        open={stockAdjustDialogOpen}
+        onOpenChange={setStockAdjustDialogOpen}
+        onStockUpdated={refetch}
       />
 
       {/* Delete Confirmation Dialog */}
