@@ -42,7 +42,7 @@ const Products = () => {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Produse</h1>
+            <h1 className="text-3xl font-bold text-foreground">Produse stoc</h1>
             <p className="mt-1 text-muted-foreground">
               {products.length} produse • Valoare totală stoc: {totalValue.toFixed(2)} RON
             </p>
