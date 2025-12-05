@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProductCard } from '@/components/products/ProductCard';
 import { ProductEditDialog } from '@/components/products/ProductEditDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, Loader2 } from 'lucide-react';
+import { Plus, Search, Loader2, Download, Upload } from 'lucide-react';
 import { Product } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useProducts } from '@/hooks/useProducts';
+import * as XLSX from 'xlsx';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,8 +26,10 @@ const Products = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { products, isLoading, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { products, isLoading, addProduct, updateProduct, deleteProduct, refetch } = useProducts();
 
   const filteredProducts = products.filter(
     (prod) =>
@@ -34,6 +37,116 @@ const Products = () => {
       prod.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
       prod.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleExport = () => {
+    const exportData = products.map((p) => ({
+      id: p.id,
+      nume: p.name,
+      sku: p.sku,
+      descriere: p.description || '',
+      pret: p.price,
+      stoc: p.stock,
+      categorie: p.category,
+      status: p.status,
+      imagine: p.image || '',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    ws['!cols'] = [
+      { wch: 36 }, // id
+      { wch: 30 }, // nume
+      { wch: 15 }, // sku
+      { wch: 40 }, // descriere
+      { wch: 10 }, // pret
+      { wch: 10 }, // stoc
+      { wch: 15 }, // categorie
+      { wch: 12 }, // status
+      { wch: 50 }, // imagine
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Produse');
+    XLSX.writeFile(wb, `produse_stoc_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+    toast({
+      title: 'Export reușit',
+      description: `${products.length} produse exportate în Excel`,
+    });
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+      let updated = 0;
+      let added = 0;
+      let errors = 0;
+
+      for (const row of jsonData) {
+        try {
+          const productData = {
+            name: row.nume || row.name || '',
+            sku: row.sku || '',
+            description: row.descriere || row.description || '',
+            price: Number(row.pret || row.price || 0),
+            stock: Number(row.stoc || row.stock || 0),
+            category: row.categorie || row.category || 'Altele',
+            status: (row.status || 'active') as Product['status'],
+            image: row.imagine || row.image || undefined,
+          };
+
+          if (!productData.name || !productData.sku) {
+            errors++;
+            continue;
+          }
+
+          // Check if product exists by id or sku
+          const existingById = row.id ? products.find((p) => p.id === row.id) : null;
+          const existingBySku = products.find((p) => p.sku === productData.sku);
+
+          if (existingById) {
+            await updateProduct({ ...productData, id: row.id });
+            updated++;
+          } else if (existingBySku) {
+            await updateProduct({ ...productData, id: existingBySku.id });
+            updated++;
+          } else {
+            await addProduct(productData);
+            added++;
+          }
+        } catch (err) {
+          console.error('Error processing row:', err);
+          errors++;
+        }
+      }
+
+      await refetch();
+
+      toast({
+        title: 'Import finalizat',
+        description: `${added} adăugate, ${updated} actualizate${errors > 0 ? `, ${errors} erori` : ''}`,
+      });
+    } catch (error: any) {
+      console.error('Import error:', error);
+      toast({
+        title: 'Eroare la import',
+        description: error.message || 'Nu am putut importa fișierul',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const handleAddNew = () => {
     setSelectedProduct(null);
@@ -123,10 +236,27 @@ const Products = () => {
               {products.length} produse • Valoare totală stoc: {totalValue.toFixed(2)} RON
             </p>
           </div>
-          <Button className="gap-2" onClick={handleAddNew}>
-            <Plus className="h-4 w-4" />
-            Adaugă Produs
-          </Button>
+          <div className="flex gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImport}
+              className="hidden"
+            />
+            <Button variant="outline" className="gap-2" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
+              {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              Import
+            </Button>
+            <Button variant="outline" className="gap-2" onClick={handleExport} disabled={products.length === 0}>
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+            <Button className="gap-2" onClick={handleAddNew}>
+              <Plus className="h-4 w-4" />
+              Adaugă Produs
+            </Button>
+          </div>
         </div>
 
         {/* Search */}
