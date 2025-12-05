@@ -118,6 +118,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
   const [existingAttachment, setExistingAttachment] = useState<string | null>(null);
   const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<OrderProduct[]>([]);
+  const [useStockProducts, setUseStockProducts] = useState(false);
   
   // AI Brief Analysis state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -205,6 +206,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
       setExistingAttachment(order.attachment_url || null);
       setSelectedOperations(order.production_operations || []);
       setSelectedProducts([]);
+      setUseStockProducts(false);
     } else {
       const prefix = documentType === 'oferta' ? 'OFR' : 'CMD';
       const nextOrderNumber = `${prefix}-${Date.now().toString().slice(-6)}`;
@@ -225,6 +227,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
       setExistingAttachment(null);
       setSelectedOperations([]);
       setSelectedProducts([]);
+      setUseStockProducts(false);
     }
     setAttachmentFile(null);
     setAttachmentPreview(null);
@@ -675,10 +678,34 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
 
             {/* Produse din stoc */}
             {!isOffer && (
-              <OrderProductsSelector
-                selectedProducts={selectedProducts}
-                onChange={setSelectedProducts}
-              />
+              <div className="space-y-3">
+                <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <Checkbox
+                    id="use-stock-products"
+                    checked={useStockProducts}
+                    onCheckedChange={(checked) => {
+                      setUseStockProducts(!!checked);
+                      if (!checked) {
+                        setSelectedProducts([]);
+                      }
+                    }}
+                  />
+                  <div className="space-y-1 leading-none">
+                    <label htmlFor="use-stock-products" className="text-sm font-medium leading-none cursor-pointer">
+                      Include produse din stoc
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Bifează dacă comanda include produse existente în stoc care vor fi scăzute automat
+                    </p>
+                  </div>
+                </div>
+                {useStockProducts && (
+                  <OrderProductsSelector
+                    selectedProducts={selectedProducts}
+                    onChange={setSelectedProducts}
+                  />
+                )}
+              </div>
             )}
 
             <div className="grid grid-cols-3 gap-4">
