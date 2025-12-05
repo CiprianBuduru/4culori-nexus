@@ -252,7 +252,7 @@ export default function PriceCalculator() {
       
       // Build brief from calculations
       const briefItems = calculations.map(calc => 
-        `${calc.recipeName} x${calc.quantity} = ${calc.totalPrice.toFixed(2)} RON`
+        `${calc.recipeName} x${calc.quantity} = ${calc.totalPrice.toFixed(2)} €`
       ).join('\n');
       const brief = `Produse calculate:\n${briefItems}\n\nDiscount: ${discount}%`;
 
@@ -267,7 +267,7 @@ export default function PriceCalculator() {
           quantity: calculations.reduce((sum, c) => sum + c.quantity, 0),
           brief: brief,
           status: 'pending',
-          notes: `Subtotal: ${subtotal.toFixed(2)} RON\nDiscount: ${discount}% (-${discountAmount.toFixed(2)} RON)`,
+          notes: `Subtotal: ${subtotal.toFixed(2)} €\nDiscount: ${discount}% (-${discountAmount.toFixed(2)} €)`,
         })
         .select()
         .single();
@@ -359,7 +359,7 @@ export default function PriceCalculator() {
                     <span className="text-muted-foreground">
                       {categoryLabels[category as RecipeCategory]}
                     </span>
-                    <span>{categoryTotal.toFixed(2)} RON</span>
+                    <span>{categoryTotal.toFixed(2)} €</span>
                   </div>
                 ))}
                 {calculations.length === 0 && (
@@ -420,7 +420,7 @@ export default function PriceCalculator() {
 
               <div className="flex justify-between font-medium">
                 <span>Subtotal</span>
-                <span>{subtotal.toFixed(2)} RON</span>
+                <span>{subtotal.toFixed(2)} €</span>
               </div>
 
               {/* Discount */}
@@ -435,7 +435,7 @@ export default function PriceCalculator() {
                 />
                 {discount > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Reducere: -{discountAmount.toFixed(2)} RON
+                    Reducere: -{discountAmount.toFixed(2)} €
                   </p>
                 )}
               </div>
@@ -444,7 +444,7 @@ export default function PriceCalculator() {
 
               <div className="flex justify-between text-xl font-bold">
                 <span>Total</span>
-                <span className="text-brand-green">{total.toFixed(2)} RON</span>
+                <span className="text-brand-green">{total.toFixed(2)} €</span>
               </div>
 
               <Button 
