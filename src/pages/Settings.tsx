@@ -15,6 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { MaterialsSettings } from '@/components/settings/MaterialsSettings';
 import { ServiceTariffsSettings } from '@/components/settings/ServiceTariffsSettings';
 import { RecipesSettings } from '@/components/settings/RecipesSettings';
+import { RefreshButton } from '@/components/ui/refresh-button';
 import { cn } from '@/lib/utils';
 
 interface CompanySettings {
@@ -552,11 +553,17 @@ const Settings = () => {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Setări</h1>
-          <p className="mt-1 text-muted-foreground">
-            Configurează aplicația după preferințele tale
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Setări</h1>
+            <p className="mt-1 text-muted-foreground">
+              Configurează aplicația după preferințele tale
+            </p>
+          </div>
+          <RefreshButton 
+            queryKeys={['order_type_defaults', 'materials', 'service_tariffs', 'recipes']} 
+            showLabel 
+          />
         </div>
 
         {/* Main content with sidebar */}
