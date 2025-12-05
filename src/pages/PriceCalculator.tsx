@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calculator, RotateCcw, FileText, Users, Mail, Loader2 } from 'lucide-react';
+import { Calculator, RotateCcw, FileText, Users, Mail, Loader2, Save } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RecipeSelector } from '@/components/calculator/RecipeSelector';
@@ -47,6 +47,7 @@ export default function PriceCalculator() {
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [clientEmail, setClientEmail] = useState('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -211,6 +212,53 @@ export default function PriceCalculator() {
       toast.error(error.message || 'Eroare la trimiterea email-ului');
     } finally {
       setIsSendingEmail(false);
+    }
+  };
+
+  const handleSaveOffer = async () => {
+    if (calculations.length === 0) {
+      toast.error('Adaugă produse în ofertă');
+      return;
+    }
+
+    setIsSaving(true);
+    
+    try {
+      // Generate offer number
+      const timestamp = Date.now();
+      const offerNumber = `OFR-${timestamp}`;
+      
+      // Build brief from calculations
+      const briefItems = calculations.map(calc => 
+        `${calc.recipeName} x${calc.quantity} = ${calc.totalPrice.toFixed(2)} RON`
+      ).join('\n');
+      const brief = `Produse calculate:\n${briefItems}\n\nDiscount: ${discount}%`;
+
+      const { data, error } = await supabase
+        .from('orders')
+        .insert({
+          order_number: offerNumber,
+          document_type: 'oferta',
+          name: `Ofertă ${clientName.trim() || 'Client'}`,
+          client_id: selectedClientId || null,
+          total_amount: total,
+          quantity: calculations.reduce((sum, c) => sum + c.quantity, 0),
+          brief: brief,
+          status: 'pending',
+          notes: `Subtotal: ${subtotal.toFixed(2)} RON\nDiscount: ${discount}% (-${discountAmount.toFixed(2)} RON)`,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success(`Oferta ${offerNumber} a fost salvată cu succes!`);
+      clearAll();
+    } catch (error: any) {
+      console.error('Error saving offer:', error);
+      toast.error(error.message || 'Eroare la salvarea ofertei');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -397,6 +445,21 @@ export default function PriceCalculator() {
                   <Mail className="h-4 w-4" />
                 )}
                 Trimite pe Email
+              </Button>
+
+              <Button 
+                variant="secondary"
+                className="w-full gap-2" 
+                size="lg"
+                disabled={calculations.length === 0 || isSaving}
+                onClick={handleSaveOffer}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Salvează Oferta în DB
               </Button>
 
               {calculations.length > 0 && (
