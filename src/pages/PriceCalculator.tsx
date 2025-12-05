@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RecipeSelector } from '@/components/calculator/RecipeSelector';
 import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorItem';
 import { BriefAnalyzer } from '@/components/calculator/BriefAnalyzer';
+import { DTFCalculator } from '@/components/calculator/DTFCalculator';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
 import { toast } from 'sonner';
 import { generateOfferPdf } from '@/lib/generateOfferPdf';
@@ -114,6 +115,27 @@ export default function PriceCalculator() {
     };
     setCalculations([...calculations, newCalculation]);
     toast.success(`Adăugat: ${suggestion.recipeName} x${suggestion.quantity}`);
+  };
+
+  const handleAddDTFToOffer = (item: {
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    details: string;
+  }) => {
+    const newCalculation: RecipeCalculation = {
+      id: crypto.randomUUID(),
+      recipeId: 'dtf-custom',
+      recipeName: item.name,
+      category: 'personalized' as RecipeCategory,
+      quantity: item.quantity,
+      materialCost: 0,
+      personalizationCost: 0,
+      totalPrice: item.totalPrice,
+    };
+    setCalculations([...calculations, newCalculation]);
+    toast.success(`Adăugat: ${item.name} (${item.details})`);
   };
 
   const handleUpdateCalculation = (updated: RecipeCalculation) => {
@@ -282,6 +304,9 @@ export default function PriceCalculator() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left Column - AI Analyzer, Recipe Selector & Items */}
           <div className="lg:col-span-2 space-y-4">
+            {/* DTF Calculator */}
+            <DTFCalculator onAddToOffer={handleAddDTFToOffer} />
+
             {/* AI Brief Analyzer */}
             <BriefAnalyzer onAddSuggestion={handleAddAISuggestion} />
 
