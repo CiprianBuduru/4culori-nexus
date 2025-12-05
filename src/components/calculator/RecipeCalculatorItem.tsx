@@ -227,7 +227,7 @@ export function RecipeCalculatorItem({
                 <SelectItem value="none">Fără personalizare</SelectItem>
                 {availablePersonalizations.map(method => (
                   <SelectItem key={method.id} value={method.id}>
-                    {method.name} ({method.pricePerUnit.toFixed(2)} RON/{method.unit})
+                    {method.name} ({method.pricePerUnit.toFixed(2)} €/{method.unit})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -238,12 +238,12 @@ export function RecipeCalculatorItem({
         {/* Price breakdown */}
         <div className="flex items-center justify-between pt-2 border-t border-border/50">
           <div className="flex gap-4 text-xs text-muted-foreground">
-            <span>Bază: {(recipe.basePrice * calculation.quantity).toFixed(2)} RON</span>
-            {materialCost > 0 && <span>Material: {materialCost.toFixed(2)} RON</span>}
-            {personalizationCost > 0 && <span>Personalizare: {personalizationCost.toFixed(2)} RON</span>}
+            <span>Bază: {(recipe.basePrice * calculation.quantity).toFixed(2)} €</span>
+            {materialCost > 0 && <span>Material: {materialCost.toFixed(2)} €</span>}
+            {personalizationCost > 0 && <span>Personalizare: {personalizationCost.toFixed(2)} €</span>}
           </div>
           <span className={`font-bold text-lg ${categoryTextColors[recipe.category]}`}>
-            {totalPrice.toFixed(2)} RON
+            {totalPrice.toFixed(2)} €
           </span>
         </div>
       </CardContent>

@@ -126,7 +126,7 @@ export function ServiceTariffsSettings() {
                   <Input value={form.unit} onChange={(e) => setForm(p => ({ ...p, unit: e.target.value }))} placeholder="ora, buc, m²" />
                 </div>
                 <div>
-                  <Label>Preț/Unitate (RON)</Label>
+                  <Label>Preț/Unitate (€)</Label>
                   <Input type="number" step="0.01" value={form.unit_price} onChange={(e) => setForm(p => ({ ...p, unit_price: parseFloat(e.target.value) || 0 }))} />
                 </div>
               </div>
@@ -150,7 +150,7 @@ export function ServiceTariffsSettings() {
               {tariffs.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.name}</TableCell>
-                  <TableCell className="text-right">{t.unit_price.toFixed(2)} RON</TableCell>
+                  <TableCell className="text-right">{t.unit_price.toFixed(2)} €</TableCell>
                   <TableCell className="text-right">{t.unit}</TableCell>
                   <TableCell className="text-right">
                     <Button size="icon" variant="ghost" onClick={() => startEdit(t)}><Pencil className="h-4 w-4" /></Button>

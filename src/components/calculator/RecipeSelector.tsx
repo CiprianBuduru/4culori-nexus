@@ -82,7 +82,7 @@ export function RecipeSelector({ onSelectRecipe }: RecipeSelectorProps) {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-semibold">
-                      de la {recipe.basePrice.toFixed(2)} RON
+                      de la {recipe.basePrice.toFixed(2)} €
                     </span>
                     <Button 
                       size="sm" 

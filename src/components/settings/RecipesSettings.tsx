@@ -187,11 +187,11 @@ export function RecipesSettings() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Preț de bază (RON)</Label>
+                  <Label>Preț de bază (€)</Label>
                   <Input type="number" step="0.01" value={form.base_price} onChange={(e) => setForm(p => ({ ...p, base_price: parseFloat(e.target.value) || 0 }))} />
                 </div>
                 <div>
-                  <Label>Preț per bucată (RON)</Label>
+                  <Label>Preț per bucată (€)</Label>
                   <Input type="number" step="0.01" value={form.price_per_unit} onChange={(e) => setForm(p => ({ ...p, price_per_unit: parseFloat(e.target.value) || 0 }))} />
                 </div>
               </div>

@@ -36,20 +36,19 @@ interface DTFCalculatorProps {
   }) => void;
 }
 
-// Constants from Excel
+// Constants from Excel (all in EUR)
 const PRODUCTION_COST_PER_MP = 15.46; // €/mp total production
 const PRODUCTION_COST_PER_CM2 = PRODUCTION_COST_PER_MP / 10000; // Convert to cm²
-const PRESS_APPLICATION_COST = 0.3; // RON per application
-const EUR_TO_RON = 5; // Exchange rate approximation
+const PRESS_APPLICATION_COST = 0.06; // € per application (0.3 RON / 5)
 
 // Standard formats in cm
 const STANDARD_FORMATS = [
-  { name: 'A5', width: 14.8, height: 21, cost: 0.49 },
-  { name: 'A4', width: 21, height: 29.7, cost: 0.97 },
-  { name: 'A3', width: 29.7, height: 42, cost: 1.95 },
-  { name: '10x10', width: 10, height: 10, cost: 0.45 },
-  { name: '15x15', width: 15, height: 15, cost: 1.01 },
-  { name: '20x20', width: 20, height: 20, cost: 1.80 },
+  { name: 'A5', width: 14.8, height: 21 },
+  { name: 'A4', width: 21, height: 29.7 },
+  { name: 'A3', width: 29.7, height: 42 },
+  { name: '10x10', width: 10, height: 10 },
+  { name: '15x15', width: 15, height: 15 },
+  { name: '20x20', width: 20, height: 20 },
 ];
 
 const MARKUP_OPTIONS = [
@@ -73,9 +72,8 @@ export function DTFCalculator({ onAddToOffer }: DTFCalculatorProps) {
   const calculatePrice = (): DTFResult => {
     const areaCm2 = calculation.width * calculation.height;
     
-    // Base production cost per cm² (converted to RON)
-    const baseCostPerCm2 = PRODUCTION_COST_PER_CM2 * EUR_TO_RON;
-    const productionCostPerUnit = areaCm2 * baseCostPerCm2;
+    // Base production cost per cm² (in EUR)
+    const productionCostPerUnit = areaCm2 * PRODUCTION_COST_PER_CM2;
     
     // Apply markup
     const pricePerUnitWithMarkup = productionCostPerUnit * (1 + calculation.markup / 100);
@@ -239,7 +237,7 @@ export function DTFCalculator({ onAddToOffer }: DTFCalculatorProps) {
 
         {/* Press Application Toggle */}
         <div className="flex items-center justify-between">
-          <Label className="text-sm">Include aplicare presă (+{PRESS_APPLICATION_COST} RON/buc)</Label>
+          <Label className="text-sm">Include aplicare presă (+{PRESS_APPLICATION_COST.toFixed(2)} €/buc)</Label>
           <Button
             variant={calculation.includePress ? "default" : "outline"}
             size="sm"
@@ -259,26 +257,26 @@ export function DTFCalculator({ onAddToOffer }: DTFCalculatorProps) {
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Cost producție/buc</span>
-            <span>{result.productionCostPerUnit.toFixed(2)} RON</span>
+            <span>{result.productionCostPerUnit.toFixed(2)} €</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Preț cu adaos {calculation.markup}%</span>
-            <span>{result.pricePerUnitWithMarkup.toFixed(2)} RON</span>
+            <span>{result.pricePerUnitWithMarkup.toFixed(2)} €</span>
           </div>
           {calculation.includePress && (
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Aplicare presă</span>
-              <span>+{result.pressCost.toFixed(2)} RON</span>
+              <span>+{result.pressCost.toFixed(2)} €</span>
             </div>
           )}
           <Separator />
           <div className="flex justify-between font-medium">
             <span>Preț/bucată</span>
-            <span>{result.totalPerUnit.toFixed(2)} RON</span>
+            <span>{result.totalPerUnit.toFixed(2)} €</span>
           </div>
           <div className="flex justify-between text-lg font-bold text-brand-teal">
             <span>Total ({calculation.quantity} buc)</span>
-            <span>{result.totalPrice.toFixed(2)} RON</span>
+            <span>{result.totalPrice.toFixed(2)} €</span>
           </div>
         </div>
 

@@ -126,7 +126,7 @@ export function MaterialsSettings() {
                   <Input value={form.unit} onChange={(e) => setForm(p => ({ ...p, unit: e.target.value }))} placeholder="buc, m², kg" />
                 </div>
                 <div>
-                  <Label>Preț/Unitate (RON)</Label>
+                  <Label>Preț/Unitate (€)</Label>
                   <Input type="number" step="0.01" value={form.unit_price} onChange={(e) => setForm(p => ({ ...p, unit_price: parseFloat(e.target.value) || 0 }))} />
                 </div>
                 <div>
@@ -156,7 +156,7 @@ export function MaterialsSettings() {
                 <TableRow key={m.id}>
                   <TableCell className="font-medium">{m.name}</TableCell>
                   <TableCell className="text-muted-foreground">{m.category || '-'}</TableCell>
-                  <TableCell className="text-right">{m.unit_price.toFixed(2)} RON</TableCell>
+                  <TableCell className="text-right">{m.unit_price.toFixed(2)} €</TableCell>
                   <TableCell className="text-right">{m.unit}</TableCell>
                   <TableCell className="text-right">
                     <Button size="icon" variant="ghost" onClick={() => startEdit(m)}><Pencil className="h-4 w-4" /></Button>
