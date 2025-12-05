@@ -137,8 +137,8 @@ export function generateOfferPdf(data: OfferData) {
 
       doc.text(displayName, tableStart + 2, yPos);
       doc.text(calc.quantity.toString(), tableStart + colWidths[0], yPos);
-      doc.text(`${unitPrice.toFixed(2)} RON`, tableStart + colWidths[0] + colWidths[1], yPos);
-      doc.text(`${calc.totalPrice.toFixed(2)} RON`, tableStart + colWidths[0] + colWidths[1] + colWidths[2], yPos);
+      doc.text(`${unitPrice.toFixed(2)} €`, tableStart + colWidths[0] + colWidths[1], yPos);
+      doc.text(`${calc.totalPrice.toFixed(2)} €`, tableStart + colWidths[0] + colWidths[1] + colWidths[2], yPos);
 
       // Dimensions if available
       if (calc.dimensions && (calc.dimensions.width || calc.dimensions.height)) {
@@ -170,13 +170,13 @@ export function generateOfferPdf(data: OfferData) {
   doc.setTextColor(textGray[0], textGray[1], textGray[2]);
   doc.text('Subtotal:', summaryX, yPos);
   doc.setTextColor(darkText[0], darkText[1], darkText[2]);
-  doc.text(`${subtotal.toFixed(2)} RON`, pageWidth - margin, yPos, { align: 'right' });
+  doc.text(`${subtotal.toFixed(2)} €`, pageWidth - margin, yPos, { align: 'right' });
   yPos += 8;
 
   if (discount > 0) {
     doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
     doc.text(`Discount (${discount}%):`, summaryX, yPos);
-    doc.text(`-${discountAmount.toFixed(2)} RON`, pageWidth - margin, yPos, { align: 'right' });
+    doc.text(`-${discountAmount.toFixed(2)} €`, pageWidth - margin, yPos, { align: 'right' });
     yPos += 8;
   }
 
@@ -187,7 +187,7 @@ export function generateOfferPdf(data: OfferData) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.text('TOTAL:', summaryX, yPos + 3);
-  doc.text(`${total.toFixed(2)} RON`, pageWidth - margin, yPos + 3, { align: 'right' });
+  doc.text(`${total.toFixed(2)} €`, pageWidth - margin, yPos + 3, { align: 'right' });
 
   yPos += 25;
 

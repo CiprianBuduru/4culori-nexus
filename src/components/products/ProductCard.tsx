@@ -67,7 +67,7 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
 
       <div className="mt-4 flex items-center justify-between">
         <div className="text-2xl font-bold text-primary">
-          {product.price.toFixed(2)} <span className="text-sm font-normal">RON</span>
+          {product.price.toFixed(2)} <span className="text-sm font-normal">€</span>
         </div>
         <Badge variant="secondary">{product.category}</Badge>
       </div>
