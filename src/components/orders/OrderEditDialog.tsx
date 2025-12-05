@@ -342,7 +342,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
         }, 0);
         setCalculatedPrice(totalPrice);
         form.setValue('total_amount', totalPrice);
-        toast.success(`Am calculat prețul estimat: ${totalPrice.toFixed(2)} RON`);
+        toast.success(`Am calculat prețul estimat: ${totalPrice.toFixed(2)} €`);
       } else {
         toast.info(data.message || 'Nu am găsit rețete potrivite pentru acest brief');
       }
@@ -631,7 +631,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
                           </Badge>
                         </div>
                         <span className="font-medium">
-                          {((suggestion.recipe?.base_price || 0) + (suggestion.recipe?.price_per_unit || 0) * suggestion.quantity).toFixed(2)} RON
+                          {((suggestion.recipe?.base_price || 0) + (suggestion.recipe?.price_per_unit || 0) * suggestion.quantity).toFixed(2)} €
                         </span>
                       </div>
                     ))}
@@ -642,7 +642,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
                 {calculatedPrice !== null && (
                   <div className="flex items-center justify-between pt-2 border-t border-brand-blue/20">
                     <span className="text-sm font-medium">Preț Estimat Total:</span>
-                    <span className="text-lg font-bold text-brand-blue">{calculatedPrice.toFixed(2)} RON</span>
+                    <span className="text-lg font-bold text-brand-blue">{calculatedPrice.toFixed(2)} €</span>
                   </div>
                 )}
               </div>
@@ -701,7 +701,7 @@ export function OrderEditDialog({ order, open, onOpenChange, documentType = 'com
                 name="total_amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valoare (RON)</FormLabel>
+                    <FormLabel>Valoare (€)</FormLabel>
                     <FormControl>
                       <Input {...field} type="number" step="0.01" min="0" />
                     </FormControl>
