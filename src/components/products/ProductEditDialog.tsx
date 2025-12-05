@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
+import { ProductImageUpload } from './ProductImageUpload';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Numele este obligatoriu'),
@@ -38,6 +39,7 @@ const productSchema = z.object({
   stock: z.coerce.number().min(0, 'Stocul trebuie să fie pozitiv'),
   category: z.string().min(1, 'Categoria este obligatorie'),
   status: z.enum(['active', 'inactive', 'discontinued']),
+  image: z.string().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -60,6 +62,7 @@ export function ProductEditDialog({
   isLoading = false,
 }: ProductEditDialogProps) {
   const isEditing = !!product;
+  const [productImage, setProductImage] = useState<string | undefined>(undefined);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -71,6 +74,7 @@ export function ProductEditDialog({
       stock: 0,
       category: '',
       status: 'active',
+      image: '',
     },
   });
 
@@ -84,7 +88,9 @@ export function ProductEditDialog({
         stock: product.stock,
         category: product.category,
         status: product.status,
+        image: product.image || '',
       });
+      setProductImage(product.image);
     } else {
       form.reset({
         name: '',
@@ -94,7 +100,9 @@ export function ProductEditDialog({
         stock: 0,
         category: '',
         status: 'active',
+        image: '',
       });
+      setProductImage(undefined);
     }
   }, [product, form]);
 
@@ -108,13 +116,14 @@ export function ProductEditDialog({
       stock: data.stock,
       category: data.category,
       status: data.status,
+      image: productImage,
     };
     onSave(updatedProduct);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Editează Produs' : 'Adaugă Produs Nou'}
@@ -123,60 +132,69 @@ export function ProductEditDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <div className="flex gap-6">
+              {/* Image Upload */}
+              <ProductImageUpload
+                currentImage={productImage}
+                onImageChange={setProductImage}
+              />
+              
+              {/* Name and SKU */}
+              <div className="flex-1 space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nume produs</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Introdu numele produsului" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>SKU</FormLabel>
+                      <FormControl>
+                        <Input placeholder="COD-001" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
             <FormField
               control={form.control}
-              name="name"
+              name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nume produs</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Introdu numele produsului" {...field} />
-                  </FormControl>
+                  <FormLabel>Categorie</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selectează categoria" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="sku"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>SKU</FormLabel>
-                    <FormControl>
-                      <Input placeholder="COD-001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categorie</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selectează categoria" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <FormField
               control={form.control}

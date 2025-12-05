@@ -23,9 +23,19 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
     <div className="group rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:shadow-md">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary">
-            <Package className="h-6 w-6 text-secondary-foreground" />
-          </div>
+          {product.image ? (
+            <div className="h-12 w-12 rounded-xl overflow-hidden">
+              <img 
+                src={product.image} 
+                alt={product.name}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary">
+              <Package className="h-6 w-6 text-secondary-foreground" />
+            </div>
+          )}
           <div>
             <h3 className="font-semibold text-foreground">{product.name}</h3>
             <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
