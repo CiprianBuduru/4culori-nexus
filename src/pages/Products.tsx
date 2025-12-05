@@ -260,7 +260,7 @@ const Products = () => {
           <div>
             <h1 className="text-3xl font-bold text-foreground">Produse stoc</h1>
             <p className="mt-1 text-muted-foreground">
-              {products.length} produse • Valoare totală stoc: {totalValue.toFixed(2)} RON
+              {products.length} produse • Valoare totală stoc: {totalValue.toFixed(2)} €
             </p>
           </div>
           <div className="flex gap-2">

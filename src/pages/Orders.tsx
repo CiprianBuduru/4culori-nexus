@@ -242,7 +242,7 @@ export default function Orders() {
                     )}
                     {order.total_amount != null && (
                       <p className="text-lg font-semibold text-foreground">
-                        {order.total_amount.toLocaleString('ro-RO')} RON
+                        {order.total_amount.toLocaleString('ro-RO')} €
                       </p>
                     )}
                     {order.notes && (

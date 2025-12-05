@@ -1175,7 +1175,7 @@ export default function ProductionCalendar() {
               {selectedOrder.total_amount > 0 && (
                 <div>
                   <span className="text-sm text-muted-foreground">Valoare totală:</span>
-                  <p className="font-semibold text-lg">{selectedOrder.total_amount.toLocaleString('ro-RO')} RON</p>
+                  <p className="font-semibold text-lg">{selectedOrder.total_amount.toLocaleString('ro-RO')} €</p>
                 </div>
               )}
 

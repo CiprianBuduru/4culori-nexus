@@ -220,8 +220,8 @@ export function ProductEditDialog({
                 control={form.control}
                 name="price"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preț (RON)</FormLabel>
+                <FormItem>
+                    <FormLabel>Preț (€)</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" min="0" {...field} />
                     </FormControl>
