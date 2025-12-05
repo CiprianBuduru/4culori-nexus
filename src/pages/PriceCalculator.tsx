@@ -15,6 +15,7 @@ import { DTFCalculator } from '@/components/calculator/DTFCalculator';
 import { LargeFormatCalculator } from '@/components/calculator/LargeFormatCalculator';
 import { TransferCalculator } from '@/components/calculator/TransferCalculator';
 import { TypographyCalculator } from '@/components/calculator/TypographyCalculator';
+import { BoxCalculator } from '@/components/calculator/BoxCalculator';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
 import { toast } from 'sonner';
 import { generateOfferPdf } from '@/lib/generateOfferPdf';
@@ -309,13 +310,17 @@ export default function PriceCalculator() {
           {/* Left Column - Calculators, AI Analyzer, Recipe Selector & Items */}
           <div className="lg:col-span-2 space-y-4">
             {/* Dedicated Calculators */}
-            <Tabs defaultValue="large-format" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+            <Tabs defaultValue="boxes" className="w-full">
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="boxes" className="text-xs">Cutii</TabsTrigger>
                 <TabsTrigger value="large-format" className="text-xs">Print Mare</TabsTrigger>
                 <TabsTrigger value="transfer" className="text-xs">Transfer</TabsTrigger>
                 <TabsTrigger value="dtf" className="text-xs">DTF</TabsTrigger>
                 <TabsTrigger value="typography" className="text-xs">Tipografie</TabsTrigger>
               </TabsList>
+              <TabsContent value="boxes" className="mt-4">
+                <BoxCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'boxes')} />
+              </TabsContent>
               <TabsContent value="large-format" className="mt-4">
                 <LargeFormatCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'large-print')} />
               </TabsContent>
