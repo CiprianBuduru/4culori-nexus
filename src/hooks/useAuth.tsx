@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     console.log('[AUTH INIT] Checking existing session');
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[AUTH INIT] getSession result:', session?.user?.email ?? 'no session');
+      console.log('[SESSION LOADED] getSession result:', session?.user?.email ?? 'no session');
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
