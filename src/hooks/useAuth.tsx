@@ -108,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Development mode bypass constant
-  const DEV_MODE = true;
+  const DEV_MODE = false;
 
   const hasAccess = (page: string): boolean => {
     if (DEV_MODE) return true; // Full access in dev mode
