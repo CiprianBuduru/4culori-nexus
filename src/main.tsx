@@ -19,7 +19,7 @@ if (!supabaseUrl || !supabaseKey) {
 const rootElement = document.getElementById("root");
 
 if (rootElement) {
-  console.log('[APP INIT] root found');
+  
   rootElement.innerHTML = '';
 
   try {
