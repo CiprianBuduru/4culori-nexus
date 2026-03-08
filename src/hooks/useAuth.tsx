@@ -101,10 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (roleResult.status === 'fulfilled' && roleResult.value.data) {
         setUserRole(roleResult.value.data as UserRole);
-        console.log('[ROLE FETCH] loaded:', roleResult.value.data.role);
       } else {
         setUserRole(null);
-        console.warn('[ROLE FETCH] No role found');
       }
     } catch (error) {
       console.error('[AUTH INIT] Error fetching user data:', error);
