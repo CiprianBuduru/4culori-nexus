@@ -78,10 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profileResult.status === 'fulfilled' && profileResult.value.data) {
         setProfile(profileResult.value.data as UserProfile);
-        console.log('[Auth] Profile loaded:', profileResult.value.data.email);
+        console.log('[PROFILE FETCH] Profile loaded:', profileResult.value.data.email);
       } else {
         setProfile(null);
-        console.warn('[Auth] No profile found for user', userId);
+        console.warn('[PROFILE FETCH] No profile found for user', userId);
       }
 
       if (roleResult.status === 'fulfilled' && roleResult.value.data) {
