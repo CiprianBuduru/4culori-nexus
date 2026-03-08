@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    console.log('[AUTH DONE] Loading complete');
+    
     setLoading(false);
   };
 
