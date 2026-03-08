@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fetchUserData(session.user.id);
       } else {
         setLoading(false);
-        console.log('[AUTH INIT] No existing session, loading set to false');
+        
       }
     });
 
