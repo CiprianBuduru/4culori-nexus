@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[SESSION LOADED] getSession result:', session?.user?.email ?? 'no session');
+      
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
