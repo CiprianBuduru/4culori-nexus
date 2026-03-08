@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -21,7 +21,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo);
+    console.error('[RENDER FATAL]', error, errorInfo);
   }
 
   private handleRetry = () => {
@@ -30,19 +30,17 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
-      const isChunkError = this.state.error?.message?.includes('dynamically imported module') ||
-                           this.state.error?.message?.includes('Failed to fetch');
-      
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
           <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
-            <h1 className="text-xl font-bold text-red-600 mb-4">
-              {isChunkError ? 'Eroare la încărcare' : 'Eroare în aplicație'}
-            </h1>
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="h-8 w-8 text-red-500" />
+              <h1 className="text-xl font-bold text-red-600">
+                Application crashed
+              </h1>
+            </div>
             <p className="text-gray-700 mb-4">
-              {isChunkError 
-                ? 'Nu s-a putut încărca pagina. Verifică conexiunea la internet și încearcă din nou.'
-                : 'A apărut o eroare neașteptată. Vă rugăm să reîncărcați pagina.'}
+              A rendering error prevented the app from loading.
             </p>
             <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-40 mb-4">
               {this.state.error?.message}

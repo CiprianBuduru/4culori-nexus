@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AppRole, UserProfile, UserRole, roleAccess } from '@/types/auth';
@@ -22,21 +22,31 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const AUTH_TIMEOUT_MS = 5000;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    
+    console.log('[AUTH INIT] Setting up auth');
+
+    // Guaranteed timeout - never stay loading forever
+    timeoutRef.current = setTimeout(() => {
+      console.warn('[AUTH TIMEOUT] Auth bootstrap exceeded 5s, forcing loading=false');
+      setLoading(false);
+    }, AUTH_TIMEOUT_MS);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        
+        console.log('[SESSION LOADED] event:', event, 'user:', session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         if (session?.user) {
           setTimeout(() => {
             fetchUserData(session.user.id);
@@ -44,30 +54,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setProfile(null);
           setUserRole(null);
-          setLoading(false);
-          
+          finishLoading();
         }
       }
     );
 
-    
     supabase.auth.getSession().then(({ data: { session } }) => {
-      
+      console.log('[SESSION LOADED] getSession:', session?.user?.email ?? 'no session');
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchUserData(session.user.id);
       } else {
-        setLoading(false);
-        
+        finishLoading();
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
+
+  const finishLoading = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    console.log('[AUTH DONE] Loading complete');
+    setLoading(false);
+  };
 
   const fetchUserData = async (userId: string) => {
     try {
+      console.log('[PROFILE FETCH] Fetching profile for:', userId);
+      console.log('[ROLE FETCH] Fetching role for:', userId);
 
       const [profileResult, roleResult] = await Promise.allSettled([
         supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
@@ -76,22 +97,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profileResult.status === 'fulfilled' && profileResult.value.data) {
         setProfile(profileResult.value.data as UserProfile);
+        console.log('[PROFILE FETCH] loaded:', profileResult.value.data.email);
       } else {
         setProfile(null);
+        console.warn('[PROFILE FETCH] No profile found');
       }
 
       if (roleResult.status === 'fulfilled' && roleResult.value.data) {
         setUserRole(roleResult.value.data as UserRole);
+        console.log('[ROLE FETCH] loaded:', roleResult.value.data.role);
       } else {
         setUserRole(null);
+        console.warn('[ROLE FETCH] No role found');
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('[AUTH INIT] Error fetching user data:', error);
       setProfile(null);
       setUserRole(null);
     } finally {
-      
-      setLoading(false);
+      finishLoading();
     }
   };
 
@@ -109,19 +133,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserRole(null);
   };
 
-  // Development mode bypass constant
   const DEV_MODE = false;
 
   const hasAccess = (page: string): boolean => {
-    if (DEV_MODE) return true; // Full access in dev mode
+    if (DEV_MODE) return true;
     if (!userRole) return false;
     const access = roleAccess[userRole.role as AppRole];
     return access?.pages.includes(page) ?? false;
   };
 
-  // Development mode bypass - full admin access
   const DEV_BYPASS_AUTH = false;
-  
+
   const canManageUsers = DEV_BYPASS_AUTH ? true : (userRole ? roleAccess[userRole.role as AppRole]?.canManageUsers ?? false : false);
   const canManageSettings = DEV_BYPASS_AUTH ? true : (userRole ? roleAccess[userRole.role as AppRole]?.canManageSettings ?? false : false);
   const canViewAllData = DEV_BYPASS_AUTH ? true : (userRole ? roleAccess[userRole.role as AppRole]?.canViewAllData ?? false : false);

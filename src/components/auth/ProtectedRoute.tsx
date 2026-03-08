@@ -20,7 +20,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       setTimedOut(false);
       return;
     }
-    const timer = setTimeout(() => setTimedOut(true), LOADING_TIMEOUT_MS);
+    const timer = setTimeout(() => {
+      console.warn('[AUTH TIMEOUT] ProtectedRoute auth timeout');
+      setTimedOut(true);
+    }, LOADING_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, [loading]);
 
@@ -34,13 +37,15 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (loading && timedOut) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4 p-6">
         <AlertTriangle className="h-10 w-10 text-destructive" />
-        <p className="text-lg font-medium text-foreground">Încărcarea a durat prea mult</p>
-        <p className="text-sm text-muted-foreground">Verifică conexiunea și încearcă din nou.</p>
+        <h2 className="text-lg font-medium text-foreground">Authentication is taking too long</h2>
+        <p className="text-sm text-muted-foreground text-center max-w-md">
+          Please refresh the page or check Supabase/auth configuration.
+        </p>
         <Button variant="outline" onClick={() => window.location.reload()}>
           <RefreshCw className="h-4 w-4 mr-2" />
-          Reîncearcă
+          Reîncarcă pagina
         </Button>
       </div>
     );
@@ -50,7 +55,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Dashboard is always accessible for authenticated users
   if (location.pathname === '/' || hasAccess(location.pathname)) {
     return <>{children}</>;
   }
