@@ -24,5 +24,5 @@ if (rootElement) {
       <App />
     </React.StrictMode>
   );
-  console.log('[APP INIT] React root rendered');
+  
 }

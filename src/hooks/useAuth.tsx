@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       setUserRole(null);
     } finally {
-      console.log('[AUTH DONE] Loading complete');
+      
       setLoading(false);
     }
   };
