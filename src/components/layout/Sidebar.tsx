@@ -32,7 +32,7 @@ const navigation = [
 ];
 
 // Development mode bypass - set to true to skip authentication
-const DEV_BYPASS_AUTH = true;
+const DEV_BYPASS_AUTH = false;
 
 export function Sidebar() {
   const location = useLocation();

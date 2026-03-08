@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Development mode bypass - full admin access
-  const DEV_BYPASS_AUTH = true;
+  const DEV_BYPASS_AUTH = false;
   
   const canManageUsers = DEV_BYPASS_AUTH ? true : (userRole ? roleAccess[userRole.role as AppRole]?.canManageUsers ?? false : false);
   const canManageSettings = DEV_BYPASS_AUTH ? true : (userRole ? roleAccess[userRole.role as AppRole]?.canManageSettings ?? false : false);

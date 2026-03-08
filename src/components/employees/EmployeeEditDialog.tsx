@@ -103,7 +103,7 @@ interface EmployeeEditDialogProps {
 }
 
 // Development mode bypass
-const DEV_BYPASS_AUTH = true;
+const DEV_BYPASS_AUTH = false;
 
 export function EmployeeEditDialog({
   employee,
