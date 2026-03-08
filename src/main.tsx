@@ -18,11 +18,15 @@ const rootElement = document.getElementById("root");
 if (rootElement) {
   rootElement.innerHTML = '';
   
-  const root = createRoot(rootElement);
-  root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
-  
+  try {
+    const root = createRoot(rootElement);
+    root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+  } catch (error) {
+    console.error('[APP FATAL] Failed to render application:', error);
+    rootElement.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#ef4444;padding:2rem;text-align:center"><p>Application failed to start</p></div>`;
+  }
 }
