@@ -33,8 +33,14 @@ const queryClient = new QueryClient({
   },
 });
 
+const HealthPage = () => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'sans-serif' }}>
+    <p>App router is working</p>
+  </div>
+);
+
 const App = () => {
-  
+  console.log('[APP RENDER] App rendered');
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -47,6 +53,7 @@ const App = () => {
                 <RealtimeNotificationProvider>
                   <Routes>
                     <Route path="/auth" element={<Auth />} />
+                    <Route path="/health" element={<HealthPage />} />
                     <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                     <Route path="/production-calendar" element={<ProtectedRoute><ProductionCalendar /></ProtectedRoute>} />
                     <Route path="/tasks-calendar" element={<ProtectedRoute><TasksCalendar /></ProtectedRoute>} />

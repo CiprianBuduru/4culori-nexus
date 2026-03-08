@@ -4,21 +4,26 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+console.log('[APP INIT] bootstrap start');
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   const msg = 'Missing Supabase environment variables';
-  document.getElementById('root')!.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#ef4444;padding:2rem;text-align:center"><p>${msg}</p></div>`;
+  console.error('[APP FATAL]', msg);
+  document.getElementById('root')!.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#ef4444;padding:2rem;text-align:center"><h2>Application failed to start</h2><p>${msg}</p></div>`;
   throw new Error(msg);
 }
 
 const rootElement = document.getElementById("root");
 
 if (rootElement) {
+  console.log('[APP INIT] root found');
   rootElement.innerHTML = '';
-  
+
   try {
+    console.log('[APP INIT] render start');
     const root = createRoot(rootElement);
     root.render(
       <React.StrictMode>
@@ -26,7 +31,7 @@ if (rootElement) {
       </React.StrictMode>
     );
   } catch (error) {
-    console.error('[APP FATAL] Failed to render application:', error);
-    rootElement.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#ef4444;padding:2rem;text-align:center"><p>Application failed to start</p></div>`;
+    console.error('[APP FATAL]', error);
+    rootElement.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#ef4444;padding:2rem;text-align:center"><h2>Application failed to start</h2><p>${error instanceof Error ? error.message : 'Unknown error'}</p></div>`;
   }
 }
