@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('[AUTH INIT] Setting up auth state listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('[AUTH INIT] onAuthStateChange event:', event, 'user:', session?.user?.email);
+        console.log('[SESSION LOADED] onAuthStateChange event:', event, 'user:', session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     console.log('[AUTH INIT] Checking existing session');
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[AUTH INIT] getSession result:', session?.user?.email ?? 'no session');
+      console.log('[SESSION LOADED] getSession result:', session?.user?.email ?? 'no session');
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -78,25 +78,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profileResult.status === 'fulfilled' && profileResult.value.data) {
         setProfile(profileResult.value.data as UserProfile);
-        console.log('[Auth] Profile loaded:', profileResult.value.data.email);
+        console.log('[PROFILE FETCH] Profile loaded:', profileResult.value.data.email);
       } else {
         setProfile(null);
-        console.warn('[Auth] No profile found for user', userId);
+        console.warn('[PROFILE FETCH] No profile found for user', userId);
       }
 
       if (roleResult.status === 'fulfilled' && roleResult.value.data) {
         setUserRole(roleResult.value.data as UserRole);
-        console.log('[Auth] Role loaded:', roleResult.value.data.role);
+        console.log('[ROLE FETCH] Role loaded:', roleResult.value.data.role);
       } else {
         setUserRole(null);
-        console.warn('[Auth] No role found for user', userId);
+        console.warn('[ROLE FETCH] No role found for user', userId);
       }
     } catch (error) {
       console.error('[Auth] Error fetching user data:', error);
       setProfile(null);
       setUserRole(null);
     } finally {
-      console.log('[Auth] Loading complete');
+      console.log('[AUTH DONE] Loading complete');
       setLoading(false);
     }
   };
