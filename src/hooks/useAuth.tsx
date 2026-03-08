@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
           setUserRole(null);
           setLoading(false);
-          console.log('[AUTH INIT] No session, loading set to false');
+          
         }
       }
     );
