@@ -65,30 +65,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = async (userId: string) => {
     try {
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      console.log('[Auth] Fetching user data for:', userId);
 
-      if (profileData) {
-        setProfile(profileData as UserProfile);
+      const [profileResult, roleResult] = await Promise.allSettled([
+        supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+        supabase.from('user_roles').select('*').eq('user_id', userId).maybeSingle(),
+      ]);
+
+      if (profileResult.status === 'fulfilled' && profileResult.value.data) {
+        setProfile(profileResult.value.data as UserProfile);
+        console.log('[Auth] Profile loaded:', profileResult.value.data.email);
+      } else {
+        setProfile(null);
+        console.warn('[Auth] No profile found for user', userId);
       }
 
-      // Fetch role
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (roleData) {
-        setUserRole(roleData as UserRole);
+      if (roleResult.status === 'fulfilled' && roleResult.value.data) {
+        setUserRole(roleResult.value.data as UserRole);
+        console.log('[Auth] Role loaded:', roleResult.value.data.role);
+      } else {
+        setUserRole(null);
+        console.warn('[Auth] No role found for user', userId);
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('[Auth] Error fetching user data:', error);
+      setProfile(null);
+      setUserRole(null);
     } finally {
+      console.log('[Auth] Loading complete');
       setLoading(false);
     }
   };
