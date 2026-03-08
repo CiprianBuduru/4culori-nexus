@@ -4,10 +4,11 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+console.log('[APP INIT] Starting React application mount');
+
 const rootElement = document.getElementById("root");
 
 if (rootElement) {
-  // Clear any existing loading content
   rootElement.innerHTML = '';
   
   const root = createRoot(rootElement);
@@ -16,4 +17,5 @@ if (rootElement) {
       <App />
     </React.StrictMode>
   );
+  console.log('[APP INIT] React root rendered');
 }
