@@ -30,13 +30,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    console.log('[AUTH INIT] Setting up auth state listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('[AUTH INIT] onAuthStateChange event:', event, 'user:', session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Defer profile fetch
         if (session?.user) {
           setTimeout(() => {
             fetchUserData(session.user.id);
@@ -45,18 +45,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
           setUserRole(null);
           setLoading(false);
+          console.log('[AUTH INIT] No session, loading set to false');
         }
       }
     );
 
-    // THEN check for existing session
+    console.log('[AUTH INIT] Checking existing session');
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[AUTH INIT] getSession result:', session?.user?.email ?? 'no session');
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchUserData(session.user.id);
       } else {
         setLoading(false);
+        console.log('[AUTH INIT] No existing session, loading set to false');
       }
     });
 
