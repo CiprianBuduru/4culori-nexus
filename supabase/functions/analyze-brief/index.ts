@@ -3,12 +3,30 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Validate JWT
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+  if (claimsError || !claimsData?.claims) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   try {
@@ -26,8 +44,6 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Fetch recipes from database
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -42,22 +58,14 @@ serve(async (req) => {
 
     if (!recipes || recipes.length === 0) {
       return new Response(
-        JSON.stringify({ 
-          suggestions: [],
-          message: 'Nu există rețete definite. Adăugați rețete în Setări.'
-        }),
+        JSON.stringify({ suggestions: [], message: 'Nu există rețete definite. Adăugați rețete în Setări.' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create a summary of available recipes for the AI
     const recipeSummary = recipes.map(r => ({
-      id: r.id,
-      name: r.name,
-      description: r.description,
-      keywords: r.brief_keywords || [],
-      basePrice: r.base_price,
-      pricePerUnit: r.price_per_unit
+      id: r.id, name: r.name, description: r.description,
+      keywords: r.brief_keywords || [], basePrice: r.base_price, pricePerUnit: r.price_per_unit
     }));
 
     const systemPrompt = `Ești un asistent pentru o tipografie/print shop care analizează brief-uri de comenzi și sugerează rețete potrivite pentru calcul de costuri.
@@ -100,69 +108,45 @@ Dacă nu găsești nicio rețetă potrivită, returnează suggestions: [] cu o n
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Prea multe cereri. Încercați din nou mai târziu." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Prea multe cereri. Încercați din nou mai târziu." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Credit AI insuficient." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Credit AI insuficient." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
       throw new Error("Eroare la analiza AI");
     }
 
     const aiResponse = await response.json();
     const content = aiResponse.choices?.[0]?.message?.content;
 
-    if (!content) {
-      throw new Error("Răspuns AI gol");
-    }
+    if (!content) throw new Error("Răspuns AI gol");
 
-    // Parse the AI response - handle potential markdown code blocks
     let parsedResponse;
     try {
-      // Remove markdown code blocks if present
       let cleanContent = content.trim();
-      if (cleanContent.startsWith('```json')) {
-        cleanContent = cleanContent.slice(7);
-      } else if (cleanContent.startsWith('```')) {
-        cleanContent = cleanContent.slice(3);
-      }
-      if (cleanContent.endsWith('```')) {
-        cleanContent = cleanContent.slice(0, -3);
-      }
+      if (cleanContent.startsWith('```json')) cleanContent = cleanContent.slice(7);
+      else if (cleanContent.startsWith('```')) cleanContent = cleanContent.slice(3);
+      if (cleanContent.endsWith('```')) cleanContent = cleanContent.slice(0, -3);
       parsedResponse = JSON.parse(cleanContent.trim());
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', content);
+    } catch {
       parsedResponse = { suggestions: [], notes: 'Nu am putut interpreta răspunsul AI.' };
     }
 
-    // Enrich suggestions with full recipe data
     const enrichedSuggestions = (parsedResponse.suggestions || []).map((suggestion: any) => {
       const recipe = recipes.find(r => r.id === suggestion.recipeId);
-      return {
-        ...suggestion,
-        recipe: recipe || null
-      };
+      return { ...suggestion, recipe: recipe || null };
     }).filter((s: any) => s.recipe !== null);
 
     return new Response(
-      JSON.stringify({
-        suggestions: enrichedSuggestions,
-        notes: parsedResponse.notes || ''
-      }),
+      JSON.stringify({ suggestions: enrichedSuggestions, notes: parsedResponse.notes || '' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
     console.error('Error in analyze-brief:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Eroare necunoscută' }),
+      JSON.stringify({ error: 'Eroare la analiza brief-ului' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

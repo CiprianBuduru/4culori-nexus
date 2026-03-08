@@ -1,11 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 interface OfferProduct {
@@ -29,27 +30,36 @@ interface SendOfferEmailRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Validate JWT
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+  if (claimsError || !claimsData?.claims) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
   try {
     const {
-      clientEmail,
-      clientName,
-      offerNumber,
-      products,
-      subtotal,
-      discount,
-      discountAmount,
-      total,
-      validUntil,
+      clientEmail, clientName, offerNumber, products,
+      subtotal, discount, discountAmount, total, validUntil,
     }: SendOfferEmailRequest = await req.json();
 
     console.log(`Sending offer ${offerNumber} to ${clientEmail}`);
 
-    // Generate products HTML table
     const productsHtml = products.map(p => `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #eee;">${p.name}</td>
@@ -93,18 +103,14 @@ const handler = async (req: Request): Promise<Response> => {
             <h1>4CULORI</h1>
             <p style="margin: 5px 0 0 0;">Tipografie & Print</p>
           </div>
-          
           <div class="content">
             <h2>Bună ziua${clientName ? `, ${clientName}` : ''}!</h2>
-            
             <p>Vă mulțumim pentru interesul acordat serviciilor noastre. Mai jos găsiți oferta de preț solicitată:</p>
-            
             <div class="offer-info">
               <strong>Ofertă:</strong> ${offerNumber}<br>
               <strong>Data:</strong> ${new Date().toLocaleDateString('ro-RO')}<br>
               <strong>Valabilă până:</strong> ${validUntil}
             </div>
-            
             <table>
               <thead>
                 <tr>
@@ -129,26 +135,17 @@ const handler = async (req: Request): Promise<Response> => {
                 </tr>
               </tfoot>
             </table>
-            
             <p><strong>Note:</strong></p>
             <ul>
               <li>Prețurile includ TVA</li>
               <li>Oferta este valabilă 30 de zile de la data emiterii</li>
               <li>Pentru comenzi speciale, termenul de livrare va fi stabilit la confirmare</li>
             </ul>
-            
-            <div class="cta">
-              <a href="https://4culori.ro">Vizitează site-ul nostru</a>
-            </div>
-            
+            <div class="cta"><a href="https://4culori.ro">Vizitează site-ul nostru</a></div>
             <p>Pentru orice întrebări sau pentru a confirma comanda, nu ezitați să ne contactați.</p>
-            
             <p>Cu stimă,<br><strong>Echipa 4Culori</strong></p>
           </div>
-          
-          <div class="footer">
-            <p>4Culori • Tipografie & Personalizări • www.4culori.ro</p>
-          </div>
+          <div class="footer"><p>4Culori • Tipografie & Personalizări • www.4culori.ro</p></div>
         </div>
       </body>
       </html>
@@ -170,11 +167,8 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error sending offer email:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      JSON.stringify({ success: false, error: "Eroare la trimiterea email-ului" }),
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };

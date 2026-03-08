@@ -6,7 +6,7 @@ const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 interface OrderNotificationRequest {
@@ -37,32 +37,40 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Validate JWT
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+  if (claimsError || !claimsData?.claims) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
   try {
     const payload: OrderNotificationRequest = await req.json();
     console.log("Received order notification request:", payload);
 
-    const { 
-      orderId,
-      orderNumber, 
-      orderName,
-      clientName,
-      previousStatus,
-      newStatus,
-      notifyEmail
-    } = payload;
+    const { orderId, orderNumber, orderName, clientName, previousStatus, newStatus, notifyEmail } = payload;
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const prevLabel = statusLabels[previousStatus] || previousStatus;
     const newLabel = statusLabels[newStatus] || newStatus;
 
-    // Save notification to database (global notification)
     const { error: dbError } = await supabase
       .from("notifications")
       .insert({
-        user_id: null, // Global notification - visible to all
+        user_id: null,
         title: `Comandă ${orderNumber} - Status actualizat`,
         message: `Comanda ${orderNumber}${orderName ? ` (${orderName})` : ''}${clientName ? ` pentru ${clientName}` : ''} a trecut de la "${prevLabel}" la "${newLabel}".`,
         type: "info",
@@ -71,11 +79,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (dbError) {
       console.error("Error saving notification to database:", dbError);
-    } else {
-      console.log("Notification saved to database");
     }
 
-    // Send email if provided
     let emailResponse = null;
     if (notifyEmail) {
       const emailHtml = `
@@ -83,39 +88,22 @@ const handler = async (req: Request): Promise<Response> => {
           <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; border-radius: 10px 10px 0 0;">
             <h1 style="color: white; margin: 0; font-size: 24px;">📦 Status Comandă Actualizat</h1>
           </div>
-          
           <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 10px 10px;">
-            <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">
-              Statusul comenzii a fost actualizat:
-            </p>
-            
+            <p style="color: #475569; font-size: 16px; margin-bottom: 20px;">Statusul comenzii a fost actualizat:</p>
             <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
               <h2 style="color: #1e293b; margin: 0 0 15px 0; font-size: 18px;">Comandă ${orderNumber}</h2>
-              
               ${orderName ? `<p style="color: #64748b; margin: 0 0 10px 0;">${orderName}</p>` : ''}
               ${clientName ? `<p style="color: #64748b; margin: 0 0 15px 0;">👤 Client: <strong>${clientName}</strong></p>` : ''}
-              
               <div style="display: flex; align-items: center; gap: 15px; padding: 15px; background: #f1f5f9; border-radius: 6px;">
-                <div style="text-align: center;">
-                  <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">De la</div>
-                  <div style="background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 4px; font-weight: 500;">${prevLabel}</div>
-                </div>
+                <div style="text-align: center;"><div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">De la</div><div style="background: #fef3c7; color: #92400e; padding: 6px 12px; border-radius: 4px; font-weight: 500;">${prevLabel}</div></div>
                 <div style="font-size: 24px; color: #94a3b8;">→</div>
-                <div style="text-align: center;">
-                  <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">La</div>
-                  <div style="background: #d1fae5; color: #065f46; padding: 6px 12px; border-radius: 4px; font-weight: 500;">${newLabel}</div>
-                </div>
+                <div style="text-align: center;"><div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">La</div><div style="background: #d1fae5; color: #065f46; padding: 6px 12px; border-radius: 4px; font-weight: 500;">${newLabel}</div></div>
               </div>
             </div>
-            
-            <p style="color: #64748b; font-size: 14px; margin-top: 30px;">
-              Acest email a fost trimis automat de sistemul de management 4culori.
-            </p>
+            <p style="color: #64748b; font-size: 14px; margin-top: 30px;">Acest email a fost trimis automat de sistemul de management 4culori.</p>
           </div>
         </div>
       `;
-
-      console.log("Attempting to send email to:", notifyEmail);
 
       emailResponse = await resend.emails.send({
         from: "4culori Producție <onboarding@resend.dev>",
@@ -128,24 +116,14 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        emailResponse,
-        notificationSaved: !dbError 
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      JSON.stringify({ success: true, emailResponse, notificationSaved: !dbError }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {
     console.error("Error in send-order-notification function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      JSON.stringify({ error: "Eroare la trimiterea notificării" }),
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };
