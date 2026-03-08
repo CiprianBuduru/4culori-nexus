@@ -30,10 +30,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('[AUTH INIT] Setting up auth state listener');
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('[SESSION LOADED] onAuthStateChange event:', event, 'user:', session?.user?.email);
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -45,21 +45,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
           setUserRole(null);
           setLoading(false);
-          console.log('[AUTH INIT] No session, loading set to false');
+          
         }
       }
     );
 
-    console.log('[AUTH INIT] Checking existing session');
+    
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[SESSION LOADED] getSession result:', session?.user?.email ?? 'no session');
+      
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchUserData(session.user.id);
       } else {
         setLoading(false);
-        console.log('[AUTH INIT] No existing session, loading set to false');
+        
       }
     });
 
@@ -68,8 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = async (userId: string) => {
     try {
-      console.log('[PROFILE FETCH] Starting profile fetch for:', userId);
-      console.log('[ROLE FETCH] Starting role fetch for:', userId);
 
       const [profileResult, roleResult] = await Promise.allSettled([
         supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
@@ -78,25 +76,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profileResult.status === 'fulfilled' && profileResult.value.data) {
         setProfile(profileResult.value.data as UserProfile);
-        console.log('[PROFILE FETCH] Profile loaded:', profileResult.value.data.email);
       } else {
         setProfile(null);
-        console.warn('[PROFILE FETCH] No profile found for user', userId);
       }
 
       if (roleResult.status === 'fulfilled' && roleResult.value.data) {
         setUserRole(roleResult.value.data as UserRole);
-        console.log('[ROLE FETCH] Role loaded:', roleResult.value.data.role);
       } else {
         setUserRole(null);
-        console.warn('[ROLE FETCH] No role found for user', userId);
       }
     } catch (error) {
-      console.error('[Auth] Error fetching user data:', error);
+      console.error('Error fetching user data:', error);
       setProfile(null);
       setUserRole(null);
     } finally {
-      console.log('[AUTH DONE] Loading complete');
+      
       setLoading(false);
     }
   };
