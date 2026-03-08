@@ -23,7 +23,7 @@ if (rootElement) {
   rootElement.innerHTML = '';
 
   try {
-    console.log('[APP INIT] render start');
+    
     const root = createRoot(rootElement);
     root.render(
       <React.StrictMode>
