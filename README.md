@@ -29,12 +29,29 @@ git clone <YOUR_GIT_URL>
 # Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
+# Step 3: Copy .env.example to .env and fill in values
+cp .env.example .env
+
+# Step 4: Install the necessary dependencies.
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 5: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
+
+## Environment Variables
+
+When deployed via Lovable, environment variables are configured automatically by Lovable Cloud.
+
+For local development, copy `.env.example` to `.env` and fill in your backend credentials:
+
+| Variable | Description |
+|---|---|
+| `VITE_SUPABASE_URL` | Your backend API URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Your backend public/anon key |
+| `VITE_SUPABASE_PROJECT_ID` | Your backend project ID |
+
+> **Note:** Never commit `.env` with real values. The `.env` file is auto-managed in Lovable deployments.
 
 **Edit a file directly in GitHub**
 
