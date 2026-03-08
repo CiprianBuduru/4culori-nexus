@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-console.log('[APP INIT] bootstrap start');
+
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -19,11 +19,11 @@ if (!supabaseUrl || !supabaseKey) {
 const rootElement = document.getElementById("root");
 
 if (rootElement) {
-  console.log('[APP INIT] root found');
+  
   rootElement.innerHTML = '';
 
   try {
-    console.log('[APP INIT] render start');
+    
     const root = createRoot(rootElement);
     root.render(
       <React.StrictMode>

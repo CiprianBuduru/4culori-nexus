@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    console.log('[AUTH INIT] Setting up auth');
+    
 
     // Guaranteed timeout - never stay loading forever
     timeoutRef.current = setTimeout(() => {
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('[SESSION LOADED] event:', event, 'user:', session?.user?.email);
+        
         setSession(session);
         setUser(session?.user ?? null);
 
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[SESSION LOADED] getSession:', session?.user?.email ?? 'no session');
+      
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -81,14 +81,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    console.log('[AUTH DONE] Loading complete');
+    
     setLoading(false);
   };
 
   const fetchUserData = async (userId: string) => {
     try {
-      console.log('[PROFILE FETCH] Fetching profile for:', userId);
-      console.log('[ROLE FETCH] Fetching role for:', userId);
 
       const [profileResult, roleResult] = await Promise.allSettled([
         supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
@@ -97,21 +95,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profileResult.status === 'fulfilled' && profileResult.value.data) {
         setProfile(profileResult.value.data as UserProfile);
-        console.log('[PROFILE FETCH] loaded:', profileResult.value.data.email);
       } else {
         setProfile(null);
-        console.warn('[PROFILE FETCH] No profile found');
       }
 
       if (roleResult.status === 'fulfilled' && roleResult.value.data) {
         setUserRole(roleResult.value.data as UserRole);
-        console.log('[ROLE FETCH] loaded:', roleResult.value.data.role);
       } else {
         setUserRole(null);
-        console.warn('[ROLE FETCH] No role found');
       }
     } catch (error) {
-      console.error('[AUTH INIT] Error fetching user data:', error);
+      console.error('Error fetching user data:', error);
       setProfile(null);
       setUserRole(null);
     } finally {
