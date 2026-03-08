@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserRole(null);
       }
     } catch (error) {
-      console.error('[Auth] Error fetching user data:', error);
+      console.error('Error fetching user data:', error);
       setProfile(null);
       setUserRole(null);
     } finally {
