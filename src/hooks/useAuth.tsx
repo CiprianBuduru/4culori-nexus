@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    console.log('[AUTH INIT] Setting up auth');
+    
 
     // Guaranteed timeout - never stay loading forever
     timeoutRef.current = setTimeout(() => {
