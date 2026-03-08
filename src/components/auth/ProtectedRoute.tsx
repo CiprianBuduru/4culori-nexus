@@ -1,28 +1,47 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ProtectedRouteProps {
   children: ReactNode;
 }
 
-// Development mode bypass - set to true to skip authentication
-const DEV_BYPASS_AUTH = false;
+const LOADING_TIMEOUT_MS = 5000;
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading, hasAccess } = useAuth();
   const location = useLocation();
+  const [timedOut, setTimedOut] = useState(false);
 
-  // Skip auth check in development mode
-  if (DEV_BYPASS_AUTH) {
-    return <>{children}</>;
-  }
+  useEffect(() => {
+    if (!loading) {
+      setTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => setTimedOut(true), LOADING_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
-  if (loading) {
+  if (loading && !timedOut) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (loading && timedOut) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <AlertTriangle className="h-10 w-10 text-destructive" />
+        <p className="text-lg font-medium text-foreground">Încărcarea a durat prea mult</p>
+        <p className="text-sm text-muted-foreground">Verifică conexiunea și încearcă din nou.</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Reîncearcă
+        </Button>
       </div>
     );
   }
@@ -31,10 +50,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Check role-based access
-  if (!hasAccess(location.pathname)) {
-    return <Navigate to="/" replace />;
+  // Dashboard is always accessible for authenticated users
+  if (location.pathname === '/' || hasAccess(location.pathname)) {
+    return <>{children}</>;
   }
 
-  return <>{children}</>;
+  return <Navigate to="/" replace />;
 }
