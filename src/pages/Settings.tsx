@@ -15,6 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { MaterialsSettings } from '@/components/settings/MaterialsSettings';
 import { ServiceTariffsSettings } from '@/components/settings/ServiceTariffsSettings';
 import { RecipesSettings } from '@/components/settings/RecipesSettings';
+import { ProductStandardsSettings } from '@/components/settings/ProductStandardsSettings';
 import { RefreshButton } from '@/components/ui/refresh-button';
 import { cn } from '@/lib/utils';
 
