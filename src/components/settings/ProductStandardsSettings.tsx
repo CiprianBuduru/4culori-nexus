@@ -461,7 +461,7 @@ function RecipeComponentsDetail({ skeletonId }: { skeletonId: string }) {
   const { data: components, isLoading } = useRecipeSkeletonComponents(skeletonId);
   const { addComponent, deleteComponent } = useMutateRecipeComponent();
   const [adding, setAdding] = useState(false);
-  const [newComp, setNewComp] = useState({ component_name: '', component_type: 'material' });
+  const [newComp, setNewComp] = useState({ component_name: '', component_type: 'material' as 'material' | 'service' });
 
   if (isLoading) return <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mx-auto" />;
 
