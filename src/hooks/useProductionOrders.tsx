@@ -23,7 +23,7 @@ export function useProductionOrders() {
     mutationFn: async (order: Partial<ProductionOrder>) => {
       const { data, error } = await supabase
         .from('production_orders')
-        .insert(order)
+        .insert(order as any)
         .select()
         .single();
       if (error) throw error;
