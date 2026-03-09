@@ -65,7 +65,7 @@ export const roleAccess: Record<AppRole, {
   operator: {
     level: 1,
     label: 'Operator',
-    pages: ['/', '/production-calendar'],
+    pages: ['/', '/production-calendar', '/my-operations'],
     canManageUsers: false,
     canManageSettings: false,
     canViewAllData: false,
