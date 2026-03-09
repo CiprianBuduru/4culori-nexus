@@ -9,12 +9,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Plus, Pencil, Trash2, Check, X, ShieldAlert, ChevronDown, ChevronUp, FileText, Package, Wrench, BookOpen, Building2, Bell } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Check, X, ShieldAlert, ChevronDown, ChevronUp, FileText, Package, Wrench, BookOpen, Building2, Bell, Layers } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { MaterialsSettings } from '@/components/settings/MaterialsSettings';
 import { ServiceTariffsSettings } from '@/components/settings/ServiceTariffsSettings';
 import { RecipesSettings } from '@/components/settings/RecipesSettings';
+import { ProductStandardsSettings } from '@/components/settings/ProductStandardsSettings';
 import { RefreshButton } from '@/components/ui/refresh-button';
 import { cn } from '@/lib/utils';
 
@@ -46,9 +47,10 @@ const defaultSettings: CompanySettings = {
 
 const STORAGE_KEY = '4culori-settings';
 
-type SettingsCategory = 'order-types' | 'materials' | 'services' | 'recipes' | 'company' | 'notifications';
+type SettingsCategory = 'product-standards' | 'order-types' | 'materials' | 'services' | 'recipes' | 'company' | 'notifications';
 
 const menuItems: { id: SettingsCategory; label: string; icon: React.ElementType }[] = [
+  { id: 'product-standards', label: 'Standarde Produse', icon: Layers },
   { id: 'order-types', label: 'Tipuri Comenzi', icon: FileText },
   { id: 'materials', label: 'Materiale', icon: Package },
   { id: 'services', label: 'Tarife Servicii', icon: Wrench },
@@ -68,7 +70,7 @@ const Settings = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [newForm, setNewForm] = useState({ order_type: '', order_type_label: '', default_production_days: 7, default_brief: '' });
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('order-types');
+  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('product-standards');
 
   // Fetch order type defaults
   const { data: orderTypeDefaults, isLoading: isLoadingOrderTypes } = useQuery({
@@ -532,6 +534,8 @@ const Settings = () => {
 
   const renderContent = () => {
     switch (activeCategory) {
+      case 'product-standards':
+        return <ProductStandardsSettings />;
       case 'order-types':
         return renderOrderTypesContent();
       case 'materials':

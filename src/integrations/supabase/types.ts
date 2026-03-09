@@ -427,6 +427,112 @@ export type Database = {
           },
         ]
       }
+      product_families: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          label: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          label: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          label?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      product_types: {
+        Row: {
+          active: boolean
+          created_at: string
+          family_id: string
+          id: string
+          label: string
+          name: string
+          notes: string | null
+          recipe_skeleton_id: string | null
+          requires_client_approval: boolean
+          requires_dtp: boolean
+          requires_mockup: boolean
+          sort_order: number
+          updated_at: string
+          workflow_template_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          family_id: string
+          id?: string
+          label: string
+          name: string
+          notes?: string | null
+          recipe_skeleton_id?: string | null
+          requires_client_approval?: boolean
+          requires_dtp?: boolean
+          requires_mockup?: boolean
+          sort_order?: number
+          updated_at?: string
+          workflow_template_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          family_id?: string
+          id?: string
+          label?: string
+          name?: string
+          notes?: string | null
+          recipe_skeleton_id?: string | null
+          requires_client_approval?: boolean
+          requires_dtp?: boolean
+          requires_mockup?: boolean
+          sort_order?: number
+          updated_at?: string
+          workflow_template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_types_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "product_families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_types_recipe_skeleton_id_fkey"
+            columns: ["recipe_skeleton_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_skeletons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_types_workflow_template_id_fkey"
+            columns: ["workflow_template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_orders: {
         Row: {
           client_name: string | null
@@ -703,6 +809,82 @@ export type Database = {
         }
         Relationships: []
       }
+      recipe_skeleton_components: {
+        Row: {
+          component_name: string
+          component_type: string
+          created_at: string
+          id: string
+          notes: string | null
+          recipe_skeleton_id: string
+          sort_order: number
+        }
+        Insert: {
+          component_name: string
+          component_type?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recipe_skeleton_id: string
+          sort_order?: number
+        }
+        Update: {
+          component_name?: string
+          component_type?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recipe_skeleton_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_skeleton_components_recipe_skeleton_id_fkey"
+            columns: ["recipe_skeleton_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_skeletons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_skeletons: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          family_id: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          family_id?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          family_id?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_skeletons_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "product_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipes: {
         Row: {
           base_price: number | null
@@ -885,6 +1067,91 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      workflow_template_stages: {
+        Row: {
+          blocks_next_stage: boolean
+          created_at: string
+          department_name: string | null
+          id: string
+          is_required: boolean
+          notes: string | null
+          sequence: number
+          stage_name: string
+          stage_type: string
+          workflow_template_id: string
+        }
+        Insert: {
+          blocks_next_stage?: boolean
+          created_at?: string
+          department_name?: string | null
+          id?: string
+          is_required?: boolean
+          notes?: string | null
+          sequence?: number
+          stage_name: string
+          stage_type?: string
+          workflow_template_id: string
+        }
+        Update: {
+          blocks_next_stage?: boolean
+          created_at?: string
+          department_name?: string | null
+          id?: string
+          is_required?: boolean
+          notes?: string | null
+          sequence?: number
+          stage_name?: string
+          stage_type?: string
+          workflow_template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_template_stages_workflow_template_id_fkey"
+            columns: ["workflow_template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_templates: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          family_id: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          family_id?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          family_id?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_templates_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "product_families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
