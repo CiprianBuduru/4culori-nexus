@@ -102,7 +102,7 @@ export function useProductionStages(orderId?: string) {
     mutationFn: async (stage: Partial<ProductionStage>) => {
       const { data, error } = await supabase
         .from('production_stages')
-        .insert(stage)
+        .insert(stage as any)
         .select()
         .single();
       if (error) throw error;
