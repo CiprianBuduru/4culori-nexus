@@ -11,7 +11,9 @@ import {
   CheckSquare,
   LogOut,
   UserCircle,
-  ShoppingCart
+  ShoppingCart,
+  Factory,
+  Wrench,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
