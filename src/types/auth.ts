@@ -35,7 +35,7 @@ export const roleAccess: Record<AppRole, {
   administrator: {
     level: 4,
     label: 'Administrator',
-    pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar', '/settings', '/clients', '/orders'],
+    pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar', '/settings', '/clients', '/orders', '/production-orders', '/my-operations'],
     canManageUsers: true,
     canManageSettings: true,
     canViewAllData: true,
