@@ -23,6 +23,8 @@ import { roleAccess } from '@/types/auth';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Calendar Producție', href: '/production-calendar', icon: CalendarDays },
+  { name: 'Comenzi Producție', href: '/production-orders', icon: Factory },
+  { name: 'Operațiunile Mele', href: '/my-operations', icon: Wrench },
   { name: 'Calendar To Do', href: '/tasks-calendar', icon: CheckSquare },
   { name: 'Clienți', href: '/clients', icon: UserCircle },
   { name: 'Oferte / Comenzi', href: '/orders', icon: ShoppingCart },
