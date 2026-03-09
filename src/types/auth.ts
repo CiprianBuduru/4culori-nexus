@@ -45,7 +45,7 @@ export const roleAccess: Record<AppRole, {
   director: {
     level: 3,
     label: 'Director',
-    pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar', '/clients', '/orders'],
+    pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar', '/clients', '/orders', '/production-orders', '/my-operations'],
     canManageUsers: false,
     canManageSettings: false,
     canViewAllData: true,
