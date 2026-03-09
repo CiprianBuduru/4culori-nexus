@@ -427,6 +427,141 @@ export type Database = {
           },
         ]
       }
+      production_orders: {
+        Row: {
+          client_name: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          order_number: string
+          priority: string
+          product_type: string | null
+          production_manager_id: string | null
+          quantity: number | null
+          source_order_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          order_number: string
+          priority?: string
+          product_type?: string | null
+          production_manager_id?: string | null
+          quantity?: number | null
+          source_order_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          order_number?: string
+          priority?: string
+          product_type?: string | null
+          production_manager_id?: string | null
+          quantity?: number | null
+          source_order_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_orders_production_manager_id_fkey"
+            columns: ["production_manager_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_orders_source_order_id_fkey"
+            columns: ["source_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_stages: {
+        Row: {
+          assigned_user_id: string | null
+          blocked_reason: string | null
+          completed_at: string | null
+          created_at: string
+          department_name: string
+          due_at: string | null
+          id: string
+          notes: string | null
+          production_order_id: string
+          sequence: number
+          stage_name: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_user_id?: string | null
+          blocked_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          department_name: string
+          due_at?: string | null
+          id?: string
+          notes?: string | null
+          production_order_id: string
+          sequence?: number
+          stage_name: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_user_id?: string | null
+          blocked_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          department_name?: string
+          due_at?: string | null
+          id?: string
+          notes?: string | null
+          production_order_id?: string
+          sequence?: number
+          stage_name?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_stages_assigned_user_id_fkey"
+            columns: ["assigned_user_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_stages_production_order_id_fkey"
+            columns: ["production_order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_tasks: {
         Row: {
           assigned_to: string | null
