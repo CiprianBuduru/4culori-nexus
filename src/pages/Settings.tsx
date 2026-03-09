@@ -70,7 +70,7 @@ const Settings = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [newForm, setNewForm] = useState({ order_type: '', order_type_label: '', default_production_days: 7, default_brief: '' });
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('order-types');
+  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('product-standards');
 
   // Fetch order type defaults
   const { data: orderTypeDefaults, isLoading: isLoadingOrderTypes } = useQuery({
