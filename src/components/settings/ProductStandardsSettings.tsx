@@ -505,7 +505,7 @@ function RecipeComponentsDetail({ skeletonId }: { skeletonId: string }) {
       {adding && (
         <div className="space-y-2 p-3 rounded-md border border-primary/30 bg-primary/5">
           <Input placeholder="Nume component" value={newComp.component_name} onChange={(e) => setNewComp((p) => ({ ...p, component_name: e.target.value }))} />
-          <Select value={newComp.component_type} onValueChange={(v) => setNewComp((p) => ({ ...p, component_type: v }))}>
+          <Select value={newComp.component_type} onValueChange={(v: 'material' | 'service') => setNewComp((p) => ({ ...p, component_type: v }))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="material">Material</SelectItem>
