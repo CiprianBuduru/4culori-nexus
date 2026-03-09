@@ -22,6 +22,8 @@ import TasksCalendar from "./pages/TasksCalendar";
 import Settings from "./pages/Settings";
 import Clients from "./pages/Clients";
 import Orders from "./pages/Orders";
+import ProductionOrders from "./pages/ProductionOrders";
+import MyOperations from "./pages/MyOperations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
