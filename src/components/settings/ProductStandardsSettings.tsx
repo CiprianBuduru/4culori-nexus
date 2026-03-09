@@ -328,7 +328,7 @@ function WorkflowStagesDetail({ workflowId }: { workflowId: string }) {
   const { data: stages, isLoading } = useWorkflowTemplateStages(workflowId);
   const { addStage, deleteStage } = useMutateWorkflowStage();
   const [adding, setAdding] = useState(false);
-  const [newStage, setNewStage] = useState({ stage_name: '', stage_type: 'production', department_name: '', is_required: true, blocks_next_stage: true });
+  const [newStage, setNewStage] = useState({ stage_name: '', stage_type: 'production' as 'production' | 'approval', department_name: '', is_required: true, blocks_next_stage: true });
 
   if (isLoading) return <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mx-auto" />;
 
