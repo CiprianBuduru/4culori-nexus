@@ -55,7 +55,7 @@ export const roleAccess: Record<AppRole, {
   sef_productie: {
     level: 2,
     label: 'Șef Producție',
-    pages: ['/', '/employees', '/products', '/production-calendar', '/clients', '/orders'],
+    pages: ['/', '/employees', '/products', '/production-calendar', '/clients', '/orders', '/production-orders', '/my-operations'],
     canManageUsers: false,
     canManageSettings: false,
     canViewAllData: false,
