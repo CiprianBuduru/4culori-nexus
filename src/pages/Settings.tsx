@@ -47,9 +47,10 @@ const defaultSettings: CompanySettings = {
 
 const STORAGE_KEY = '4culori-settings';
 
-type SettingsCategory = 'order-types' | 'materials' | 'services' | 'recipes' | 'company' | 'notifications';
+type SettingsCategory = 'product-standards' | 'order-types' | 'materials' | 'services' | 'recipes' | 'company' | 'notifications';
 
 const menuItems: { id: SettingsCategory; label: string; icon: React.ElementType }[] = [
+  { id: 'product-standards', label: 'Standarde Produse', icon: Layers },
   { id: 'order-types', label: 'Tipuri Comenzi', icon: FileText },
   { id: 'materials', label: 'Materiale', icon: Package },
   { id: 'services', label: 'Tarife Servicii', icon: Wrench },
