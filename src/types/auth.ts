@@ -35,7 +35,7 @@ export const roleAccess: Record<AppRole, {
   administrator: {
     level: 4,
     label: 'Administrator',
-    pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar', '/settings', '/clients', '/orders'],
+    pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar', '/settings', '/clients', '/orders', '/production-orders', '/my-operations'],
     canManageUsers: true,
     canManageSettings: true,
     canViewAllData: true,
@@ -45,7 +45,7 @@ export const roleAccess: Record<AppRole, {
   director: {
     level: 3,
     label: 'Director',
-    pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar', '/clients', '/orders'],
+    pages: ['/', '/employees', '/departments', '/products', '/price-calculator', '/production-calendar', '/clients', '/orders', '/production-orders', '/my-operations'],
     canManageUsers: false,
     canManageSettings: false,
     canViewAllData: true,
@@ -55,7 +55,7 @@ export const roleAccess: Record<AppRole, {
   sef_productie: {
     level: 2,
     label: 'Șef Producție',
-    pages: ['/', '/employees', '/products', '/production-calendar', '/clients', '/orders'],
+    pages: ['/', '/employees', '/products', '/production-calendar', '/clients', '/orders', '/production-orders', '/my-operations'],
     canManageUsers: false,
     canManageSettings: false,
     canViewAllData: false,
@@ -65,7 +65,7 @@ export const roleAccess: Record<AppRole, {
   operator: {
     level: 1,
     label: 'Operator',
-    pages: ['/', '/production-calendar'],
+    pages: ['/', '/production-calendar', '/my-operations'],
     canManageUsers: false,
     canManageSettings: false,
     canViewAllData: false,

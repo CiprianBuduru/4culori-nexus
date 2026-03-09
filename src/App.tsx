@@ -22,6 +22,8 @@ import TasksCalendar from "./pages/TasksCalendar";
 import Settings from "./pages/Settings";
 import Clients from "./pages/Clients";
 import Orders from "./pages/Orders";
+import ProductionOrders from "./pages/ProductionOrders";
+import MyOperations from "./pages/MyOperations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -59,6 +61,8 @@ const App = () => {
                     <Route path="/tasks-calendar" element={<ProtectedRoute><TasksCalendar /></ProtectedRoute>} />
                     <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
                     <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+                    <Route path="/production-orders" element={<ProtectedRoute><ProductionOrders /></ProtectedRoute>} />
+                    <Route path="/my-operations" element={<ProtectedRoute><MyOperations /></ProtectedRoute>} />
                     <Route path="/employees" element={<ProtectedRoute><Employees /></ProtectedRoute>} />
                     <Route path="/departments" element={<ProtectedRoute><Departments /></ProtectedRoute>} />
                     <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
