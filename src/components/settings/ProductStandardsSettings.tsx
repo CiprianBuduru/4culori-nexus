@@ -384,7 +384,7 @@ function WorkflowStagesDetail({ workflowId }: { workflowId: string }) {
         <div className="space-y-2 p-3 rounded-md border border-primary/30 bg-primary/5">
           <Input placeholder="Nume etapă" value={newStage.stage_name} onChange={(e) => setNewStage((p) => ({ ...p, stage_name: e.target.value }))} />
           <div className="flex gap-2">
-            <Select value={newStage.stage_type} onValueChange={(v) => setNewStage((p) => ({ ...p, stage_type: v }))}>
+            <Select value={newStage.stage_type} onValueChange={(v: 'production' | 'approval') => setNewStage((p) => ({ ...p, stage_type: v }))}>
               <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="production">Producție</SelectItem>
