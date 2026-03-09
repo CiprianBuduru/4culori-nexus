@@ -534,6 +534,8 @@ const Settings = () => {
 
   const renderContent = () => {
     switch (activeCategory) {
+      case 'product-standards':
+        return <ProductStandardsSettings />;
       case 'order-types':
         return renderOrderTypesContent();
       case 'materials':
