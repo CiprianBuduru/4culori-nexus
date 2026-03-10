@@ -14,6 +14,7 @@ import {
   PRINT_ENGINE,
   type PrintProductConfig,
 } from './printProductConfigs';
+import { type PrintCalculatorPrefill } from '@/types/briefAnalysis';
 
 interface CalculatorProps {
   onAddToOffer?: (item: {
@@ -23,9 +24,11 @@ interface CalculatorProps {
     totalPrice: number;
     details: string;
   }) => void;
+  prefill?: PrintCalculatorPrefill | null;
+  onPrefillApplied?: () => void;
 }
 
-export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
+export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied }: CalculatorProps) {
   // ── Product selection ──
   const [productId, setProductId] = useState(PRINT_PRODUCTS[0].id);
   const product = useMemo(
