@@ -331,14 +331,37 @@ export default function PriceCalculator() {
   };
 
   const handleGeneratePdf = async () => {
+    let calcs: RecipeCalculation[] = calculations;
+
+    // If comparative state is active (cards visible), build from variants directly
+    if (comparativeState) {
+      calcs = comparativeState.variants.map(v => ({
+        id: `comp-${v.tier}`,
+        recipeId: `comparative-${v.tier}`,
+        recipeName: `${v.productName} — ${v.label}`,
+        category: 'printed' as RecipeCategory,
+        quantity: v.quantity,
+        materialCost: 0,
+        personalizationCost: 0,
+        totalPrice: v.totalPrice,
+        configSnapshot: v.configSnapshot,
+      }));
+    }
+
+    if (calcs.length === 0) {
+      toast.error('Adaugă produse în ofertă');
+      return;
+    }
+
     try {
       const offerNumber = await generateOfferPdf({
-        calculations,
+        calculations: calcs,
         subtotal,
         discount,
         discountAmount,
         total,
         clientName: clientName.trim() || undefined,
+        clientEmail: clientEmail.trim() || undefined,
       });
       toast.success(`Oferta ${offerNumber} a fost generată cu succes!`);
     } catch (error) {
