@@ -31,7 +31,7 @@ interface CalculatorProps {
   onAutoAddComplete?: () => void;
 }
 
-export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied }: CalculatorProps) {
+export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoAdd, onAutoAddComplete }: CalculatorProps) {
   // ── Product selection ──
   const [productId, setProductId] = useState(PRINT_PRODUCTS[0].id);
   const product = useMemo(
