@@ -389,7 +389,7 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
             )}
             <Separator />
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Cost producție</span>
+              <span className="text-muted-foreground">Cost direct</span>
               <span>{result.productionCost.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between text-sm">
