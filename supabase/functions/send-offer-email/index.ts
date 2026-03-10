@@ -64,8 +64,8 @@ const handler = async (req: Request): Promise<Response> => {
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #eee;">${p.name}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${p.quantity}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${p.unitPrice.toFixed(2)} RON</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${p.totalPrice.toFixed(2)} RON</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${p.unitPrice.toFixed(2)} € + TVA</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${p.totalPrice.toFixed(2)} € + TVA</td>
       </tr>
     `).join('');
 
