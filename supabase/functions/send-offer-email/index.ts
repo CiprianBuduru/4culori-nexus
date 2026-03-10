@@ -72,7 +72,7 @@ const handler = async (req: Request): Promise<Response> => {
     const discountHtml = discount > 0 ? `
       <tr>
         <td colspan="3" style="padding: 10px; text-align: right; color: #ff7f50;">Discount (${discount}%):</td>
-        <td style="padding: 10px; text-align: right; color: #ff7f50;">-${discountAmount.toFixed(2)} RON</td>
+        <td style="padding: 10px; text-align: right; color: #ff7f50;">-${discountAmount.toFixed(2)} € + TVA</td>
       </tr>
     ` : '';
 
