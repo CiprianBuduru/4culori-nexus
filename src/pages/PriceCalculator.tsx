@@ -487,19 +487,20 @@ export default function PriceCalculator() {
               </CardContent>
             </Card>
 
-            {/* Email Draft Panel */}
-            <EmailDraftPanel
-              clientName={clientName}
-              clientEmail={clientEmail}
-              products={offerProducts}
-              subtotal={subtotal}
-              discount={discount}
-              discountAmount={discountAmount}
-              total={total}
-              disabled={calculations.length === 0}
-              onSendEmail={handleSendEmail}
-            />
           </div>
+
+          {/* Email Draft Drawer (renders trigger buttons + Sheet) */}
+          <EmailDraftPanel
+            clientName={clientName}
+            clientEmail={clientEmail}
+            products={offerProducts}
+            subtotal={subtotal}
+            discount={discount}
+            discountAmount={discountAmount}
+            total={total}
+            disabled={calculations.length === 0}
+            onSendEmail={handleSendEmail}
+          />
         </div>
       </div>
     </MainLayout>
