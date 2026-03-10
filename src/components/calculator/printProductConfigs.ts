@@ -6,6 +6,10 @@ export interface PrintFormat {
   value: string;
   label: string;
   pcsPerSheet: number;
+  /** Number of folds for this format (pliant only) */
+  folds?: number;
+  /** Whether prism glue is needed (pliant only) */
+  glue?: boolean;
 }
 
 export interface PrintColorMode {
@@ -88,6 +92,8 @@ export const PRINT_ENGINE = {
   LABOR_PCT: 0.02,
   MAINTENANCE_PCT: 0.05,
   PRODUCTION_MARKUP: 1.40,
+  FOLD_COST_PER_FOLD: 0.01,  // EUR per fold per piece
+  GLUE_COST_PER_PIECE: 0.03, // EUR per glued piece (prism)
 } as const;
 
 // ── Product definitions ─────────────────────
@@ -157,35 +163,39 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     },
   },
 
-  // 3 ─ Pliant (placeholder)
+  // 3 ─ Pliant (fully functional)
   {
     id: 'pliant',
     name: 'Pliant',
     icon: 'BookOpen',
     formats: [
-      { value: 'A4-tri', label: 'A4 tri-fold', pcsPerSheet: 2 },
-      { value: 'A3-bi', label: 'A3 bi-fold', pcsPerSheet: 1 },
-      { value: 'DL-bi', label: 'DL bi-fold', pcsPerSheet: 6 },
+      { value: 'A4-A3',      label: 'A4 închis → A3 deschis',   pcsPerSheet: 1, folds: 1, glue: false },
+      { value: 'A5-A4',      label: 'A5 închis → A4 deschis',   pcsPerSheet: 2, folds: 1, glue: false },
+      { value: 'DL-A4',      label: 'DL închis → A4 deschis',   pcsPerSheet: 2, folds: 2, glue: false },
+      { value: 'A3-trifold', label: 'A3 trifold',               pcsPerSheet: 1, folds: 2, glue: false },
+      { value: 'DL-bifold',  label: 'DL bifold',                pcsPerSheet: 2, folds: 1, glue: false },
+      { value: 'prisma-A4',  label: 'Prisma A4',                pcsPerSheet: 2, folds: 3, glue: true },
+      { value: 'prisma-A3',  label: 'Prisma A3',                pcsPerSheet: 1, folds: 3, glue: true },
     ],
-    allowCustomFormat: true,
-    allowedGsm: [120, 160, 200, 250],
+    allowCustomFormat: false,
+    allowedGsm: [120, 160, 200, 250, 300, 350],
     defaultGsm: 160,
-    colorModes: pickColorModes(['4+4']),
+    colorModes: pickColorModes(['4+0', '4+4']),
     defaultColorMode: '4+4',
-    laminations: pickLaminations(['none', 'gloss_1', 'gloss_2', 'matte_1', 'matte_2']),
+    laminations: pickLaminations(['none', 'gloss_1', 'gloss_2', 'matte_1', 'matte_2', 'soft_1', 'soft_2']),
     defaultLamination: 'none',
     minQuantity: 50,
     quantityStep: 50,
     defaultQuantity: 100,
-    finishingNotes: 'Tăiere + fălțuire inclusă (placeholder – de validat)',
+    finishingNotes: 'Tăiere + fălțuire inclusă. Prismele includ lipire.',
     dtpHours: 0.5,
-    ready: false,
+    ready: true,
     commercialDefaults: {
-      format: 'A4-tri',
+      format: 'DL-A4',
       gsm: 160,
       colorMode: '4+4',
       lamination: 'none',
-      labels: { format: 'A4 tri-fold', gsm: '160 g/mp', colorMode: '4+4 (color, 2 fețe)', lamination: 'Fără plastifiere' },
+      labels: { format: 'DL închis → A4 deschis', gsm: '160 g/mp', colorMode: '4+4 (color, 2 fețe)', lamination: 'Fără plastifiere' },
     },
   },
 

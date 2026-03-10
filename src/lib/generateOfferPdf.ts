@@ -152,6 +152,8 @@ export function generateOfferPdf(data: OfferData) {
         if (snap.gsm) specParts.push(`Hârtie: ${snap.gsm} g/mp`);
         if (snap.colorModeLabel) specParts.push(`Tipar: ${snap.colorModeLabel}`);
         if (snap.laminationLabel && snap.lamination !== 'none') specParts.push(`Plastifiere: ${snap.laminationLabel}`);
+        if (snap.folds && snap.folds > 0) specParts.push(`Fălțuire: ${snap.folds} fălțuiri`);
+        if (snap.glue) specParts.push(`Lipire prisma: Da`);
         
         if (specParts.length > 0) {
           doc.text(`  ${specParts.join(' • ')}`, tableStart + 2, yPos);

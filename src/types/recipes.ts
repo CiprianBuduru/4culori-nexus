@@ -45,6 +45,10 @@ export interface PrintConfigSnapshot {
   laminationLabel: string;   // e.g. 'Fără plastifiere'
   sheetsUsed?: number;       // internal: sheets with waste
   dtpHours?: number;         // internal
+  /** Number of folds (pliant only) */
+  folds?: number;
+  /** Whether prism glue was applied (pliant only) */
+  glue?: boolean;
 }
 
 // Calculator item when using a recipe

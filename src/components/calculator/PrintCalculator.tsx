@@ -140,10 +140,14 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
   }
 
   // ── Derived values ──
+  const selectedFormat = product.formats.find((f) => f.value === format);
   const pcsPerSheet =
     format === 'custom'
       ? customPcsPerSheet
-      : product.formats.find((f) => f.value === format)?.pcsPerSheet ?? 1;
+      : selectedFormat?.pcsPerSheet ?? 1;
+
+  const folds = selectedFormat?.folds ?? 0;
+  const glue = selectedFormat?.glue ?? false;
 
   const paperPricePerSheet = paperPrices[paperWeight] || 0;
   const hasPaperPrice = paperPricePerSheet > 0;
@@ -165,9 +169,13 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
     const productionCost =
       (paperCostPerSheet + colorCostPerSheet + laminationCostPerSheet) * sheetsWithWaste;
 
+    // Finishing costs
+    const foldingCost = folds > 0 ? quantity * folds * PRINT_ENGINE.FOLD_COST_PER_FOLD : 0;
+    const glueCost = glue ? quantity * PRINT_ENGINE.GLUE_COST_PER_PIECE : 0;
+
     const labor = productionCost * PRINT_ENGINE.LABOR_PCT;
     const maintenance = productionCost * PRINT_ENGINE.MAINTENANCE_PCT;
-    const internalCost = productionCost + setupCost + labor + maintenance;
+    const internalCost = productionCost + setupCost + foldingCost + glueCost + labor + maintenance;
     const productionPrice = internalCost * PRINT_ENGINE.PRODUCTION_MARKUP;
     const unitPrice = productionPrice / quantity;
 
@@ -180,6 +188,10 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
       productionCost,
       setupCost,
       dtpHours: product.dtpHours,
+      foldingCost,
+      glueCost,
+      folds,
+      glue,
       labor,
       maintenance,
       internalCost,
@@ -194,6 +206,8 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
     laminationCostPerSheet,
     product.minQuantity,
     product.dtpHours,
+    folds,
+    glue,
   ]);
 
   /** Build the full offer item with config snapshot */
@@ -225,6 +239,8 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
       laminationLabel: laminationObj?.label ?? 'Fără plastifiere',
       sheetsUsed: result.sheetsWithWaste,
       dtpHours: product.dtpHours,
+      folds: result.folds > 0 ? result.folds : undefined,
+      glue: result.glue || undefined,
     };
 
     return {
@@ -334,11 +350,19 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
                 key={f.value}
                 variant={format === f.value ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setFormat(f.value)}
+                onClick={() => {
+                  setFormat(f.value);
+                  // Auto-switch color mode for prisma (4+0 only)
+                  if (f.glue && colorMode !== '4+0') {
+                    setColorMode('4+0');
+                  }
+                }}
                 className="text-xs"
               >
                 {f.label}
-                <span className="ml-1 text-muted-foreground">({f.pcsPerSheet}/SRA3)</span>
+                <span className="ml-1 text-muted-foreground">
+                  ({f.pcsPerSheet}/SRA3{f.folds ? `, ${f.folds}f` : ''}{f.glue ? ', lipire' : ''})
+                </span>
               </Button>
             ))}
             {product.allowCustomFormat && (
@@ -490,6 +514,18 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
               <span className="text-muted-foreground">Setup ({result.dtpHours}h × {PRINT_ENGINE.SETUP_RATE} €)</span>
               <span>{result.setupCost.toFixed(2)} €</span>
             </div>
+            {result.foldingCost > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Fălțuire ({result.folds} fălțuiri × {quantity} buc × {PRINT_ENGINE.FOLD_COST_PER_FOLD} €)</span>
+                <span>{result.foldingCost.toFixed(2)} €</span>
+              </div>
+            )}
+            {result.glueCost > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Lipire prisma ({quantity} buc × {PRINT_ENGINE.GLUE_COST_PER_PIECE} €)</span>
+                <span>{result.glueCost.toFixed(2)} €</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Manoperă (2%)</span>
               <span>{result.labor.toFixed(2)} €</span>
