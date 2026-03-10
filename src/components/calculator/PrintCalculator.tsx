@@ -107,9 +107,9 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
     const productionCost =
       (paperCostPerSheet + colorCostPerSheet + laminationCostPerSheet) * sheetsWithWaste;
 
-    const subtotal = productionCost + setupCost;
-    const internalCost =
-      subtotal * (1 + PRINT_ENGINE.LABOR_PCT + PRINT_ENGINE.MAINTENANCE_PCT);
+    const labor = productionCost * PRINT_ENGINE.LABOR_PCT;
+    const maintenance = productionCost * PRINT_ENGINE.MAINTENANCE_PCT;
+    const internalCost = productionCost + setupCost + labor + maintenance;
     const productionPrice = internalCost * PRINT_ENGINE.PRODUCTION_MARKUP;
     const unitPrice = productionPrice / quantity;
 
@@ -122,7 +122,8 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
       productionCost,
       setupCost,
       dtpHours: product.dtpHours,
-      subtotal,
+      labor,
+      maintenance,
       internalCost,
       productionPrice,
       unitPrice,
@@ -396,8 +397,12 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
               <span>{result.setupCost.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">+2% manoperă, +5% mentenanță</span>
-              <span>{result.internalCost.toFixed(2)} €</span>
+              <span className="text-muted-foreground">Manoperă (2%)</span>
+              <span>{result.labor.toFixed(2)} €</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Mentenanță (5%)</span>
+              <span>{result.maintenance.toFixed(2)} €</span>
             </div>
             <Separator />
             <div className="flex justify-between text-sm font-medium">
