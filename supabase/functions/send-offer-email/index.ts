@@ -161,7 +161,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await resend.emails.send({
       from: "4Culori <onboarding@resend.dev>",
       to: [clientEmail],
-      subject: `Ofertă de preț ${offerNumber} - 4Culori`,
+      subject: customSubject || `Ofertă de preț ${offerNumber} - 4Culori`,
       html: emailHtml,
     });
 
