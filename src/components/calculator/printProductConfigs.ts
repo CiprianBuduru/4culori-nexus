@@ -73,9 +73,7 @@ const pickLaminations = (ids: string[]) =>
 export const PRINT_ENGINE = {
   SPOILAGE: 0.10,            // +10 % extra sheets
   PAPER_TECH_LOSS: 0.20,     // +20 % on paper cost
-  SETUP_HOURS: 0.5,
   SETUP_RATE: 15,            // EUR / h
-  get SETUP_COST() { return this.SETUP_HOURS * this.SETUP_RATE; }, // 7.50 €
   LABOR_PCT: 0.02,
   MAINTENANCE_PCT: 0.05,
   PRODUCTION_MARKUP: 1.40,
