@@ -46,6 +46,7 @@ interface EmailDraftPanelProps {
   discount: number;
   discountAmount: number;
   total: number;
+  isComparative?: boolean;
   disabled?: boolean;
   onSendEmail?: (draft: string, subject: string) => Promise<void>;
   /** When true, auto-open drawer and generate draft */
@@ -61,6 +62,7 @@ export function EmailDraftPanel({
   discount,
   discountAmount,
   total,
+  isComparative: isComparativeProp,
   disabled,
   onSendEmail,
   autoOpenAndGenerate,
