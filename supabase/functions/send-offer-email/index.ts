@@ -124,7 +124,7 @@ const handler = async (req: Request): Promise<Response> => {
                 ${productsHtml}
                 <tr>
                   <td colspan="3" style="padding: 10px; text-align: right;"><strong>Subtotal:</strong></td>
-                  <td style="padding: 10px; text-align: right;"><strong>${subtotal.toFixed(2)} RON</strong></td>
+                  <td style="padding: 10px; text-align: right;"><strong>${subtotal.toFixed(2)} € + TVA</strong></td>
                 </tr>
                 ${discountHtml}
               </tbody>
