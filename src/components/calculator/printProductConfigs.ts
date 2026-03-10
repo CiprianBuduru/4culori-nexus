@@ -45,8 +45,6 @@ export interface PrintProductConfig {
   defaultColorMode: string;
   laminations: PrintLamination[];
   defaultLamination: string;
-  minQuantity: number;
-  quantityStep: number;
   defaultQuantity: number;
   finishingNotes: string;
   /** DTP setup hours for this product */
@@ -117,8 +115,6 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     defaultColorMode: '4+0',
     laminations: pickLaminations(['none', 'gloss_1', 'gloss_2', 'matte_1', 'matte_2', 'soft_1', 'soft_2']),
     defaultLamination: 'none',
-    minQuantity: 50,
-    quantityStep: 50,
     defaultQuantity: 100,
     finishingNotes: 'Tăiere inclusă',
     dtpHours: 0.5,
@@ -148,8 +144,6 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     defaultColorMode: '4+4',
     laminations: pickLaminations(['none', 'gloss_1', 'gloss_2', 'matte_1', 'matte_2', 'soft_1', 'soft_2']),
     defaultLamination: 'none',
-    minQuantity: 60,
-    quantityStep: 20,
     defaultQuantity: 100,
     finishingNotes: 'Tăiere inclusă',
     dtpHours: 0.2,
@@ -184,8 +178,6 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     defaultColorMode: '4+4',
     laminations: pickLaminations(['none', 'gloss_1', 'gloss_2', 'matte_1', 'matte_2', 'soft_1', 'soft_2']),
     defaultLamination: 'none',
-    minQuantity: 50,
-    quantityStep: 50,
     defaultQuantity: 100,
     finishingNotes: 'Tăiere + fălțuire inclusă. Prismele includ lipire.',
     dtpHours: 0.5,
@@ -215,8 +207,6 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     defaultColorMode: '4+4',
     laminations: pickLaminations(['none', 'gloss_1', 'matte_1']),
     defaultLamination: 'none',
-    minQuantity: 25,
-    quantityStep: 25,
     defaultQuantity: 50,
     finishingNotes: 'Capsare + tăiere inclusă (placeholder – de validat)',
     dtpHours: 0.5,
@@ -247,8 +237,6 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     defaultColorMode: '4+0',
     laminations: pickLaminations(['none', 'gloss_1', 'matte_1']),
     defaultLamination: 'none',
-    minQuantity: 10,
-    quantityStep: 10,
     defaultQuantity: 50,
     finishingNotes: 'Tăiere inclusă (placeholder – de validat)',
     dtpHours: 0.5,

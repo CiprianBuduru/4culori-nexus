@@ -120,10 +120,8 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
       setLamination(targetProduct.defaultLamination);
     }
 
-    if (prefill.quantity && prefill.quantity >= targetProduct.minQuantity) {
+    if (prefill.quantity && prefill.quantity >= 1) {
       setQuantity(prefill.quantity);
-    } else if (prefill.quantity) {
-      setQuantity(targetProduct.defaultQuantity);
     }
 
     onPrefillApplied?.();
@@ -159,7 +157,7 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
 
   // ── Calculation ──
   const result = useMemo(() => {
-    if (pcsPerSheet <= 0 || quantity < product.minQuantity) return null;
+    if (pcsPerSheet <= 0 || quantity < 1) return null;
 
     const setupCost = product.dtpHours * PRINT_ENGINE.SETUP_RATE;
     const sheets = Math.ceil(quantity / pcsPerSheet);
@@ -204,7 +202,6 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
     paperPricePerSheet,
     colorCostPerSheet,
     laminationCostPerSheet,
-    product.minQuantity,
     product.dtpHours,
     folds,
     glue,
@@ -268,11 +265,8 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
 
   // ── Quantity handler ──
   const handleQuantityChange = (val: string) => {
-    let num = parseInt(val) || product.minQuantity;
-    if (num < product.minQuantity) num = product.minQuantity;
-    num = Math.round(num / product.quantityStep) * product.quantityStep;
-    if (num < product.minQuantity) num = product.minQuantity;
-    setQuantity(num);
+    const num = parseInt(val) || 1;
+    setQuantity(Math.max(1, num));
   };
 
   // ── Add to offer ──
@@ -462,17 +456,14 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
 
         {/* ── Quantity ── */}
         <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Cantitate (bucăți)</Label>
+          <Label className="text-xs text-muted-foreground">Cantitate (buc)</Label>
           <Input
             type="number"
-            min={product.minQuantity}
-            step={product.quantityStep}
+            min={1}
+            step={1}
             value={quantity}
             onChange={(e) => handleQuantityChange(e.target.value)}
           />
-          <p className="text-xs text-muted-foreground">
-            Minim {product.minQuantity} buc, multiplu de {product.quantityStep}
-          </p>
         </div>
 
         <Separator />
