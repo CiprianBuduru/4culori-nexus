@@ -190,6 +190,33 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
     product.dtpHours,
   ]);
 
+  // Auto-add to offer when autoAdd is true and result is ready
+  useEffect(() => {
+    if (!autoAdd || !result || !onAddToOffer || !hasPaperPrice) return;
+
+    const formatLabel =
+      format === 'custom'
+        ? `Custom (${customPcsPerSheet}/SRA3)`
+        : product.formats.find((f) => f.value === format)?.label ?? format;
+    const weightLabel = `${paperWeight} g/mp`;
+    const laminationLabel =
+      product.laminations.find((l) => l.value === lamination)?.label ?? '';
+
+    let details = `${formatLabel}, Color Copy ${weightLabel}, ${colorMode}`;
+    if (lamination !== 'none') details += `, ${laminationLabel}`;
+    details += `, ${result.sheetsWithWaste} coli SRA3`;
+
+    onAddToOffer({
+      name: `${product.name} ${formatLabel}`,
+      quantity,
+      unitPrice: result.unitPrice,
+      totalPrice: result.productionPrice,
+      details,
+    });
+
+    onAutoAddComplete?.();
+  }, [autoAdd, result, hasPaperPrice]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Quantity handler ──
   const handleQuantityChange = (val: string) => {
     let num = parseInt(val) || product.minQuantity;
