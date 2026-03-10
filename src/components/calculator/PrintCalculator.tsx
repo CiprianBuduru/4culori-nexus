@@ -417,7 +417,6 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
               <span>Preț/bucată</span>
               <span>{result.unitPrice.toFixed(4)} € + TVA</span>
             </div>
-          </div>
 
             {/* ── Quick quantity estimates ── */}
             <div className="mt-3 bg-muted/30 rounded-lg p-3">
@@ -433,6 +432,7 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
                 ))}
               </div>
             </div>
+          </div>
         )}
 
         {!result && (
