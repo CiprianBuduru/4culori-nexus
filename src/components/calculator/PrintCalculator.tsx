@@ -99,6 +99,7 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
   const result = useMemo(() => {
     if (pcsPerSheet <= 0 || quantity < product.minQuantity) return null;
 
+    const setupCost = product.dtpHours * PRINT_ENGINE.SETUP_RATE;
     const sheets = Math.ceil(quantity / pcsPerSheet);
     const sheetsWithWaste = Math.ceil(sheets * (1 + PRINT_ENGINE.SPOILAGE));
 
@@ -106,7 +107,7 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
     const productionCost =
       (paperCostPerSheet + colorCostPerSheet + laminationCostPerSheet) * sheetsWithWaste;
 
-    const subtotal = productionCost + PRINT_ENGINE.SETUP_COST;
+    const subtotal = productionCost + setupCost;
     const internalCost =
       subtotal * (1 + PRINT_ENGINE.LABOR_PCT + PRINT_ENGINE.MAINTENANCE_PCT);
     const productionPrice = internalCost * PRINT_ENGINE.PRODUCTION_MARKUP;
@@ -119,7 +120,8 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
       colorCostPerSheet,
       laminationCostPerSheet,
       productionCost,
-      setupCost: PRINT_ENGINE.SETUP_COST,
+      setupCost,
+      dtpHours: product.dtpHours,
       subtotal,
       internalCost,
       productionPrice,
@@ -132,6 +134,7 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
     colorCostPerSheet,
     laminationCostPerSheet,
     product.minQuantity,
+    product.dtpHours,
   ]);
 
   // ── Quantity handler ──

@@ -177,6 +177,7 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     quantityStep: 25,
     defaultQuantity: 50,
     finishingNotes: 'Capsare + tăiere inclusă (placeholder – de validat)',
+    dtpHours: 0.5,
     ready: false,
   },
 
