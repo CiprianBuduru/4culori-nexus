@@ -16,16 +16,26 @@ import {
 } from './printProductConfigs';
 import { type PrintCalculatorPrefill } from '@/types/briefAnalysis';
 
+import { type PrintConfigSnapshot } from '@/types/recipes';
+
+interface PrintOfferItem {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  details: string;
+  productionCost: number;
+  markupMultiplier: number;
+  configSnapshot: PrintConfigSnapshot;
+}
+
 interface CalculatorProps {
-  onAddToOffer?: (item: {
-    name: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-    details: string;
-  }) => void;
+  onAddToOffer?: (item: PrintOfferItem) => void;
   prefill?: PrintCalculatorPrefill | null;
   onPrefillApplied?: () => void;
+  autoAdd?: boolean;
+  onAutoAddComplete?: () => void;
+}
   /** When true, automatically adds the current calculation to offer after prefill is applied */
   autoAdd?: boolean;
   onAutoAddComplete?: () => void;
