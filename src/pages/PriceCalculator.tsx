@@ -571,7 +571,17 @@ export default function PriceCalculator() {
             <BriefAnalyzer
               onApplyToCalculator={handlePrefillWithConfirmation}
               onGenerateFullQuote={handleFullQuoteWithConfirmation}
+              onGenerateComparativeQuote={handleGenerateComparativeQuote}
             />
+
+            {/* Comparative Quote Cards (optional mode) */}
+            {comparativeState && (
+              <ComparativeQuoteCards
+                state={comparativeState}
+                onSelectVariant={handleSelectVariant}
+                onAddAllVariants={handleAddAllVariants}
+              />
+            )}
 
             {/* Step 2: Universal Print Calculator */}
             <PrintCalculator
