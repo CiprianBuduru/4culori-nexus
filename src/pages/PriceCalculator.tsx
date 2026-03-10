@@ -199,56 +199,44 @@ export default function PriceCalculator() {
     }
   };
 
-  const handleSendEmail = async () => {
+  const handleSendEmail = async (draftBody: string, draftSubject: string) => {
     const emailToUse = clientEmail.trim();
     if (!emailToUse) {
-      toast.error('Selectează un client cu email sau introdu adresa de email');
-      return;
+      throw new Error('Selectează un client cu email sau introdu adresa de email');
     }
-
     if (calculations.length === 0) {
-      toast.error('Adaugă produse în ofertă');
-      return;
+      throw new Error('Adaugă produse în ofertă');
     }
 
-    setIsSendingEmail(true);
-    
-    try {
-      const offerNumber = `OF-${Date.now()}`;
-      const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('ro-RO');
-      
-      const products = calculations.map(calc => ({
-        name: calc.recipeName,
-        quantity: calc.quantity,
-        unitPrice: calc.quantity > 0 ? calc.totalPrice / calc.quantity : 0,
-        totalPrice: calc.totalPrice,
-        category: calc.category,
-      }));
+    const offerNumber = `OF-${Date.now()}`;
+    const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('ro-RO');
 
-      const { data, error } = await supabase.functions.invoke('send-offer-email', {
-        body: {
-          clientEmail: emailToUse,
-          clientName: clientName.trim(),
-          offerNumber,
-          products,
-          subtotal,
-          discount,
-          discountAmount,
-          total,
-          validUntil,
-        },
-      });
+    const products = calculations.map(calc => ({
+      name: calc.recipeName,
+      quantity: calc.quantity,
+      unitPrice: calc.quantity > 0 ? calc.totalPrice / calc.quantity : 0,
+      totalPrice: calc.totalPrice,
+      category: calc.category,
+    }));
 
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error || 'Eroare la trimiterea email-ului');
+    const { data, error } = await supabase.functions.invoke('send-offer-email', {
+      body: {
+        clientEmail: emailToUse,
+        clientName: clientName.trim(),
+        offerNumber,
+        products,
+        subtotal,
+        discount,
+        discountAmount,
+        total,
+        validUntil,
+        subject: draftSubject,
+        bodyText: draftBody,
+      },
+    });
 
-      toast.success(`Oferta ${offerNumber} a fost trimisă pe email la ${emailToUse}`);
-    } catch (error: any) {
-      console.error('Error sending email:', error);
-      toast.error(error.message || 'Eroare la trimiterea email-ului');
-    } finally {
-      setIsSendingEmail(false);
-    }
+    if (error) throw error;
+    if (!data.success) throw new Error(data.error || 'Eroare la trimiterea email-ului');
   };
 
   const handleSaveOffer = async () => {
