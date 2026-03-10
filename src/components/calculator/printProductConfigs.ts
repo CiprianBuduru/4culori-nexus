@@ -6,6 +6,10 @@ export interface PrintFormat {
   value: string;
   label: string;
   pcsPerSheet: number;
+  /** Number of folds for this format (pliant only) */
+  folds?: number;
+  /** Whether prism glue is needed (pliant only) */
+  glue?: boolean;
 }
 
 export interface PrintColorMode {
