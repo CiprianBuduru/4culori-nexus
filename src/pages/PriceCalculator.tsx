@@ -52,6 +52,7 @@ export default function PriceCalculator() {
   const [clientEmail, setClientEmail] = useState('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [calculatorPrefill, setCalculatorPrefill] = useState<PrintCalculatorPrefill | null>(null);
 
   useEffect(() => {
     const fetchClients = async () => {
