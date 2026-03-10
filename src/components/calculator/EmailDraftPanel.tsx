@@ -29,6 +29,8 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+import { type PrintConfigSnapshot } from '@/types/recipes';
+
 interface EmailDraftPanelProps {
   clientName: string;
   clientEmail: string;
@@ -38,6 +40,7 @@ interface EmailDraftPanelProps {
     unitPrice: number;
     totalPrice: number;
     details?: string;
+    configSnapshot?: PrintConfigSnapshot;
   }[];
   subtotal: number;
   discount: number;
