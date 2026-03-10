@@ -418,6 +418,21 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
               <span>{result.unitPrice.toFixed(4)} € + TVA</span>
             </div>
           </div>
+
+            {/* ── Quick quantity estimates ── */}
+            <div className="mt-3 bg-muted/30 rounded-lg p-3">
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                Estimare rapidă tiraje
+              </div>
+              <div className="space-y-1">
+                {[100, 200, 500, 1000].map((qty) => (
+                  <div key={qty} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{qty} buc</span>
+                    <span>{(qty * result.unitPrice).toFixed(2)} € + TVA</span>
+                  </div>
+                ))}
+              </div>
+            </div>
         )}
 
         {!result && (
