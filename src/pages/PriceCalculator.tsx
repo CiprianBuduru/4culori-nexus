@@ -311,10 +311,13 @@ export default function PriceCalculator() {
             <Tabs defaultValue="flyer" className="w-full">
               <TabsList className="w-full">
                 <TabsTrigger value="flyer" className="text-xs">Flyer</TabsTrigger>
-                {/* New calculators will be added here as tabs */}
+                <TabsTrigger value="business-card" className="text-xs">Cărți de vizită</TabsTrigger>
               </TabsList>
               <TabsContent value="flyer" className="mt-4">
                 <FlyerCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')} />
+              </TabsContent>
+              <TabsContent value="business-card" className="mt-4">
+                <BusinessCardCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')} />
               </TabsContent>
             </Tabs>
 
