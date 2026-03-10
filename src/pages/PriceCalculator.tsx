@@ -887,7 +887,8 @@ export default function PriceCalculator() {
                   discount={discount}
                   discountAmount={discountAmount}
                   total={total}
-                  disabled={calculations.length === 0}
+                  isComparative={isComparativeMode}
+                  disabled={calculations.length === 0 && !comparativeState}
                   onSendEmail={handleSendEmail}
                   autoOpenAndGenerate={autoOpenEmail}
                   onAutoOpenComplete={handleAutoOpenEmailComplete}
