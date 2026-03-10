@@ -119,7 +119,14 @@ export function EmailDraftPanel({
   };
 
   const renderPreviewHtml = () => {
-    const paragraphs = draft
+    const safeProducts = products ?? [];
+    const safeDraft = draft ?? '';
+    const safeSubtotal = subtotal ?? 0;
+    const safeTotal = total ?? 0;
+    const safeDiscount = discount ?? 0;
+    const safeDiscountAmount = discountAmount ?? 0;
+
+    const paragraphs = safeDraft
       .split('\n')
       .map((line) => {
         const trimmed = line.trim();
@@ -128,14 +135,14 @@ export function EmailDraftPanel({
       })
       .join('');
 
-    const productsRows = products
+    const productsRows = safeProducts
       .map(
         (p) => `
       <tr>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;">${p.name}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${p.quantity}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${p.unitPrice.toFixed(2)} €</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${p.totalPrice.toFixed(2)} €</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;">${p.name ?? ''}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${p.quantity ?? 0}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${(p.unitPrice ?? 0).toFixed(2)} €</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${(p.totalPrice ?? 0).toFixed(2)} €</td>
       </tr>`
       )
       .join('');
