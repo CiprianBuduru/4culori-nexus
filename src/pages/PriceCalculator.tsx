@@ -490,12 +490,14 @@ export default function PriceCalculator() {
             {/* Email Draft Panel */}
             <EmailDraftPanel
               clientName={clientName}
+              clientEmail={clientEmail}
               products={offerProducts}
               subtotal={subtotal}
               discount={discount}
               discountAmount={discountAmount}
               total={total}
               disabled={calculations.length === 0}
+              onSendEmail={handleSendEmail}
             />
           </div>
         </div>
