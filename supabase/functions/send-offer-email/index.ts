@@ -27,6 +27,8 @@ interface SendOfferEmailRequest {
   discountAmount: number;
   total: number;
   validUntil: string;
+  subject?: string;
+  bodyText?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -56,6 +58,7 @@ const handler = async (req: Request): Promise<Response> => {
     const {
       clientEmail, clientName, offerNumber, products,
       subtotal, discount, discountAmount, total, validUntil,
+      subject: customSubject, bodyText,
     }: SendOfferEmailRequest = await req.json();
 
     console.log(`Sending offer ${offerNumber} to ${clientEmail}`);
@@ -76,6 +79,15 @@ const handler = async (req: Request): Promise<Response> => {
       </tr>
     ` : '';
 
+    // Convert bodyText paragraphs to HTML if custom body provided
+    const bodyHtml = bodyText
+      ? bodyText.split('\n').map((line: string) => {
+          const t = line.trim();
+          return t ? `<p style="margin:0 0 8px 0;line-height:1.6;">${t}</p>` : '<br/>';
+        }).join('')
+      : `<h2>Bună ziua${clientName ? `, ${clientName}` : ''}!</h2>
+         <p>Vă mulțumim pentru interesul acordat serviciilor noastre. Mai jos găsiți oferta de preț solicitată:</p>`;
+
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -93,8 +105,6 @@ const handler = async (req: Request): Promise<Response> => {
           .total-row { background: #0071bc; color: white; font-weight: bold; }
           .total-row td { padding: 12px 10px; }
           .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; border-top: 1px solid #eee; }
-          .cta { text-align: center; margin: 30px 0; }
-          .cta a { background: #0071bc; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; }
         </style>
       </head>
       <body>
@@ -104,8 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
             <p style="margin: 5px 0 0 0;">Tipografie & Print</p>
           </div>
           <div class="content">
-            <h2>Bună ziua${clientName ? `, ${clientName}` : ''}!</h2>
-            <p>Vă mulțumim pentru interesul acordat serviciilor noastre. Mai jos găsiți oferta de preț solicitată:</p>
+            ${bodyHtml}
             <div class="offer-info">
               <strong>Ofertă:</strong> ${offerNumber}<br>
               <strong>Data:</strong> ${new Date().toLocaleDateString('ro-RO')}<br>
@@ -137,12 +146,10 @@ const handler = async (req: Request): Promise<Response> => {
             </table>
             <p><strong>Note:</strong></p>
             <ul>
-              <li>Prețurile includ TVA</li>
+              <li>Prețurile sunt exprimate în EUR + TVA</li>
               <li>Oferta este valabilă 30 de zile de la data emiterii</li>
               <li>Pentru comenzi speciale, termenul de livrare va fi stabilit la confirmare</li>
             </ul>
-            <div class="cta"><a href="https://4culori.ro">Vizitează site-ul nostru</a></div>
-            <p>Pentru orice întrebări sau pentru a confirma comanda, nu ezitați să ne contactați.</p>
             <p>Cu stimă,<br><strong>Echipa 4Culori</strong></p>
           </div>
           <div class="footer"><p>4Culori • Tipografie & Personalizări • www.4culori.ro</p></div>
@@ -154,7 +161,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await resend.emails.send({
       from: "4Culori <onboarding@resend.dev>",
       to: [clientEmail],
-      subject: `Ofertă de preț ${offerNumber} - 4Culori`,
+      subject: customSubject || `Ofertă de preț ${offerNumber} - 4Culori`,
       html: emailHtml,
     });
 
