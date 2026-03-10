@@ -140,10 +140,14 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
   }
 
   // ── Derived values ──
+  const selectedFormat = product.formats.find((f) => f.value === format);
   const pcsPerSheet =
     format === 'custom'
       ? customPcsPerSheet
-      : product.formats.find((f) => f.value === format)?.pcsPerSheet ?? 1;
+      : selectedFormat?.pcsPerSheet ?? 1;
+
+  const folds = selectedFormat?.folds ?? 0;
+  const glue = selectedFormat?.glue ?? false;
 
   const paperPricePerSheet = paperPrices[paperWeight] || 0;
   const hasPaperPrice = paperPricePerSheet > 0;
@@ -165,9 +169,13 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
     const productionCost =
       (paperCostPerSheet + colorCostPerSheet + laminationCostPerSheet) * sheetsWithWaste;
 
+    // Finishing costs
+    const foldingCost = folds > 0 ? quantity * folds * PRINT_ENGINE.FOLD_COST_PER_FOLD : 0;
+    const glueCost = glue ? quantity * PRINT_ENGINE.GLUE_COST_PER_PIECE : 0;
+
     const labor = productionCost * PRINT_ENGINE.LABOR_PCT;
     const maintenance = productionCost * PRINT_ENGINE.MAINTENANCE_PCT;
-    const internalCost = productionCost + setupCost + labor + maintenance;
+    const internalCost = productionCost + setupCost + foldingCost + glueCost + labor + maintenance;
     const productionPrice = internalCost * PRINT_ENGINE.PRODUCTION_MARKUP;
     const unitPrice = productionPrice / quantity;
 
@@ -180,6 +188,10 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
       productionCost,
       setupCost,
       dtpHours: product.dtpHours,
+      foldingCost,
+      glueCost,
+      folds,
+      glue,
       labor,
       maintenance,
       internalCost,
@@ -194,6 +206,8 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
     laminationCostPerSheet,
     product.minQuantity,
     product.dtpHours,
+    folds,
+    glue,
   ]);
 
   /** Build the full offer item with config snapshot */
