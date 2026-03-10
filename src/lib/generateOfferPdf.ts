@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
-import { RecipeCalculation, categoryLabels, RecipeCategory, type PrintConfigSnapshot } from '@/types/recipes';
+import { RecipeCalculation, type PrintConfigSnapshot } from '@/types/recipes';
+import { buildClientSpecs } from '@/lib/quoteItemSpecs';
 
 interface OfferData {
   calculations: RecipeCalculation[];
@@ -9,7 +10,40 @@ interface OfferData {
   total: number;
   offerNumber?: string;
   clientName?: string;
+  clientEmail?: string;
   validUntil?: string;
+}
+
+// Brand palette
+const BRAND = {
+  blue: [0, 113, 188] as [number, number, number],
+  blueLight: [235, 245, 252] as [number, number, number],
+  orange: [255, 127, 80] as [number, number, number],
+  dark: [33, 33, 33] as [number, number, number],
+  gray: [110, 110, 110] as [number, number, number],
+  grayLight: [180, 180, 180] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
+  bg: [250, 251, 252] as [number, number, number],
+};
+
+/**
+ * Romanian-diacritics-safe text helper.
+ * jsPDF's default Helvetica subset handles most Latin-Extended chars.
+ * We keep Helvetica for maximum compatibility but use careful encoding.
+ */
+function safeText(text: string): string {
+  // Map problematic diacritics to widely-supported Unicode equivalents
+  return text
+    .replace(/ș/g, '\u0219')
+    .replace(/Ș/g, '\u0218')
+    .replace(/ț/g, '\u021B')
+    .replace(/Ț/g, '\u021A')
+    .replace(/ă/g, '\u0103')
+    .replace(/Ă/g, '\u0102')
+    .replace(/â/g, '\u00E2')
+    .replace(/Â/g, '\u00C2')
+    .replace(/î/g, '\u00EE')
+    .replace(/Î/g, '\u00CE');
 }
 
 export function generateOfferPdf(data: OfferData) {
@@ -21,222 +55,250 @@ export function generateOfferPdf(data: OfferData) {
     total,
     offerNumber = `OF-${Date.now()}`,
     clientName = '',
+    clientEmail = '',
     validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('ro-RO'),
   } = data;
 
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  let yPos = 20;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pw = doc.internal.pageSize.getWidth(); // ~210
+  const ph = doc.internal.pageSize.getHeight(); // ~297
+  const ml = 18; // left margin
+  const mr = 18; // right margin
+  const contentW = pw - ml - mr;
+  let y = 0;
 
-  // Colors
-  const brandBlue = [0, 113, 188];
-  const brandOrange = [255, 127, 80];
-  const textGray = [100, 100, 100];
-  const darkText = [30, 30, 30];
+  const t = (s: string) => safeText(s);
 
-  // Header
-  doc.setFillColor(brandBlue[0], brandBlue[1], brandBlue[2]);
-  doc.rect(0, 0, pageWidth, 45, 'F');
+  // ── Utility helpers ────────────────────────────────────────────
+  const setColor = (c: [number, number, number]) => doc.setTextColor(c[0], c[1], c[2]);
+  const setFill = (c: [number, number, number]) => doc.setFillColor(c[0], c[1], c[2]);
 
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
-  doc.text('4CULORI', margin, 28);
+  const ensureSpace = (needed: number) => {
+    if (y + needed > ph - 30) {
+      renderFooter();
+      doc.addPage();
+      y = 18;
+    }
+  };
 
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Tipografie & Print', margin, 36);
-
-  // Offer number and date
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(12);
-  doc.text(`Ofertă: ${offerNumber}`, pageWidth - margin, 24, { align: 'right' });
-  doc.setFontSize(10);
-  doc.text(`Data: ${new Date().toLocaleDateString('ro-RO')}`, pageWidth - margin, 32, { align: 'right' });
-  doc.text(`Valabil până: ${validUntil}`, pageWidth - margin, 40, { align: 'right' });
-
-  yPos = 60;
-
-  // Client info (if provided)
-  if (clientName) {
-    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-    doc.setFontSize(10);
-    doc.text('Client:', margin, yPos);
-    doc.setTextColor(darkText[0], darkText[1], darkText[2]);
-    doc.setFont('helvetica', 'bold');
-    doc.text(clientName, margin + 25, yPos);
+  const renderFooter = () => {
+    // thin blue line
+    doc.setDrawColor(BRAND.blue[0], BRAND.blue[1], BRAND.blue[2]);
+    doc.setLineWidth(0.5);
+    doc.line(ml, ph - 14, pw - mr, ph - 14);
+    setColor(BRAND.grayLight);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    yPos += 15;
+    doc.text(t('4Culori \u2022 Tipografie & Personaliz\u0103ri \u2022 www.4culori.ro'), pw / 2, ph - 9, { align: 'center' });
+  };
+
+  // ── A. HEADER ──────────────────────────────────────────────────
+  // Subtle top accent bar
+  setFill(BRAND.blue);
+  doc.rect(0, 0, pw, 3, 'F');
+
+  y = 16;
+  // Company name
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  setColor(BRAND.blue);
+  doc.text('4CULORI', ml, y);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  setColor(BRAND.gray);
+  doc.text(t('Tipografie & Print'), ml, y + 5);
+
+  // Right side: offer metadata
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  setColor(BRAND.gray);
+  const rightX = pw - mr;
+  doc.text(t(`Ofert\u0103: ${offerNumber}`), rightX, y - 4, { align: 'right' });
+  doc.text(t(`Data: ${new Date().toLocaleDateString('ro-RO')}`), rightX, y + 1, { align: 'right' });
+  doc.text(t(`Valabil p\u00E2n\u0103: ${validUntil}`), rightX, y + 6, { align: 'right' });
+
+  y += 14;
+  // Separator
+  doc.setDrawColor(BRAND.grayLight[0], BRAND.grayLight[1], BRAND.grayLight[2]);
+  doc.setLineWidth(0.3);
+  doc.line(ml, y, pw - mr, y);
+  y += 8;
+
+  // ── B. CLIENT ──────────────────────────────────────────────────
+  if (clientName) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    setColor(BRAND.dark);
+    doc.text(t('OFERT\u0102 DE PRE\u021A'), ml, y);
+    y += 7;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    setColor(BRAND.gray);
+    doc.text(t('C\u0103tre:'), ml, y);
+    doc.setFont('helvetica', 'bold');
+    setColor(BRAND.dark);
+    doc.text(t(clientName), ml + 16, y);
+    y += 5;
+
+    if (clientEmail) {
+      doc.setFont('helvetica', 'normal');
+      setColor(BRAND.gray);
+      doc.text(clientEmail, ml + 16, y);
+      y += 5;
+    }
+    y += 4;
+  } else {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    setColor(BRAND.dark);
+    doc.text(t('OFERT\u0102 DE PRE\u021A'), ml, y);
+    y += 12;
   }
 
-  // Title
-  doc.setTextColor(darkText[0], darkText[1], darkText[2]);
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text('OFERTĂ DE PREȚ', margin, yPos);
-  yPos += 15;
+  // ── C. PRODUCTS ────────────────────────────────────────────────
+  calculations.forEach((calc, idx) => {
+    const unitPrice = calc.quantity > 0 ? calc.totalPrice / calc.quantity : 0;
+    const specs = buildClientSpecs(calc.configSnapshot);
 
-  // Table header
-  const colWidths = [80, 25, 30, 35];
-  const tableStart = margin;
+    // Estimate block height: name(6) + quantity(5) + specs(5 each) + prices(10) + spacing(8)
+    const blockH = 30 + specs.length * 5;
+    ensureSpace(blockH);
 
-  doc.setFillColor(245, 245, 245);
-  doc.rect(tableStart, yPos - 5, pageWidth - 2 * margin, 10, 'F');
-
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-  doc.text('Produs', tableStart + 2, yPos + 2);
-  doc.text('Cantitate', tableStart + colWidths[0], yPos + 2);
-  doc.text('Preț unit.', tableStart + colWidths[0] + colWidths[1], yPos + 2);
-  doc.text('Total', tableStart + colWidths[0] + colWidths[1] + colWidths[2], yPos + 2);
-
-  yPos += 12;
-
-  // Table rows
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(darkText[0], darkText[1], darkText[2]);
-
-  // Group by category
-  const grouped = calculations.reduce((acc, calc) => {
-    if (!acc[calc.category]) acc[calc.category] = [];
-    acc[calc.category].push(calc);
-    return acc;
-  }, {} as Record<RecipeCategory, RecipeCalculation[]>);
-
-  Object.entries(grouped).forEach(([category, items]) => {
-    // Category header
-    doc.setFillColor(250, 250, 250);
-    doc.rect(tableStart, yPos - 4, pageWidth - 2 * margin, 8, 'F');
+    // Light background card
+    const cardTop = y - 2;
+    
+    // Product name
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-    doc.text(categoryLabels[category as RecipeCategory] || category, tableStart + 2, yPos + 1);
-    yPos += 10;
+    doc.setFontSize(11);
+    setColor(BRAND.blue);
+    doc.text(t(calc.recipeName), ml + 1, y + 3);
 
+    // Index badge
+    setFill(BRAND.blue);
+    const badgeW = 5;
+    doc.roundedRect(pw - mr - badgeW - 1, y - 2, badgeW + 2, 6, 1, 1, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    setColor(BRAND.white);
+    doc.text(`${idx + 1}`, pw - mr - badgeW / 2, y + 2.5, { align: 'center' });
+
+    y += 8;
+
+    // Specs as structured rows
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(darkText[0], darkText[1], darkText[2]);
+    doc.setFontSize(8.5);
 
-    items.forEach((calc) => {
-      const unitPrice = calc.quantity > 0 ? calc.totalPrice / calc.quantity : 0;
+    // Quantity
+    setColor(BRAND.gray);
+    doc.text(t('Tiraj:'), ml + 3, y);
+    setColor(BRAND.dark);
+    doc.text(t(`${calc.quantity} buc`), ml + 28, y);
+    y += 5;
 
-      // Check if we need a new page
-      if (yPos > 240) {
-        doc.addPage();
-        yPos = 20;
-      }
-
-      doc.setFontSize(9);
-      
-      // Truncate long names
-      const maxNameLength = 45;
-      const displayName = calc.recipeName.length > maxNameLength 
-        ? calc.recipeName.substring(0, maxNameLength) + '...'
-        : calc.recipeName;
-
-      doc.text(displayName, tableStart + 2, yPos);
-      doc.text(calc.quantity.toString(), tableStart + colWidths[0], yPos);
-      doc.text(`${unitPrice.toFixed(2)} €`, tableStart + colWidths[0] + colWidths[1], yPos);
-      doc.text(`${calc.totalPrice.toFixed(2)} €`, tableStart + colWidths[0] + colWidths[1] + colWidths[2], yPos);
-
-      // Show config snapshot characteristics (client-facing, no DTP/internal)
-      if (calc.configSnapshot) {
-        const snap = calc.configSnapshot;
-        yPos += 5;
-        doc.setFontSize(7);
-        doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-        
-        const specParts: string[] = [];
-        if (snap.formatLabel) specParts.push(`Format: ${snap.formatLabel}`);
-        if (snap.gsm) specParts.push(`Hârtie: ${snap.gsm} g/mp`);
-        if (snap.colorModeLabel) specParts.push(`Tipar: ${snap.colorModeLabel}`);
-        if (snap.laminationLabel && snap.lamination !== 'none') specParts.push(`Plastifiere: ${snap.laminationLabel}`);
-        if (snap.folds && snap.folds > 0) specParts.push(`Fălțuire: ${snap.folds} fălțuiri`);
-        if (snap.glue) specParts.push(`Lipire prisma: Da`);
-        
-        if (specParts.length > 0) {
-          doc.text(`  ${specParts.join(' • ')}`, tableStart + 2, yPos);
-          yPos += 4;
-        }
-        
-        doc.setTextColor(darkText[0], darkText[1], darkText[2]);
-      }
-      // Legacy dimensions display
-      else if (calc.dimensions && (calc.dimensions.width || calc.dimensions.height)) {
-        yPos += 5;
-        doc.setFontSize(7);
-        doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-        const dimText = calc.dimensions.depth 
-          ? `${calc.dimensions.width} x ${calc.dimensions.height} x ${calc.dimensions.depth} cm`
-          : `${calc.dimensions.width} x ${calc.dimensions.height} cm`;
-        doc.text(`  Dimensiuni: ${dimText}`, tableStart + 2, yPos);
-        doc.setTextColor(darkText[0], darkText[1], darkText[2]);
-      }
-
-      yPos += 8;
+    specs.forEach((spec) => {
+      setColor(BRAND.gray);
+      doc.text(t(`${spec.label}:`), ml + 3, y);
+      setColor(BRAND.dark);
+      doc.text(t(spec.value), ml + 28, y);
+      y += 5;
     });
 
-    yPos += 5;
+    // Prices row
+    y += 1;
+    setFill(BRAND.blueLight);
+    doc.roundedRect(ml, y - 3.5, contentW, 7, 1.5, 1.5, 'F');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    setColor(BRAND.gray);
+    doc.text(t('Pre\u021B unitar:'), ml + 3, y + 1);
+    setColor(BRAND.dark);
+    doc.setFont('helvetica', 'bold');
+    doc.text(t(`${unitPrice.toFixed(2)} \u20AC + TVA`), ml + 28, y + 1);
+
+    setColor(BRAND.gray);
+    doc.setFont('helvetica', 'normal');
+    doc.text(t('Total:'), ml + contentW / 2 + 5, y + 1);
+    setColor(BRAND.dark);
+    doc.setFont('helvetica', 'bold');
+    doc.text(t(`${calc.totalPrice.toFixed(2)} \u20AC + TVA`), ml + contentW / 2 + 22, y + 1);
+
+    y += 10;
+
+    // Card bottom border
+    doc.setDrawColor(BRAND.grayLight[0], BRAND.grayLight[1], BRAND.grayLight[2]);
+    doc.setLineWidth(0.2);
+    if (idx < calculations.length - 1) {
+      doc.line(ml + 2, y - 3, pw - mr - 2, y - 3);
+    }
   });
 
-  // Summary section
-  yPos += 5;
-  doc.setDrawColor(200, 200, 200);
-  doc.line(margin, yPos, pageWidth - margin, yPos);
-  yPos += 10;
+  // ── D. TOTALS ──────────────────────────────────────────────────
+  ensureSpace(40);
+  y += 4;
 
-  const summaryX = pageWidth - margin - 80;
+  // Separator
+  doc.setDrawColor(BRAND.blue[0], BRAND.blue[1], BRAND.blue[2]);
+  doc.setLineWidth(0.5);
+  doc.line(ml, y, pw - mr, y);
+  y += 8;
 
-  doc.setFontSize(10);
-  doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-  doc.text('Subtotal:', summaryX, yPos);
-  doc.setTextColor(darkText[0], darkText[1], darkText[2]);
-  doc.text(`${subtotal.toFixed(2)} €`, pageWidth - margin, yPos, { align: 'right' });
-  yPos += 8;
+  const totalsX = pw - mr - 65;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  setColor(BRAND.gray);
+  doc.text('Subtotal:', totalsX, y);
+  setColor(BRAND.dark);
+  doc.text(t(`${subtotal.toFixed(2)} \u20AC + TVA`), pw - mr, y, { align: 'right' });
+  y += 6;
 
   if (discount > 0) {
-    doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-    doc.text(`Discount (${discount}%):`, summaryX, yPos);
-    doc.text(`-${discountAmount.toFixed(2)} €`, pageWidth - margin, yPos, { align: 'right' });
-    yPos += 8;
+    setColor(BRAND.orange);
+    doc.text(t(`Discount (${discount}%):`), totalsX, y);
+    doc.text(t(`-${discountAmount.toFixed(2)} \u20AC`), pw - mr, y, { align: 'right' });
+    y += 6;
   }
 
-  // Total
-  doc.setFillColor(brandBlue[0], brandBlue[1], brandBlue[2]);
-  doc.rect(summaryX - 10, yPos - 5, pageWidth - margin - summaryX + 10, 12, 'F');
-  doc.setTextColor(255, 255, 255);
+  // Total highlight
+  setFill(BRAND.blue);
+  doc.roundedRect(totalsX - 4, y - 4, pw - mr - totalsX + 8, 10, 2, 2, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('TOTAL:', summaryX, yPos + 3);
-  doc.text(`${total.toFixed(2)} €`, pageWidth - margin, yPos + 3, { align: 'right' });
+  doc.setFontSize(11);
+  setColor(BRAND.white);
+  doc.text('TOTAL:', totalsX, y + 3);
+  doc.text(t(`${total.toFixed(2)} \u20AC + TVA`), pw - mr, y + 3, { align: 'right' });
 
-  yPos += 25;
+  y += 20;
 
-  // Footer notes
-  doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+  // ── E. NOTES ───────────────────────────────────────────────────
+  ensureSpace(30);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  setColor(BRAND.dark);
+  doc.text('Note:', ml, y);
+  y += 5;
+
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.text('Note:', margin, yPos);
-  yPos += 5;
-  doc.text('• Prețurile includ TVA', margin, yPos);
-  yPos += 4;
-  doc.text('• Oferta este valabilă 30 de zile de la data emiterii', margin, yPos);
-  yPos += 4;
-  doc.text('• Pentru comenzi speciale, termenul de livrare va fi stabilit la confirmare', margin, yPos);
+  doc.setFontSize(7.5);
+  setColor(BRAND.gray);
+  const notes = [
+    t('Pre\u021Burile sunt exprimate \u00EEn EUR + TVA.'),
+    t('Oferta este valabil\u0103 30 de zile de la data emiterii.'),
+    t('Termenul de livrare va fi confirmat la plasarea comenzii.'),
+  ];
+  notes.forEach((n) => {
+    doc.text(`\u2022  ${n}`, ml + 2, y);
+    y += 4.5;
+  });
 
-  // Bottom line
-  const pageHeight = doc.internal.pageSize.getHeight();
-  doc.setDrawColor(brandBlue[0], brandBlue[1], brandBlue[2]);
-  doc.setLineWidth(2);
-  doc.line(0, pageHeight - 15, pageWidth, pageHeight - 15);
+  // ── FOOTER ─────────────────────────────────────────────────────
+  renderFooter();
 
-  doc.setFontSize(8);
-  doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-  doc.text('4Culori • Tipografie & Personalizări • www.4culori.ro', pageWidth / 2, pageHeight - 8, { align: 'center' });
-
-  // Save the PDF
+  // Save
   doc.save(`Oferta_${offerNumber}.pdf`);
-
   return offerNumber;
 }
