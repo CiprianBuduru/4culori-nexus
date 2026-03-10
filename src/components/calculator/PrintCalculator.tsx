@@ -6,9 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CreditCard, Plus, Info, AlertTriangle } from 'lucide-react';
+import { Printer, Plus, Info, AlertTriangle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  PRINT_PRODUCTS,
+  PRINT_ENGINE,
+  type PrintProductConfig,
+} from './printProductConfigs';
 
 interface CalculatorProps {
   onAddToOffer?: (item: {
@@ -20,53 +25,23 @@ interface CalculatorProps {
   }) => void;
 }
 
-const FORMATS = [
-  { value: '9x5', label: '9 × 5 cm', pcsPerSheet: 20 },
-  { value: '8.5x5.5', label: '8.5 × 5.5 cm', pcsPerSheet: 20 },
-  { value: 'custom', label: 'Format personalizat', pcsPerSheet: 0 },
-];
+export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
+  // ── Product selection ──
+  const [productId, setProductId] = useState(PRINT_PRODUCTS[0].id);
+  const product = useMemo(
+    () => PRINT_PRODUCTS.find((p) => p.id === productId) ?? PRINT_PRODUCTS[0],
+    [productId],
+  );
 
-const PAPER_WEIGHTS = [
-  { value: 300, label: '300 g/mp' },
-  { value: 350, label: '350 g/mp' },
-  { value: 400, label: '400 g/mp' },
-];
-
-const PRINT_COSTS: Record<string, number> = {
-  '4+0': 0.10,
-  '4+4': 0.20,
-};
-
-const LAMINATION_OPTIONS = [
-  { value: 'none', label: 'Fără plastifiere', costPerSheet: 0 },
-  { value: 'gloss_1', label: 'Lucioasă 1 față', costPerSheet: 0.07 },
-  { value: 'gloss_2', label: 'Lucioasă 2 fețe', costPerSheet: 0.14 },
-  { value: 'matte_1', label: 'Mată 1 față', costPerSheet: 0.10 },
-  { value: 'matte_2', label: 'Mată 2 fețe', costPerSheet: 0.20 },
-  { value: 'soft_1', label: 'Soft Touch 1 față', costPerSheet: 0.16 },
-  { value: 'soft_2', label: 'Soft Touch 2 fețe', costPerSheet: 0.32 },
-];
-
-const TECH_LOSS = 0.10;
-const PAPER_MARKUP = 0.20;
-const SETUP_HOURS = 0.5;
-const SETUP_RATE = 15;
-const SETUP_COST = SETUP_HOURS * SETUP_RATE;
-const LABOR_PERCENT = 0.02;
-const MAINTENANCE_PERCENT = 0.05;
-const PRODUCTION_MARKUP = 1.40;
-
-const MIN_QUANTITY = 60;
-const QUANTITY_STEP = 20;
-
-export function BusinessCardCalculator({ onAddToOffer }: CalculatorProps) {
-  const [format, setFormat] = useState('9x5');
-  const [customPcsPerSheet, setCustomPcsPerSheet] = useState(20);
-  const [paperWeight, setPaperWeight] = useState<number>(300);
-  const [printMode, setPrintMode] = useState<'4+0' | '4+4'>('4+4');
+  // ── Calculator state ──
+  const [format, setFormat] = useState('');
+  const [customPcsPerSheet, setCustomPcsPerSheet] = useState(4);
+  const [paperWeight, setPaperWeight] = useState<number>(0);
+  const [colorMode, setColorMode] = useState('');
   const [lamination, setLamination] = useState('none');
   const [quantity, setQuantity] = useState(100);
 
+  // ── Paper prices from DB ──
   const [paperPrices, setPaperPrices] = useState<Record<number, number>>({});
   const [loadingPrices, setLoadingPrices] = useState(true);
 
@@ -91,66 +66,101 @@ export function BusinessCardCalculator({ onAddToOffer }: CalculatorProps) {
     fetchPaperPrices();
   }, []);
 
-  const pcsPerSheet = format === 'custom' ? customPcsPerSheet : (FORMATS.find(f => f.value === format)?.pcsPerSheet || 20);
+  // Reset calculator state when product changes
+  useEffect(() => {
+    resetToProduct(product);
+  }, [product.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function resetToProduct(p: PrintProductConfig) {
+    const firstFormat = p.formats[0]?.value ?? '';
+    setFormat(firstFormat);
+    setCustomPcsPerSheet(p.formats[0]?.pcsPerSheet ?? 4);
+    setPaperWeight(p.defaultGsm);
+    setColorMode(p.defaultColorMode);
+    setLamination(p.defaultLamination);
+    setQuantity(p.defaultQuantity);
+  }
+
+  // ── Derived values ──
+  const pcsPerSheet =
+    format === 'custom'
+      ? customPcsPerSheet
+      : product.formats.find((f) => f.value === format)?.pcsPerSheet ?? 1;
+
   const paperPricePerSheet = paperPrices[paperWeight] || 0;
   const hasPaperPrice = paperPricePerSheet > 0;
 
+  const colorCostPerSheet =
+    product.colorModes.find((c) => c.value === colorMode)?.costPerSheet ?? 0;
+  const laminationCostPerSheet =
+    product.laminations.find((l) => l.value === lamination)?.costPerSheet ?? 0;
+
+  // ── Calculation ──
   const result = useMemo(() => {
-    if (pcsPerSheet <= 0 || quantity < MIN_QUANTITY) return null;
+    if (pcsPerSheet <= 0 || quantity < product.minQuantity) return null;
 
-    const theoreticalSheets = quantity / pcsPerSheet;
-    const sheets = Math.ceil(theoreticalSheets);
-    const sheetsWithWaste = Math.ceil(sheets * (1 + TECH_LOSS));
+    const sheets = Math.ceil(quantity / pcsPerSheet);
+    const sheetsWithWaste = Math.ceil(sheets * (1 + PRINT_ENGINE.SPOILAGE));
 
-    const paperCostPerSheet = paperPricePerSheet * (1 + PAPER_MARKUP);
-    const printCostPerSheet = PRINT_COSTS[printMode];
-    const laminationOption = LAMINATION_OPTIONS.find(l => l.value === lamination);
-    const laminationCostPerSheet = laminationOption?.costPerSheet || 0;
+    const paperCostPerSheet = paperPricePerSheet * (1 + PRINT_ENGINE.PAPER_TECH_LOSS);
+    const productionCost =
+      (paperCostPerSheet + colorCostPerSheet + laminationCostPerSheet) * sheetsWithWaste;
 
-    const productionCost = (paperCostPerSheet + printCostPerSheet + laminationCostPerSheet) * sheetsWithWaste;
-    const subtotal = productionCost + SETUP_COST;
-    const internalCost = subtotal * (1 + LABOR_PERCENT + MAINTENANCE_PERCENT);
-    const productionPrice = internalCost * PRODUCTION_MARKUP;
+    const subtotal = productionCost + PRINT_ENGINE.SETUP_COST;
+    const internalCost =
+      subtotal * (1 + PRINT_ENGINE.LABOR_PCT + PRINT_ENGINE.MAINTENANCE_PCT);
+    const productionPrice = internalCost * PRINT_ENGINE.PRODUCTION_MARKUP;
     const unitPrice = productionPrice / quantity;
 
     return {
-      pcsPerSheet,
-      theoreticalSheets,
       sheets,
       sheetsWithWaste,
       paperCostPerSheet,
-      printCostPerSheet,
+      colorCostPerSheet,
       laminationCostPerSheet,
       productionCost,
-      setupCost: SETUP_COST,
+      setupCost: PRINT_ENGINE.SETUP_COST,
       subtotal,
       internalCost,
       productionPrice,
       unitPrice,
     };
-  }, [quantity, pcsPerSheet, paperPricePerSheet, printMode, lamination]);
+  }, [
+    quantity,
+    pcsPerSheet,
+    paperPricePerSheet,
+    colorCostPerSheet,
+    laminationCostPerSheet,
+    product.minQuantity,
+  ]);
 
+  // ── Quantity handler ──
   const handleQuantityChange = (val: string) => {
-    let num = parseInt(val) || MIN_QUANTITY;
-    if (num < MIN_QUANTITY) num = MIN_QUANTITY;
-    num = Math.round(num / QUANTITY_STEP) * QUANTITY_STEP;
-    if (num < MIN_QUANTITY) num = MIN_QUANTITY;
+    let num = parseInt(val) || product.minQuantity;
+    if (num < product.minQuantity) num = product.minQuantity;
+    num = Math.round(num / product.quantityStep) * product.quantityStep;
+    if (num < product.minQuantity) num = product.minQuantity;
     setQuantity(num);
   };
 
+  // ── Add to offer ──
   const handleAddToOffer = () => {
     if (!onAddToOffer || !result) return;
 
-    const formatLabel = format === 'custom' ? `Custom (${customPcsPerSheet}/SRA3)` : FORMATS.find(f => f.value === format)?.label || format;
-    const weightLabel = PAPER_WEIGHTS.find(p => p.value === paperWeight)?.label || `${paperWeight} g/mp`;
-    const laminationLabel = LAMINATION_OPTIONS.find(l => l.value === lamination)?.label || '';
+    const formatLabel =
+      format === 'custom'
+        ? `Custom (${customPcsPerSheet}/SRA3)`
+        : product.formats.find((f) => f.value === format)?.label ?? format;
+    const weightLabel = `${paperWeight} g/mp`;
+    const laminationLabel =
+      product.laminations.find((l) => l.value === lamination)?.label ?? '';
 
-    let details = `${formatLabel}, Color Copy ${weightLabel}, ${printMode}`;
+    let details = `${formatLabel}, Color Copy ${weightLabel}, ${colorMode}`;
     if (lamination !== 'none') details += `, ${laminationLabel}`;
     details += `, ${result.sheetsWithWaste} coli SRA3`;
 
     onAddToOffer({
-      name: `Cărți de vizită ${formatLabel}`,
+      name: `${product.name} ${formatLabel}`,
       quantity,
       unitPrice: result.unitPrice,
       totalPrice: result.productionPrice,
@@ -158,31 +168,70 @@ export function BusinessCardCalculator({ onAddToOffer }: CalculatorProps) {
     });
   };
 
+  // ── Allowed GSM buttons (only those with prices) ──
+  const gsmButtons = product.allowedGsm;
+
   return (
     <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <CreditCard className="h-5 w-5 text-primary" />
-          Calculator Cărți de Vizită
-          <Badge variant="outline" className="text-xs font-normal">Color Copy</Badge>
+          <Printer className="h-5 w-5 text-primary" />
+          Calculator Tipărituri
+          <Badge variant="outline" className="text-xs font-normal">Color Copy SRA3</Badge>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
                 <Info className="h-4 w-4 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
-                <p>Calculator cu formule reale de producție pentru cărți de vizită. Prețurile hârtiei se preiau din baza de date.</p>
+                <p>
+                  Motor universal de calcul pentru produse tipărite. Prețurile hârtiei se preiau din
+                  baza de date (Setări → Materiale).
+                </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </CardTitle>
       </CardHeader>
+
       <CardContent className="space-y-4">
-        {/* Format */}
+        {/* ── Product type selector ── */}
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">Tip produs</Label>
+          <div className="flex flex-wrap gap-2">
+            {PRINT_PRODUCTS.map((p) => (
+              <Button
+                key={p.id}
+                variant={productId === p.id ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setProductId(p.id)}
+                className="text-xs"
+              >
+                {p.name}
+                {!p.ready && (
+                  <span className="ml-1 text-muted-foreground opacity-60">(draft)</span>
+                )}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {!product.ready && (
+          <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-md px-3 py-2">
+            <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+            Configurația pentru „{product.name}" este în draft. Rezultatele sunt estimative.
+          </div>
+        )}
+
+        {product.finishingNotes && (
+          <p className="text-xs text-muted-foreground italic">{product.finishingNotes}</p>
+        )}
+
+        {/* ── Format ── */}
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">Format</Label>
           <div className="flex flex-wrap gap-2">
-            {FORMATS.map((f) => (
+            {product.formats.map((f) => (
               <Button
                 key={f.value}
                 variant={format === f.value ? 'default' : 'outline'}
@@ -191,11 +240,19 @@ export function BusinessCardCalculator({ onAddToOffer }: CalculatorProps) {
                 className="text-xs"
               >
                 {f.label}
-                {f.value !== 'custom' && (
-                  <span className="ml-1 text-muted-foreground">({f.pcsPerSheet}/SRA3)</span>
-                )}
+                <span className="ml-1 text-muted-foreground">({f.pcsPerSheet}/SRA3)</span>
               </Button>
             ))}
+            {product.allowCustomFormat && (
+              <Button
+                variant={format === 'custom' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFormat('custom')}
+                className="text-xs"
+              >
+                Format personalizat
+              </Button>
+            )}
           </div>
           {format === 'custom' && (
             <div className="mt-2">
@@ -205,29 +262,31 @@ export function BusinessCardCalculator({ onAddToOffer }: CalculatorProps) {
                 min={1}
                 max={40}
                 value={customPcsPerSheet}
-                onChange={(e) => setCustomPcsPerSheet(Math.max(1, parseInt(e.target.value) || 1))}
+                onChange={(e) =>
+                  setCustomPcsPerSheet(Math.max(1, parseInt(e.target.value) || 1))
+                }
                 className="w-32"
               />
             </div>
           )}
         </div>
 
-        {/* Paper weight */}
+        {/* ── Paper weight ── */}
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">Gramaj hârtie (Color Copy)</Label>
           <div className="flex flex-wrap gap-2">
-            {PAPER_WEIGHTS.map((p) => (
+            {gsmButtons.map((gsm) => (
               <Button
-                key={p.value}
-                variant={paperWeight === p.value ? 'default' : 'outline'}
+                key={gsm}
+                variant={paperWeight === gsm ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setPaperWeight(p.value)}
+                onClick={() => setPaperWeight(gsm)}
                 className="text-xs"
               >
-                {p.label}
-                {paperPrices[p.value] !== undefined && (
+                {gsm} g/mp
+                {paperPrices[gsm] !== undefined && (
                   <span className="ml-1 text-muted-foreground">
-                    ({paperPrices[p.value].toFixed(4)} €)
+                    ({paperPrices[gsm].toFixed(4)} €)
                   </span>
                 )}
               </Button>
@@ -241,69 +300,66 @@ export function BusinessCardCalculator({ onAddToOffer }: CalculatorProps) {
           )}
         </div>
 
-        {/* Print mode */}
+        {/* ── Color mode ── */}
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">Tipar</Label>
-          <div className="flex gap-2">
-            <Button
-              variant={printMode === '4+0' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setPrintMode('4+0')}
-              className="text-xs"
-            >
-              4+0 (o față) — 0.10 €/SRA3
-            </Button>
-            <Button
-              variant={printMode === '4+4' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setPrintMode('4+4')}
-              className="text-xs"
-            >
-              4+4 (două fețe) — 0.20 €/SRA3
-            </Button>
+          <div className="flex flex-wrap gap-2">
+            {product.colorModes.map((cm) => (
+              <Button
+                key={cm.value}
+                variant={colorMode === cm.value ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setColorMode(cm.value)}
+                className="text-xs"
+              >
+                {cm.label} — {cm.costPerSheet.toFixed(2)} €/SRA3
+              </Button>
+            ))}
           </div>
         </div>
 
-        {/* Lamination */}
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">Plastifiere (opțional)</Label>
-          <Select value={lamination} onValueChange={setLamination}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {LAMINATION_OPTIONS.map((l) => (
-                <SelectItem key={l.value} value={l.value}>
-                  {l.label}
-                  {l.costPerSheet > 0 && ` — ${l.costPerSheet.toFixed(2)} €/SRA3`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* ── Lamination ── */}
+        {product.laminations.length > 1 && (
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Plastifiere (opțional)</Label>
+            <Select value={lamination} onValueChange={setLamination}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {product.laminations.map((l) => (
+                  <SelectItem key={l.value} value={l.value}>
+                    {l.label}
+                    {l.costPerSheet > 0 && ` — ${l.costPerSheet.toFixed(2)} €/SRA3`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-        {/* Quantity */}
+        {/* ── Quantity ── */}
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Cantitate (bucăți)</Label>
           <Input
             type="number"
-            min={MIN_QUANTITY}
-            step={QUANTITY_STEP}
+            min={product.minQuantity}
+            step={product.quantityStep}
             value={quantity}
             onChange={(e) => handleQuantityChange(e.target.value)}
           />
           <p className="text-xs text-muted-foreground">
-            Minim {MIN_QUANTITY} buc, multiplu de {QUANTITY_STEP}
+            Minim {product.minQuantity} buc, multiplu de {product.quantityStep}
           </p>
         </div>
 
         <Separator />
 
-        {/* Results */}
+        {/* ── Calculation breakdown ── */}
         {result && (
           <div className="space-y-2 bg-muted/50 rounded-lg p-3">
             <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-              Detalii calcul
+              Detalii calcul — {product.name}
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Coli SRA3 (teoretice)</span>
@@ -319,7 +375,7 @@ export function BusinessCardCalculator({ onAddToOffer }: CalculatorProps) {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Cost tipar/coală</span>
-              <span>{result.printCostPerSheet.toFixed(2)} €</span>
+              <span>{result.colorCostPerSheet.toFixed(2)} €</span>
             </div>
             {lamination !== 'none' && (
               <div className="flex justify-between text-sm">

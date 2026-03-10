@@ -8,12 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calculator, RotateCcw, FileText, Users, Mail, Loader2, Save } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { RecipeSelector } from '@/components/calculator/RecipeSelector';
 import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorItem';
 import { BriefAnalyzer } from '@/components/calculator/BriefAnalyzer';
-import { FlyerCalculator } from '@/components/calculator/FlyerCalculator';
-import { BusinessCardCalculator } from '@/components/calculator/BusinessCardCalculator';
+import { PrintCalculator } from '@/components/calculator/PrintCalculator';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
 import { toast } from 'sonner';
 import { generateOfferPdf } from '@/lib/generateOfferPdf';
@@ -308,18 +307,8 @@ export default function PriceCalculator() {
           {/* Left Column - Calculators, AI Analyzer, Recipe Selector & Items */}
           <div className="lg:col-span-2 space-y-4">
             {/* Dedicated Calculators */}
-            <Tabs defaultValue="flyer" className="w-full">
-              <TabsList className="w-full">
-                <TabsTrigger value="flyer" className="text-xs">Flyer</TabsTrigger>
-                <TabsTrigger value="business-card" className="text-xs">Cărți de vizită</TabsTrigger>
-              </TabsList>
-              <TabsContent value="flyer" className="mt-4">
-                <FlyerCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')} />
-              </TabsContent>
-              <TabsContent value="business-card" className="mt-4">
-                <BusinessCardCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')} />
-              </TabsContent>
-            </Tabs>
+            {/* Tipărituri Calculator */}
+            <PrintCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')} />
 
             {/* AI Brief Analyzer */}
             <BriefAnalyzer onAddSuggestion={handleAddAISuggestion} />
