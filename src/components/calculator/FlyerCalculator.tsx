@@ -73,28 +73,28 @@ const QUANTITY_STEP = 50;
 export function FlyerCalculator({ onAddToOffer }: CalculatorProps) {
   const [format, setFormat] = useState('A5');
   const [customPcsPerSheet, setCustomPcsPerSheet] = useState(4);
-  const [paperWeight, setPaperWeight] = useState('120g');
+  const [paperWeight, setPaperWeight] = useState<number>(120);
   const [printMode, setPrintMode] = useState<'4+0' | '4+4'>('4+0');
   const [lamination, setLamination] = useState('none');
   const [quantity, setQuantity] = useState(100);
 
-  // Paper prices from DB
-  const [paperPrices, setPaperPrices] = useState<Record<string, number>>({});
+  // Paper prices from DB (keyed by weight_gsm)
+  const [paperPrices, setPaperPrices] = useState<Record<number, number>>({});
   const [loadingPrices, setLoadingPrices] = useState(true);
 
   useEffect(() => {
     const fetchPaperPrices = async () => {
-      const names = PAPER_WEIGHTS.map(p => p.materialName);
       const { data } = await supabase
         .from('materials')
-        .select('name, unit_price')
-        .in('name', names);
+        .select('unit_price, weight_gsm')
+        .eq('brand', 'Color Copy')
+        .eq('format', 'SRA3')
+        .eq('active', true);
 
       if (data) {
-        const prices: Record<string, number> = {};
-        data.forEach(m => {
-          const weight = PAPER_WEIGHTS.find(p => p.materialName === m.name);
-          if (weight) prices[weight.value] = Number(m.unit_price);
+        const prices: Record<number, number> = {};
+        data.forEach((m: any) => {
+          if (m.weight_gsm) prices[m.weight_gsm] = Number(m.unit_price);
         });
         setPaperPrices(prices);
       }
