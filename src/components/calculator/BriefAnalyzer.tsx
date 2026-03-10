@@ -473,25 +473,39 @@ export function BriefAnalyzer({ onApplyToCalculator, onGenerateFullQuote, onGene
 
             {/* Apply button (manual flow) */}
             {result.extraction.product_type && (
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => handleApply()}
-                  variant="outline"
-                  className="flex-1 gap-2"
-                >
-                  <ArrowRight className="h-4 w-4" />
-                  Aplică în calculator
-                </Button>
-                {onGenerateFullQuote && result.status !== 'ambiguous' && (
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
                   <Button
-                    onClick={() => {
-                      const prefill = buildPrefill();
-                      if (prefill) onGenerateFullQuote(prefill);
-                    }}
+                    onClick={() => handleApply()}
+                    variant="outline"
                     className="flex-1 gap-2"
                   >
-                    <Zap className="h-4 w-4" />
-                    Generează ofertă
+                    <ArrowRight className="h-4 w-4" />
+                    Aplică în calculator
+                  </Button>
+                  {onGenerateFullQuote && result.status !== 'ambiguous' && (
+                    <Button
+                      onClick={() => {
+                        const prefill = buildPrefill();
+                        if (prefill) onGenerateFullQuote(prefill);
+                      }}
+                      className="flex-1 gap-2"
+                    >
+                      <Zap className="h-4 w-4" />
+                      Generează ofertă
+                    </Button>
+                  )}
+                </div>
+                {onGenerateComparativeQuote &&
+                  result.status !== 'ambiguous' &&
+                  isComparativeAvailable(result.extraction.product_type!) && (
+                  <Button
+                    onClick={() => onGenerateComparativeQuote(result.extraction)}
+                    variant="outline"
+                    className="w-full gap-2 border-primary/30 text-primary hover:bg-primary/5"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    Generează ofertă comparativă (3 variante)
                   </Button>
                 )}
               </div>
