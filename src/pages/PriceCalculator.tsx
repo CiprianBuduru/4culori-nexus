@@ -856,7 +856,7 @@ export default function PriceCalculator() {
                 <Button 
                   className="w-full gradient-brand text-white gap-2" 
                   size="lg"
-                  disabled={calculations.length === 0}
+                  disabled={calculations.length === 0 && !comparativeState}
                   onClick={handleGeneratePdf}
                 >
                   <FileText className="h-4 w-4" />
