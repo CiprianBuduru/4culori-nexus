@@ -45,8 +45,6 @@ export interface PrintProductConfig {
   defaultColorMode: string;
   laminations: PrintLamination[];
   defaultLamination: string;
-  minQuantity: number;
-  quantityStep: number;
   defaultQuantity: number;
   finishingNotes: string;
   /** DTP setup hours for this product */
