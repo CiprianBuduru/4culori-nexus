@@ -462,20 +462,7 @@ export default function PriceCalculator() {
                   Generează Ofertă PDF
                 </Button>
 
-                <Button 
-                  variant="outline"
-                  className="w-full gap-2" 
-                  size="lg"
-                  disabled={calculations.length === 0 || !clientEmail.trim() || isSendingEmail}
-                  onClick={handleSendEmail}
-                >
-                  {isSendingEmail ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Mail className="h-4 w-4" />
-                  )}
-                  Trimite pe Email
-                </Button>
+                {/* Email sending moved to EmailDraftPanel below */}
 
                 <Button 
                   variant="secondary"
