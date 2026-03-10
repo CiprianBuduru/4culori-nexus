@@ -88,6 +88,12 @@ export default function PriceCalculator() {
   const [duplicateMatchId, setDuplicateMatchId] = useState<string | null>(null);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
+  // Comparative quote state
+  const [comparativeState, setComparativeState] = useState<ComparativeQuoteState | null>(null);
+
+  // Paper prices for comparative engine (shared with PrintCalculator)
+  const [paperPrices, setPaperPrices] = useState<Record<number, number>>({});
+
   useEffect(() => {
     const fetchClients = async () => {
       const { data, error } = await supabase
