@@ -107,9 +107,9 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
     const productionCost =
       (paperCostPerSheet + colorCostPerSheet + laminationCostPerSheet) * sheetsWithWaste;
 
-    const subtotal = productionCost + setupCost;
-    const internalCost =
-      subtotal * (1 + PRINT_ENGINE.LABOR_PCT + PRINT_ENGINE.MAINTENANCE_PCT);
+    const labor = productionCost * PRINT_ENGINE.LABOR_PCT;
+    const maintenance = productionCost * PRINT_ENGINE.MAINTENANCE_PCT;
+    const internalCost = productionCost + setupCost + labor + maintenance;
     const productionPrice = internalCost * PRINT_ENGINE.PRODUCTION_MARKUP;
     const unitPrice = productionPrice / quantity;
 
@@ -122,7 +122,8 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
       productionCost,
       setupCost,
       dtpHours: product.dtpHours,
-      subtotal,
+      labor,
+      maintenance,
       internalCost,
       productionPrice,
       unitPrice,
