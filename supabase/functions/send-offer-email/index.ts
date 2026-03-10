@@ -64,15 +64,15 @@ const handler = async (req: Request): Promise<Response> => {
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #eee;">${p.name}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${p.quantity}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${p.unitPrice.toFixed(2)} RON</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${p.totalPrice.toFixed(2)} RON</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${p.unitPrice.toFixed(2)} € + TVA</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">${p.totalPrice.toFixed(2)} € + TVA</td>
       </tr>
     `).join('');
 
     const discountHtml = discount > 0 ? `
       <tr>
         <td colspan="3" style="padding: 10px; text-align: right; color: #ff7f50;">Discount (${discount}%):</td>
-        <td style="padding: 10px; text-align: right; color: #ff7f50;">-${discountAmount.toFixed(2)} RON</td>
+        <td style="padding: 10px; text-align: right; color: #ff7f50;">-${discountAmount.toFixed(2)} € + TVA</td>
       </tr>
     ` : '';
 
@@ -124,14 +124,14 @@ const handler = async (req: Request): Promise<Response> => {
                 ${productsHtml}
                 <tr>
                   <td colspan="3" style="padding: 10px; text-align: right;"><strong>Subtotal:</strong></td>
-                  <td style="padding: 10px; text-align: right;"><strong>${subtotal.toFixed(2)} RON</strong></td>
+                  <td style="padding: 10px; text-align: right;"><strong>${subtotal.toFixed(2)} € + TVA</strong></td>
                 </tr>
                 ${discountHtml}
               </tbody>
               <tfoot>
                 <tr class="total-row">
                   <td colspan="3" style="text-align: right;">TOTAL:</td>
-                  <td style="text-align: right;">${total.toFixed(2)} RON</td>
+                  <td style="text-align: right;">${total.toFixed(2)} € + TVA</td>
                 </tr>
               </tfoot>
             </table>
