@@ -46,6 +46,7 @@ interface EmailDraftPanelProps {
   discount: number;
   discountAmount: number;
   total: number;
+  isComparative?: boolean;
   disabled?: boolean;
   onSendEmail?: (draft: string, subject: string) => Promise<void>;
   /** When true, auto-open drawer and generate draft */
@@ -61,6 +62,7 @@ export function EmailDraftPanel({
   discount,
   discountAmount,
   total,
+  isComparative: isComparativeProp,
   disabled,
   onSendEmail,
   autoOpenAndGenerate,
@@ -84,8 +86,8 @@ export function EmailDraftPanel({
 
   const offerNumber = `OF-${Date.now()}`;
 
-  // Detect comparative mode
-  const isComparative = products.some(p => p.name.includes('— Varianta'));
+  // Detect comparative mode (explicit prop or fallback name detection)
+  const isComparative = isComparativeProp || products.some(p => (p.name ?? '').includes('— Varianta'));
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -213,16 +215,11 @@ export function EmailDraftPanel({
       })
       .join('');
 
-    return `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
-        <div style="background:#0071bc;color:white;padding:16px 20px;text-align:center;">
-          <h1 style="margin:0;font-size:20px;">4CULORI</h1>
-          <p style="margin:4px 0 0 0;font-size:12px;">Tipografie & Print</p>
-        </div>
-        <div style="padding:20px;">
-          ${paragraphs}
-          ${productBlocks}
-          <div style="margin:16px 0;font-size:13px;">
+    const totalsBlock = isComparative
+      ? `<div style="margin:16px 0;padding:12px 16px;background:#f0f7fc;border:1px solid #cce3f3;border-radius:8px;font-size:13px;color:#0071bc;text-align:center;">
+           <strong>Prețurile sunt prezentate individual per variantă.<br/>Clientul alege o singură opțiune din cele 3 prezentate.</strong>
+         </div>`
+      : `<div style="margin:16px 0;font-size:13px;">
             <table style="width:100%;border-collapse:collapse;">
               <tbody>
                 <tr>
@@ -245,7 +242,18 @@ export function EmailDraftPanel({
                 </tr>
               </tfoot>
             </table>
-          </div>
+          </div>`;
+
+    return `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
+        <div style="background:#0071bc;color:white;padding:16px 20px;text-align:center;">
+          <h1 style="margin:0;font-size:20px;">4CULORI</h1>
+          <p style="margin:4px 0 0 0;font-size:12px;">Tipografie & Print</p>
+        </div>
+        <div style="padding:20px;">
+          ${paragraphs}
+          ${productBlocks}
+          ${totalsBlock}
         </div>
         <div style="text-align:center;padding:12px;color:#666;font-size:11px;border-top:1px solid #eee;">
           4Culori • Tipografie & Personalizări • www.4culori.ro

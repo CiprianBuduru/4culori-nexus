@@ -293,15 +293,27 @@ export default function PriceCalculator() {
   const discountAmount = subtotal * (discount / 100);
   const total = subtotal - discountAmount;
 
+  // Comparative mode detection
+  const isComparativeMode = !!comparativeState || calculations.some(c => c.recipeId.startsWith('comparative-'));
+
   // Build products list for email draft (client-facing only)
-  const offerProducts = calculations.map(calc => ({
-    name: calc.recipeName,
-    quantity: calc.quantity,
-    unitPrice: calc.quantity > 0 ? calc.totalPrice / calc.quantity : 0,
-    totalPrice: calc.totalPrice,
-    details: calc.category,
-    configSnapshot: calc.configSnapshot,
-  }));
+  const offerProducts = comparativeState
+    ? comparativeState.variants.map(v => ({
+        name: `${v.productName} — ${v.label}`,
+        quantity: v.quantity,
+        unitPrice: v.unitPrice,
+        totalPrice: v.totalPrice,
+        details: v.description,
+        configSnapshot: v.configSnapshot,
+      }))
+    : calculations.map(calc => ({
+        name: calc.recipeName,
+        quantity: calc.quantity,
+        unitPrice: calc.quantity > 0 ? calc.totalPrice / calc.quantity : 0,
+        totalPrice: calc.totalPrice,
+        details: calc.category,
+        configSnapshot: calc.configSnapshot,
+      }));
 
   const clearAll = () => {
     setCalculations([]);
@@ -319,14 +331,37 @@ export default function PriceCalculator() {
   };
 
   const handleGeneratePdf = async () => {
+    let calcs: RecipeCalculation[] = calculations;
+
+    // If comparative state is active (cards visible), build from variants directly
+    if (comparativeState) {
+      calcs = comparativeState.variants.map(v => ({
+        id: `comp-${v.tier}`,
+        recipeId: `comparative-${v.tier}`,
+        recipeName: `${v.productName} — ${v.label}`,
+        category: 'printed' as RecipeCategory,
+        quantity: v.quantity,
+        materialCost: 0,
+        personalizationCost: 0,
+        totalPrice: v.totalPrice,
+        configSnapshot: v.configSnapshot,
+      }));
+    }
+
+    if (calcs.length === 0) {
+      toast.error('Adaugă produse în ofertă');
+      return;
+    }
+
     try {
       const offerNumber = await generateOfferPdf({
-        calculations,
+        calculations: calcs,
         subtotal,
         discount,
         discountAmount,
         total,
         clientName: clientName.trim() || undefined,
+        clientEmail: clientEmail.trim() || undefined,
       });
       toast.success(`Oferta ${offerNumber} a fost generată cu succes!`);
     } catch (error) {
@@ -821,7 +856,7 @@ export default function PriceCalculator() {
                 <Button 
                   className="w-full gradient-brand text-white gap-2" 
                   size="lg"
-                  disabled={calculations.length === 0}
+                  disabled={calculations.length === 0 && !comparativeState}
                   onClick={handleGeneratePdf}
                 >
                   <FileText className="h-4 w-4" />
@@ -852,7 +887,8 @@ export default function PriceCalculator() {
                   discount={discount}
                   discountAmount={discountAmount}
                   total={total}
-                  disabled={calculations.length === 0}
+                  isComparative={isComparativeMode}
+                  disabled={calculations.length === 0 && !comparativeState}
                   onSendEmail={handleSendEmail}
                   autoOpenAndGenerate={autoOpenEmail}
                   onAutoOpenComplete={handleAutoOpenEmailComplete}

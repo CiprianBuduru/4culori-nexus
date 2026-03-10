@@ -426,6 +426,61 @@ export async function generateOfferPdf(data: OfferData) {
     y += 26;
   };
 
+  // ─── COMPARATIVE SUMMARY (replaces grand total for comparative) ──
+  const renderComparativeSummary = (sortedVariantCalcs: RecipeCalculation[]) => {
+    ensureSpace(80);
+    y += 2;
+
+    draw(BRAND.blue);
+    doc.setLineWidth(0.4);
+    doc.line(ml, y, rx, y);
+    y += 10;
+
+    font('bold', 10);
+    color(BRAND.dark);
+    doc.text('Rezumat variante', ml, y);
+    y += 8;
+
+    sortedVariantCalcs.forEach((calc) => {
+      const tier = getVariantTierFromRecipeId(calc.recipeId);
+      const tierStyle = tier ? TIER_ACCENT[tier] : TIER_ACCENT.recomandata;
+      const isRec = tier === 'recomandata';
+
+      font(isRec ? 'bold' : 'normal', 9);
+      color(isRec ? BRAND.blue : BRAND.text);
+      doc.text(tierStyle.label, ml + 4, y);
+      font('bold', 9);
+      color(isRec ? BRAND.blue : BRAND.dark);
+      doc.text(`${calc.totalPrice.toFixed(2)} € + TVA`, rx, y, { align: 'right' });
+      y += 6;
+    });
+
+    y += 6;
+
+    // Highlight recommended
+    const recCalc = sortedVariantCalcs.find(c => getVariantTierFromRecipeId(c.recipeId) === 'recomandata');
+    if (recCalc) {
+      const barW = rx - ml;
+      fill(BRAND.blue);
+      doc.roundedRect(ml, y - 4, barW, 12, 2, 2, 'F');
+      font('bold', 10);
+      color(BRAND.white);
+      doc.text('VARIANTA RECOMANDATĂ:', ml + 6, y + 3);
+      doc.text(`${recCalc.totalPrice.toFixed(2)} € + TVA`, rx - 6, y + 3, { align: 'right' });
+      y += 18;
+    }
+
+    // Comparative footer note
+    font('normal', 8);
+    color(BRAND.gray);
+    const noteLines = doc.splitTextToSize(
+      'Am pregătit aceste 3 variante pentru a vă ajuta să alegeți opțiunea optimă în funcție de buget, impact vizual și finisare.',
+      cw - 10,
+    );
+    doc.text(noteLines, ml + 4, y);
+    y += noteLines.length * 4 + 8;
+  };
+
   // ─── RENDER ───────────────────────────────────────────────
   const { isComparative, variantCalcs, standardCalcs } = detectComparativeVariants(calculations);
 
@@ -458,13 +513,16 @@ export async function generateOfferPdf(data: OfferData) {
     standardCalcs.forEach((calc, idx) => {
       renderProductBlock(calc, idx + 1);
     });
+
+    // Comparative summary instead of grand total
+    renderComparativeSummary(sortedVariants);
   } else {
     calculations.forEach((calc, idx) => {
       renderProductBlock(calc, idx);
     });
+    renderTotals();
   }
 
-  renderTotals();
   renderNotes();
   pageFooter();
 
