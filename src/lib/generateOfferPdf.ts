@@ -16,10 +16,14 @@ interface OfferData {
 
 const BRAND = {
   blue: [0, 113, 188] as [number, number, number],
-  blueLight: [235, 245, 252] as [number, number, number],
-  dark: [40, 40, 40] as [number, number, number],
-  gray: [120, 120, 120] as [number, number, number],
-  grayLight: [210, 210, 210] as [number, number, number],
+  blueMid: [30, 136, 200] as [number, number, number],
+  blueLight: [238, 246, 252] as [number, number, number],
+  bluePale: [245, 250, 255] as [number, number, number],
+  dark: [35, 35, 40] as [number, number, number],
+  text: [55, 55, 65] as [number, number, number],
+  gray: [130, 130, 140] as [number, number, number],
+  grayLight: [200, 200, 205] as [number, number, number],
+  grayBg: [248, 248, 250] as [number, number, number],
   white: [255, 255, 255] as [number, number, number],
 };
 
@@ -51,200 +55,237 @@ export async function generateOfferPdf(data: OfferData) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
-  const ml = 20;
-  const mr = 20;
+  const ml = 22;
+  const mr = 22;
   const cw = pw - ml - mr;
-  const specLabelX = ml + 6;
-  const specValueX = ml + 48;
+  const rx = pw - mr;
   let y = 0;
 
   await loadFont(doc, 'Roboto-Regular.ttf', 'normal');
   await loadFont(doc, 'Roboto-Bold.ttf', 'bold');
   doc.setFont(FONT, 'normal');
 
-  // Helpers
+  // ── Helpers ───────────────────────────────────────────────
   const color = (c: [number, number, number]) => doc.setTextColor(c[0], c[1], c[2]);
   const fill = (c: [number, number, number]) => doc.setFillColor(c[0], c[1], c[2]);
+  const draw = (c: [number, number, number]) => doc.setDrawColor(c[0], c[1], c[2]);
   const font = (s: 'normal' | 'bold', sz: number) => { doc.setFont(FONT, s); doc.setFontSize(sz); };
 
-  const footer = () => {
+  const pageFooter = () => {
     font('normal', 7);
     color(BRAND.grayLight);
-    doc.text('4Culori • Tipografie & Personalizări • www.4culori.ro', pw / 2, ph - 8, { align: 'center' });
+    doc.text('4Culori  •  Tipografie & Print  •  www.4culori.ro', pw / 2, ph - 8, { align: 'center' });
   };
 
   const ensureSpace = (need: number) => {
-    if (y + need > ph - 20) {
-      footer();
+    if (y + need > ph - 22) {
+      pageFooter();
       doc.addPage();
-      y = 20;
+      y = 22;
     }
   };
 
-  // ─── HEADER ───────────────────────────────────────────────
-  // Thin brand accent
+  // ─── TOP ACCENT ───────────────────────────────────────────
   fill(BRAND.blue);
-  doc.rect(0, 0, pw, 1.5, 'F');
+  doc.rect(0, 0, pw, 2, 'F');
 
-  y = 18;
+  // ─── HEADER ───────────────────────────────────────────────
+  y = 20;
 
-  // Left: brand
-  font('bold', 18);
+  // Brand
+  font('bold', 22);
   color(BRAND.blue);
   doc.text('4CULORI', ml, y);
+  font('normal', 9);
+  color(BRAND.gray);
+  doc.text('Tipografie & Print', ml, y + 6);
+
+  // Meta – right aligned
   font('normal', 8.5);
   color(BRAND.gray);
-  doc.text('Tipografie & Print', ml, y + 5);
+  doc.text(`Ofertă: ${offerNumber}`, rx, y - 3, { align: 'right' });
+  doc.text(`Data: ${new Date().toLocaleDateString('ro-RO')}`, rx, y + 2.5, { align: 'right' });
+  doc.text(`Valabil până: ${validUntil}`, rx, y + 8, { align: 'right' });
 
-  // Right: meta
-  const rx = pw - mr;
-  font('normal', 8.5);
-  color(BRAND.gray);
-  doc.text(`Ofertă: ${offerNumber}`, rx, y - 4, { align: 'right' });
-  doc.text(`Data: ${new Date().toLocaleDateString('ro-RO')}`, rx, y + 1, { align: 'right' });
-  doc.text(`Valabil până: ${validUntil}`, rx, y + 6, { align: 'right' });
+  // Header separator
+  y += 16;
+  draw(BRAND.blue);
+  doc.setLineWidth(0.5);
+  doc.line(ml, y, rx, y);
+  draw(BRAND.blueLight);
+  doc.setLineWidth(0.2);
+  doc.line(ml, y + 1, rx, y + 1);
 
-  // Separator
-  y += 12;
-  doc.setDrawColor(BRAND.grayLight[0], BRAND.grayLight[1], BRAND.grayLight[2]);
-  doc.setLineWidth(0.3);
-  doc.line(ml, y, pw - mr, y);
-  y += 8;
-
-  // ─── TITLE + CLIENT ──────────────────────────────────────
-  font('bold', 13);
+  // ─── TITLE ────────────────────────────────────────────────
+  y += 14;
+  font('bold', 15);
   color(BRAND.dark);
   doc.text('OFERTĂ DE PREȚ', ml, y);
-  y += 8;
+  y += 6;
+  font('normal', 8.5);
+  color(BRAND.gray);
+  doc.text('Specificațiile produselor ofertate și prețurile finale', ml, y);
+  y += 10;
 
+  // ─── CLIENT ───────────────────────────────────────────────
   if (clientName) {
-    font('normal', 9);
+    // Light background card for client
+    fill(BRAND.bluePale);
+    doc.roundedRect(ml, y - 4, cw, clientEmail ? 16 : 12, 2, 2, 'F');
+
+    font('normal', 8.5);
     color(BRAND.gray);
-    doc.text('Către:', ml, y);
+    doc.text('Către:', ml + 5, y + 1);
     font('bold', 9);
     color(BRAND.dark);
-    doc.text(clientName, ml + 14, y);
-    y += 5;
+    doc.text(clientName, ml + 20, y + 1);
+
     if (clientEmail) {
-      font('normal', 8.5);
+      font('normal', 8);
       color(BRAND.gray);
-      doc.text(clientEmail, ml + 14, y);
-      y += 5;
+      doc.text('Email:', ml + 5, y + 7);
+      color(BRAND.text);
+      doc.text(clientEmail, ml + 20, y + 7);
     }
-    y += 4;
-  } else {
-    y += 3;
+    y += clientEmail ? 20 : 16;
   }
 
+  y += 4;
+
   // ─── PRODUCTS ─────────────────────────────────────────────
+  const specLabelX = ml + 8;
+  const specValueX = ml + 50;
+
   calculations.forEach((calc, idx) => {
     const unitPrice = calc.quantity > 0 ? calc.totalPrice / calc.quantity : 0;
     const specs = buildClientSpecs(calc.configSnapshot);
 
-    // Estimate block height: title + quantity row + specs + price bar + spacing
-    const blockH = 14 + (specs.length + 1) * 5.5 + 14;
+    // Estimate block height
+    const specRows = specs.length + 1; // +1 for Tiraj
+    const blockH = 12 + 6 + specRows * 5.5 + 4 + 12 + 16;
     ensureSpace(blockH);
 
-    // Product title
-    font('bold', 10.5);
-    color(BRAND.blue);
-    doc.text(`${idx + 1}.  ${calc.recipeName}`, ml, y);
-    y += 7;
+    // ── Product card background
+    fill(BRAND.grayBg);
+    const cardH = 10 + 6 + specRows * 5.5 + 4 + 12 + 4;
+    doc.roundedRect(ml, y - 3, cw, cardH, 2.5, 2.5, 'F');
 
-    // Quantity row
+    // Left accent bar
+    fill(BRAND.blue);
+    doc.roundedRect(ml, y - 3, 1.2, cardH, 0.6, 0.6, 'F');
+
+    // Product title
+    font('bold', 11);
+    color(BRAND.blue);
+    doc.text(`${idx + 1}.  ${calc.recipeName}`, ml + 6, y + 2);
+    y += 8;
+
+    // Section label
+    font('normal', 7.5);
+    color(BRAND.gray);
+    doc.text('Specificațiile produsului ofertat', specLabelX, y);
+    y += 6;
+
+    // Specs – two-column
+    // Tiraj first
     font('normal', 8.5);
     color(BRAND.gray);
     doc.text('Tiraj:', specLabelX, y);
-    color(BRAND.dark);
-    doc.text(`${calc.quantity} buc`, specValueX, y);
+    font('bold', 8.5);
+    color(BRAND.text);
+    doc.text(`${calc.quantity} bucăți`, specValueX, y);
     y += 5.5;
 
-    // Specs — two-column aligned
     specs.forEach((spec) => {
       font('normal', 8.5);
       color(BRAND.gray);
       doc.text(`${spec.label}:`, specLabelX, y);
-      color(BRAND.dark);
+      font('normal', 8.5);
+      color(BRAND.text);
       doc.text(spec.value, specValueX, y);
       y += 5.5;
     });
 
-    y += 1;
+    y += 2;
 
-    // Price bar
+    // Price row – light blue bar inside card
     fill(BRAND.blueLight);
-    doc.roundedRect(ml, y - 4, cw, 9, 1.5, 1.5, 'F');
+    doc.roundedRect(ml + 4, y - 4, cw - 8, 10, 1.5, 1.5, 'F');
 
     font('normal', 8.5);
     color(BRAND.gray);
-    doc.text('Preț / buc:', ml + 4, y + 1.5);
-    font('bold', 8.5);
+    doc.text('Preț / bucată:', ml + 8, y + 2);
+    font('bold', 9);
     color(BRAND.dark);
-    doc.text(`${unitPrice.toFixed(2)} € + TVA`, ml + 28, y + 1.5);
+    doc.text(`${unitPrice.toFixed(2)} € + TVA`, ml + 42, y + 2);
 
+    const midX = ml + cw / 2 + 2;
     font('normal', 8.5);
     color(BRAND.gray);
-    doc.text('Total produs:', ml + cw / 2 + 4, y + 1.5);
-    font('bold', 8.5);
-    color(BRAND.dark);
-    doc.text(`${calc.totalPrice.toFixed(2)} € + TVA`, ml + cw / 2 + 32, y + 1.5);
+    doc.text(`Total produs (${calc.quantity} buc):`, midX, y + 2);
+    font('bold', 9);
+    color(BRAND.blue);
+    doc.text(`${calc.totalPrice.toFixed(2)} € + TVA`, rx - 4, y + 2, { align: 'right' });
 
     y += 14;
 
-    // Separator between products
-    if (idx < calculations.length - 1) {
-      doc.setDrawColor(BRAND.grayLight[0], BRAND.grayLight[1], BRAND.grayLight[2]);
-      doc.setLineWidth(0.15);
-      doc.line(ml + 4, y - 4, pw - mr - 4, y - 4);
-    }
+    // Spacing between product cards
+    y += 6;
   });
 
   // ─── TOTALS ───────────────────────────────────────────────
-  ensureSpace(40);
+  ensureSpace(50);
   y += 2;
 
-  doc.setDrawColor(BRAND.blue[0], BRAND.blue[1], BRAND.blue[2]);
+  // Totals separator
+  draw(BRAND.blue);
   doc.setLineWidth(0.4);
-  doc.line(ml, y, pw - mr, y);
-  y += 8;
+  doc.line(ml, y, rx, y);
+  y += 10;
 
-  const totX = pw - mr - 72;
+  const totLabelX = rx - 80;
 
   // Subtotal
-  font('normal', 9);
+  font('normal', 9.5);
   color(BRAND.gray);
-  doc.text('Subtotal:', totX, y);
+  doc.text('Subtotal:', totLabelX, y);
+  font('normal', 9.5);
   color(BRAND.dark);
-  doc.text(`${subtotal.toFixed(2)} € + TVA`, pw - mr, y, { align: 'right' });
-  y += 6;
+  doc.text(`${subtotal.toFixed(2)} € + TVA`, rx, y, { align: 'right' });
+  y += 7;
 
   // Discount
   if (discount > 0) {
-    font('normal', 9);
-    color(BRAND.blue);
-    doc.text(`Discount (${discount}%):`, totX, y);
-    doc.text(`-${discountAmount.toFixed(2)} €`, pw - mr, y, { align: 'right' });
-    y += 6;
+    font('normal', 9.5);
+    color(BRAND.blueMid);
+    doc.text(`Discount (${discount}%):`, totLabelX, y);
+    doc.text(`-${discountAmount.toFixed(2)} €`, rx, y, { align: 'right' });
+    y += 7;
   }
 
-  // Total highlight
+  // Total highlight bar
+  y += 2;
+  const totalBarW = rx - totLabelX + 12;
   fill(BRAND.blue);
-  const totalBarW = pw - mr - totX + 8;
-  doc.roundedRect(totX - 4, y - 4, totalBarW, 11, 2, 2, 'F');
-  font('bold', 11);
+  doc.roundedRect(totLabelX - 6, y - 5, totalBarW, 14, 2.5, 2.5, 'F');
+  font('bold', 12);
   color(BRAND.white);
-  doc.text('TOTAL OFERTĂ:', totX, y + 3.5);
-  doc.text(`${total.toFixed(2)} € + TVA`, pw - mr, y + 3.5, { align: 'right' });
+  doc.text('TOTAL OFERTĂ:', totLabelX, y + 4);
+  doc.text(`${total.toFixed(2)} € + TVA`, rx, y + 4, { align: 'right' });
 
-  y += 22;
+  y += 26;
 
   // ─── NOTES ────────────────────────────────────────────────
-  ensureSpace(26);
+  ensureSpace(36);
 
-  font('bold', 8);
+  // Notes background
+  fill(BRAND.grayBg);
+  doc.roundedRect(ml, y - 4, cw, 32, 2, 2, 'F');
+
+  font('bold', 8.5);
   color(BRAND.dark);
-  doc.text('Note:', ml, y);
-  y += 5;
+  doc.text('Note', ml + 5, y + 1);
+  y += 6;
 
   font('normal', 7.5);
   color(BRAND.gray);
@@ -254,12 +295,17 @@ export async function generateOfferPdf(data: OfferData) {
     'Termenul de livrare va fi confirmat la plasarea comenzii.',
   ];
   notes.forEach((n) => {
-    doc.text(`•  ${n}`, ml + 2, y);
-    y += 4.5;
+    doc.text(`•   ${n}`, ml + 5, y + 1);
+    y += 5;
   });
 
-  // Footer
-  footer();
+  y += 4;
+  font('normal', 7.5);
+  color(BRAND.blueMid);
+  doc.text('Vă mulțumim pentru interesul acordat serviciilor 4Culori.', ml + 5, y);
+
+  // Page footer
+  pageFooter();
 
   doc.save(`Oferta_${offerNumber}.pdf`);
   return offerNumber;
