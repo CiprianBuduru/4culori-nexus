@@ -32,6 +32,21 @@ export interface Recipe {
   priceFormula: string;
 }
 
+/** Snapshot of product configuration at the time it was added to the offer */
+export interface PrintConfigSnapshot {
+  productType: string;       // e.g. 'flyer', 'business-card'
+  productName: string;       // e.g. 'Flyer'
+  format: string;            // e.g. 'A5'
+  formatLabel: string;       // e.g. 'A5'
+  gsm: number;               // e.g. 120
+  colorMode: string;         // e.g. '4+4'
+  colorModeLabel: string;    // e.g. '4+4 (color, 2 fețe)'
+  lamination: string;        // e.g. 'none'
+  laminationLabel: string;   // e.g. 'Fără plastifiere'
+  sheetsUsed?: number;       // internal: sheets with waste
+  dtpHours?: number;         // internal
+}
+
 // Calculator item when using a recipe
 export interface RecipeCalculation {
   id: string;
@@ -48,7 +63,13 @@ export interface RecipeCalculation {
   personalizationDetails?: string;
   materialCost: number;
   personalizationCost: number;
-  totalPrice: number;
+  totalPrice: number;           // selling price (after markup)
+  /** Internal production cost (before markup) — admin-only */
+  productionCost?: number;
+  /** Markup multiplier used (e.g. 1.40) */
+  markupMultiplier?: number;
+  /** Product configuration snapshot for display in quote */
+  configSnapshot?: PrintConfigSnapshot;
 }
 
 // Predefined materials
