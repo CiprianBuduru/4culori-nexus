@@ -243,6 +243,13 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     finishingNotes: 'Tăiere inclusă (placeholder – de validat)',
     dtpHours: 0.5,
     ready: false,
+    commercialDefaults: {
+      format: 'A3',
+      gsm: 200,
+      colorMode: '4+0',
+      lamination: 'none',
+      labels: { format: 'A3', gsm: '200 g/mp', colorMode: '4+0 (color, 1 față)', lamination: 'Fără plastifiere' },
+    },
   },
 ];
 
