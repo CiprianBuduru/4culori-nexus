@@ -482,6 +482,57 @@ export default function PriceCalculator() {
     setAutoOpenEmail(false);
   };
 
+  // ── Comparative quote flow ──
+  const handleGenerateComparativeQuote = (extraction: BriefExtraction) => {
+    const result = generateComparativeVariants(extraction, paperPrices);
+    if (!result) {
+      toast.error('Produsul nu suportă ofertă comparativă');
+      return;
+    }
+    setComparativeState(result);
+    toast.success('3 variante comerciale generate');
+  };
+
+  const handleSelectVariant = (variant: ComparativeVariant) => {
+    const newCalc: RecipeCalculation = {
+      id: crypto.randomUUID(),
+      recipeId: `comparative-${variant.tier}-${Date.now()}`,
+      recipeName: variant.productName,
+      category: 'printed' as RecipeCategory,
+      quantity: variant.quantity,
+      materialCost: 0,
+      personalizationCost: 0,
+      totalPrice: variant.totalPrice,
+      productionCost: variant.internalCost,
+      markupMultiplier: 1.40,
+      configSnapshot: variant.configSnapshot,
+    };
+    setCalculations(prev => [...prev, newCalc]);
+    setComparativeState(null);
+    toast.success(`${variant.label} adăugată în ofertă`);
+  };
+
+  const handleAddAllVariants = () => {
+    if (!comparativeState) return;
+    const newCalcs: RecipeCalculation[] = comparativeState.variants.map((variant) => ({
+      id: crypto.randomUUID(),
+      recipeId: `comparative-${variant.tier}-${Date.now()}`,
+      recipeName: `${variant.productName} — ${variant.label}`,
+      category: 'printed' as RecipeCategory,
+      quantity: variant.quantity,
+      materialCost: 0,
+      personalizationCost: 0,
+      totalPrice: variant.totalPrice,
+      productionCost: variant.internalCost,
+      markupMultiplier: 1.40,
+      configSnapshot: variant.configSnapshot,
+      comparativeVariantTier: variant.tier,
+    } as RecipeCalculation));
+    setCalculations(prev => [...prev, ...newCalcs]);
+    setComparativeState(null);
+    toast.success('Ofertă comparativă completă adăugată (3 variante)');
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
