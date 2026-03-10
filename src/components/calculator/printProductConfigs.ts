@@ -36,6 +36,8 @@ export interface PrintProductConfig {
   quantityStep: number;
   defaultQuantity: number;
   finishingNotes: string;
+  /** DTP setup hours for this product */
+  dtpHours: number;
   /** true = config is complete & calculator is fully functional */
   ready: boolean;
 }
@@ -71,9 +73,7 @@ const pickLaminations = (ids: string[]) =>
 export const PRINT_ENGINE = {
   SPOILAGE: 0.10,            // +10 % extra sheets
   PAPER_TECH_LOSS: 0.20,     // +20 % on paper cost
-  SETUP_HOURS: 0.5,
   SETUP_RATE: 15,            // EUR / h
-  get SETUP_COST() { return this.SETUP_HOURS * this.SETUP_RATE; }, // 7.50 €
   LABOR_PCT: 0.02,
   MAINTENANCE_PCT: 0.05,
   PRODUCTION_MARKUP: 1.40,
@@ -104,6 +104,7 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     quantityStep: 50,
     defaultQuantity: 100,
     finishingNotes: 'Tăiere inclusă',
+    dtpHours: 0.5,
     ready: true,
   },
 
@@ -127,6 +128,7 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     quantityStep: 20,
     defaultQuantity: 100,
     finishingNotes: 'Tăiere inclusă',
+    dtpHours: 0.2,
     ready: true,
   },
 
@@ -151,6 +153,7 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     quantityStep: 50,
     defaultQuantity: 100,
     finishingNotes: 'Tăiere + fălțuire inclusă (placeholder – de validat)',
+    dtpHours: 0.5,
     ready: false,
   },
 
@@ -174,6 +177,7 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     quantityStep: 25,
     defaultQuantity: 50,
     finishingNotes: 'Capsare + tăiere inclusă (placeholder – de validat)',
+    dtpHours: 0.5,
     ready: false,
   },
 
@@ -198,6 +202,7 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     quantityStep: 10,
     defaultQuantity: 50,
     finishingNotes: 'Tăiere inclusă (placeholder – de validat)',
+    dtpHours: 0.5,
     ready: false,
   },
 ];
