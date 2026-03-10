@@ -86,8 +86,8 @@ export function EmailDraftPanel({
 
   const offerNumber = `OF-${Date.now()}`;
 
-  // Detect comparative mode
-  const isComparative = products.some(p => p.name.includes('— Varianta'));
+  // Detect comparative mode (explicit prop or fallback name detection)
+  const isComparative = isComparativeProp || products.some(p => (p.name ?? '').includes('— Varianta'));
 
   const handleGenerate = async () => {
     setIsGenerating(true);
