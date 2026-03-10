@@ -392,7 +392,7 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
               <span>{result.productionCost.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Setup (0.5h × 15 €)</span>
+              <span className="text-muted-foreground">Setup ({result.dtpHours}h × {PRINT_ENGINE.SETUP_RATE} €)</span>
               <span>{result.setupCost.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between text-sm">
