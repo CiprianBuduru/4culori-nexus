@@ -207,8 +207,6 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     defaultColorMode: '4+4',
     laminations: pickLaminations(['none', 'gloss_1', 'matte_1']),
     defaultLamination: 'none',
-    minQuantity: 25,
-    quantityStep: 25,
     defaultQuantity: 50,
     finishingNotes: 'Capsare + tăiere inclusă (placeholder – de validat)',
     dtpHours: 0.5,
