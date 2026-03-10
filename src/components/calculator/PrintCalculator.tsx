@@ -120,10 +120,8 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
       setLamination(targetProduct.defaultLamination);
     }
 
-    if (prefill.quantity && prefill.quantity >= targetProduct.minQuantity) {
+    if (prefill.quantity && prefill.quantity >= 1) {
       setQuantity(prefill.quantity);
-    } else if (prefill.quantity) {
-      setQuantity(targetProduct.defaultQuantity);
     }
 
     onPrefillApplied?.();
