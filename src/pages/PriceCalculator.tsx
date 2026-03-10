@@ -479,6 +479,19 @@ export default function PriceCalculator() {
                   Salvează Oferta în DB
                 </Button>
 
+                {/* Email Draft Drawer (trigger button + Sheet) */}
+                <EmailDraftPanel
+                  clientName={clientName}
+                  clientEmail={clientEmail}
+                  products={offerProducts}
+                  subtotal={subtotal}
+                  discount={discount}
+                  discountAmount={discountAmount}
+                  total={total}
+                  disabled={calculations.length === 0}
+                  onSendEmail={handleSendEmail}
+                />
+
                 {calculations.length > 0 && (
                   <p className="text-xs text-center text-muted-foreground">
                     {calculations.length} produs(e) • {calculations.reduce((sum, c) => sum + c.quantity, 0)} bucăți total
@@ -486,19 +499,6 @@ export default function PriceCalculator() {
                 )}
               </CardContent>
             </Card>
-
-            {/* Email Draft Drawer (renders trigger buttons + Sheet) */}
-            <EmailDraftPanel
-              clientName={clientName}
-              clientEmail={clientEmail}
-              products={offerProducts}
-              subtotal={subtotal}
-              discount={discount}
-              discountAmount={discountAmount}
-              total={total}
-              disabled={calculations.length === 0}
-              onSendEmail={handleSendEmail}
-            />
           </div>
         </div>
       </div>
