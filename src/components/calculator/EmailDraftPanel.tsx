@@ -45,6 +45,9 @@ interface EmailDraftPanelProps {
   total: number;
   disabled?: boolean;
   onSendEmail?: (draft: string, subject: string) => Promise<void>;
+  /** When true, auto-open drawer and generate draft */
+  autoOpenAndGenerate?: boolean;
+  onAutoOpenComplete?: () => void;
 }
 
 export function EmailDraftPanel({
