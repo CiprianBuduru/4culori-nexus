@@ -117,6 +117,13 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     finishingNotes: 'Tăiere inclusă',
     dtpHours: 0.5,
     ready: true,
+    commercialDefaults: {
+      format: 'A5',
+      gsm: 120,
+      colorMode: '4+4',
+      lamination: 'none',
+      labels: { format: 'A5', gsm: '120 g/mp', colorMode: '4+4 (color, 2 fețe)', lamination: 'Fără plastifiere' },
+    },
   },
 
   // 2 ─ Cărți de vizită
