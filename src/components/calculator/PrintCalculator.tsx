@@ -239,6 +239,8 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
       laminationLabel: laminationObj?.label ?? 'Fără plastifiere',
       sheetsUsed: result.sheetsWithWaste,
       dtpHours: product.dtpHours,
+      folds: result.folds > 0 ? result.folds : undefined,
+      glue: result.glue || undefined,
     };
 
     return {
