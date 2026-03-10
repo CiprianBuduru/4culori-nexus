@@ -16,6 +16,7 @@ import { DTFCalculator } from '@/components/calculator/DTFCalculator';
 import { LargeFormatCalculator } from '@/components/calculator/LargeFormatCalculator';
 import { TransferCalculator } from '@/components/calculator/TransferCalculator';
 import { TypographyCalculator } from '@/components/calculator/TypographyCalculator';
+import { FlyerCalculator } from '@/components/calculator/FlyerCalculator';
 import { BoxCalculator } from '@/components/calculator/BoxCalculator';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
 import { toast } from 'sonner';
