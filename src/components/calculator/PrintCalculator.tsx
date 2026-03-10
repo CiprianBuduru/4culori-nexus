@@ -157,7 +157,7 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
 
   // ── Calculation ──
   const result = useMemo(() => {
-    if (pcsPerSheet <= 0 || quantity < product.minQuantity) return null;
+    if (pcsPerSheet <= 0 || quantity < 1) return null;
 
     const setupCost = product.dtpHours * PRINT_ENGINE.SETUP_RATE;
     const sheets = Math.ceil(quantity / pcsPerSheet);
