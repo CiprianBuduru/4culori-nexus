@@ -310,10 +310,14 @@ export default function PriceCalculator() {
           <div className="lg:col-span-2 space-y-4">
             {/* Dedicated Calculators */}
             {/* Tipărituri Calculator */}
-            <PrintCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')} />
+            <PrintCalculator
+              onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')}
+              prefill={calculatorPrefill}
+              onPrefillApplied={() => setCalculatorPrefill(null)}
+            />
 
             {/* AI Brief Analyzer */}
-            <BriefAnalyzer onAddSuggestion={handleAddAISuggestion} />
+            <BriefAnalyzer onApplyToCalculator={setCalculatorPrefill} />
 
             {/* Manual Recipe Selector */}
             <RecipeSelector onSelectRecipe={handleSelectRecipe} />
