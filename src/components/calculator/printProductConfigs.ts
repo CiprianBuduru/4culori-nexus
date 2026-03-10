@@ -36,6 +36,8 @@ export interface PrintProductConfig {
   quantityStep: number;
   defaultQuantity: number;
   finishingNotes: string;
+  /** DTP setup hours for this product */
+  dtpHours: number;
   /** true = config is complete & calculator is fully functional */
   ready: boolean;
 }
