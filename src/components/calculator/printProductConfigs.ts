@@ -199,6 +199,7 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     quantityStep: 10,
     defaultQuantity: 50,
     finishingNotes: 'Tăiere inclusă (placeholder – de validat)',
+    dtpHours: 0.5,
     ready: false,
   },
 ];
