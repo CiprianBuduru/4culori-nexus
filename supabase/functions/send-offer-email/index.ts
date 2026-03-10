@@ -131,7 +131,7 @@ const handler = async (req: Request): Promise<Response> => {
               <tfoot>
                 <tr class="total-row">
                   <td colspan="3" style="text-align: right;">TOTAL:</td>
-                  <td style="text-align: right;">${total.toFixed(2)} RON</td>
+                  <td style="text-align: right;">${total.toFixed(2)} € + TVA</td>
                 </tr>
               </tfoot>
             </table>
