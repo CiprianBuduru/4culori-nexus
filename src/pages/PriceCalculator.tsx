@@ -311,6 +311,7 @@ export default function PriceCalculator() {
     setClientEmail('');
     setAutoAddToOffer(false);
     setAutoOpenEmail(false);
+    setComparativeState(null);
   };
 
   const getRecipeById = (recipeId: string) => {
