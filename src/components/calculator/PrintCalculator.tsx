@@ -350,11 +350,19 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
                 key={f.value}
                 variant={format === f.value ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setFormat(f.value)}
+                onClick={() => {
+                  setFormat(f.value);
+                  // Auto-switch color mode for prisma (4+0 only)
+                  if (f.glue && colorMode !== '4+0') {
+                    setColorMode('4+0');
+                  }
+                }}
                 className="text-xs"
               >
                 {f.label}
-                <span className="ml-1 text-muted-foreground">({f.pcsPerSheet}/SRA3)</span>
+                <span className="ml-1 text-muted-foreground">
+                  ({f.pcsPerSheet}/SRA3{f.folds ? `, ${f.folds}f` : ''}{f.glue ? ', lipire' : ''})
+                </span>
               </Button>
             ))}
             {product.allowCustomFormat && (
