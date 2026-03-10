@@ -487,7 +487,7 @@ export default function PriceCalculator() {
               </CardContent>
             </Card>
 
-            {/* Email Draft Panel */}
+            {/* Email Draft Drawer (renders trigger buttons + Sheet) */}
             <EmailDraftPanel
               clientName={clientName}
               clientEmail={clientEmail}
