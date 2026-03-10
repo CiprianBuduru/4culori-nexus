@@ -1,4 +1,4 @@
-// Price Calculator v5.0 – AI Sales Assistant + Config Snapshots + Cost Separation
+// Price Calculator v6.0 – Comparative Quote Mode + AI Sales Assistant
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -25,8 +25,11 @@ import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorIt
 import { BriefAnalyzer } from '@/components/calculator/BriefAnalyzer';
 import { PrintCalculator } from '@/components/calculator/PrintCalculator';
 import { EmailDraftPanel } from '@/components/calculator/EmailDraftPanel';
+import { ComparativeQuoteCards } from '@/components/calculator/ComparativeQuoteCards';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes, type PrintConfigSnapshot } from '@/types/recipes';
-import { type PrintCalculatorPrefill } from '@/types/briefAnalysis';
+import { type PrintCalculatorPrefill, type BriefExtraction } from '@/types/briefAnalysis';
+import { type ComparativeVariant, type ComparativeQuoteState } from '@/types/comparativeQuote';
+import { generateComparativeVariants } from '@/lib/comparativeQuote';
 import { toast } from 'sonner';
 import { generateOfferPdf } from '@/lib/generateOfferPdf';
 import { supabase } from '@/integrations/supabase/client';
@@ -85,6 +88,12 @@ export default function PriceCalculator() {
   const [duplicateMatchId, setDuplicateMatchId] = useState<string | null>(null);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
+  // Comparative quote state
+  const [comparativeState, setComparativeState] = useState<ComparativeQuoteState | null>(null);
+
+  // Paper prices for comparative engine (shared with PrintCalculator)
+  const [paperPrices, setPaperPrices] = useState<Record<number, number>>({});
+
   useEffect(() => {
     const fetchClients = async () => {
       const { data, error } = await supabase
@@ -98,6 +107,26 @@ export default function PriceCalculator() {
       }
     };
     fetchClients();
+  }, []);
+
+  // Fetch paper prices for comparative engine
+  useEffect(() => {
+    const fetchPaperPrices = async () => {
+      const { data } = await supabase
+        .from('materials')
+        .select('unit_price, weight_gsm')
+        .eq('brand', 'Color Copy')
+        .eq('format', 'SRA3')
+        .eq('active', true);
+      if (data) {
+        const prices: Record<number, number> = {};
+        data.forEach((m: any) => {
+          if (m.weight_gsm) prices[m.weight_gsm] = Number(m.unit_price);
+        });
+        setPaperPrices(prices);
+      }
+    };
+    fetchPaperPrices();
   }, []);
 
   const handleClientSelect = (value: string) => {
@@ -282,6 +311,7 @@ export default function PriceCalculator() {
     setClientEmail('');
     setAutoAddToOffer(false);
     setAutoOpenEmail(false);
+    setComparativeState(null);
   };
 
   const getRecipeById = (recipeId: string) => {
@@ -453,6 +483,56 @@ export default function PriceCalculator() {
     setAutoOpenEmail(false);
   };
 
+  // ── Comparative quote flow ──
+  const handleGenerateComparativeQuote = (extraction: BriefExtraction) => {
+    const result = generateComparativeVariants(extraction, paperPrices);
+    if (!result) {
+      toast.error('Produsul nu suportă ofertă comparativă');
+      return;
+    }
+    setComparativeState(result);
+    toast.success('3 variante comerciale generate');
+  };
+
+  const handleSelectVariant = (variant: ComparativeVariant) => {
+    const newCalc: RecipeCalculation = {
+      id: crypto.randomUUID(),
+      recipeId: `comparative-${variant.tier}-${Date.now()}`,
+      recipeName: variant.productName,
+      category: 'printed' as RecipeCategory,
+      quantity: variant.quantity,
+      materialCost: 0,
+      personalizationCost: 0,
+      totalPrice: variant.totalPrice,
+      productionCost: variant.internalCost,
+      markupMultiplier: 1.40,
+      configSnapshot: variant.configSnapshot,
+    };
+    setCalculations(prev => [...prev, newCalc]);
+    setComparativeState(null);
+    toast.success(`${variant.label} adăugată în ofertă`);
+  };
+
+  const handleAddAllVariants = () => {
+    if (!comparativeState) return;
+    const newCalcs: RecipeCalculation[] = comparativeState.variants.map((variant) => ({
+      id: crypto.randomUUID(),
+      recipeId: `comparative-${variant.tier}-${Date.now()}`,
+      recipeName: `${variant.productName} — ${variant.label}`,
+      category: 'printed' as RecipeCategory,
+      quantity: variant.quantity,
+      materialCost: 0,
+      personalizationCost: 0,
+      totalPrice: variant.totalPrice,
+      productionCost: variant.internalCost,
+      markupMultiplier: 1.40,
+      configSnapshot: variant.configSnapshot,
+    }));
+    setCalculations(prev => [...prev, ...newCalcs]);
+    setComparativeState(null);
+    toast.success('Ofertă comparativă completă adăugată (3 variante)');
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -490,7 +570,17 @@ export default function PriceCalculator() {
             <BriefAnalyzer
               onApplyToCalculator={handlePrefillWithConfirmation}
               onGenerateFullQuote={handleFullQuoteWithConfirmation}
+              onGenerateComparativeQuote={handleGenerateComparativeQuote}
             />
+
+            {/* Comparative Quote Cards (optional mode) */}
+            {comparativeState && (
+              <ComparativeQuoteCards
+                state={comparativeState}
+                onSelectVariant={handleSelectVariant}
+                onAddAllVariants={handleAddAllVariants}
+              />
+            )}
 
             {/* Step 2: Universal Print Calculator */}
             <PrintCalculator

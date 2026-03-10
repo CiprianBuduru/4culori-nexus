@@ -12,19 +12,23 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   type BriefAnalysisResult,
+  type BriefExtraction,
   type PrintCalculatorPrefill,
   FIELD_LABELS,
   PRODUCT_NAMES,
 } from '@/types/briefAnalysis';
+import { isComparativeAvailable } from '@/lib/comparativeQuote';
 import { PRINT_PRODUCTS, type CommercialDefaults } from './printProductConfigs';
 
 interface BriefAnalyzerProps {
   onApplyToCalculator: (prefill: PrintCalculatorPrefill) => void;
   /** Full AI Sales flow: prefill + auto-add + generate email + open drawer */
   onGenerateFullQuote?: (prefill: PrintCalculatorPrefill) => void;
+  /** Comparative quote flow */
+  onGenerateComparativeQuote?: (extraction: BriefExtraction) => void;
 }
 
-export function BriefAnalyzer({ onApplyToCalculator, onGenerateFullQuote }: BriefAnalyzerProps) {
+export function BriefAnalyzer({ onApplyToCalculator, onGenerateFullQuote, onGenerateComparativeQuote }: BriefAnalyzerProps) {
   const [brief, setBrief] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<BriefAnalysisResult | null>(null);
@@ -469,25 +473,39 @@ export function BriefAnalyzer({ onApplyToCalculator, onGenerateFullQuote }: Brie
 
             {/* Apply button (manual flow) */}
             {result.extraction.product_type && (
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => handleApply()}
-                  variant="outline"
-                  className="flex-1 gap-2"
-                >
-                  <ArrowRight className="h-4 w-4" />
-                  Aplică în calculator
-                </Button>
-                {onGenerateFullQuote && result.status !== 'ambiguous' && (
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
                   <Button
-                    onClick={() => {
-                      const prefill = buildPrefill();
-                      if (prefill) onGenerateFullQuote(prefill);
-                    }}
+                    onClick={() => handleApply()}
+                    variant="outline"
                     className="flex-1 gap-2"
                   >
-                    <Zap className="h-4 w-4" />
-                    Generează ofertă
+                    <ArrowRight className="h-4 w-4" />
+                    Aplică în calculator
+                  </Button>
+                  {onGenerateFullQuote && result.status !== 'ambiguous' && (
+                    <Button
+                      onClick={() => {
+                        const prefill = buildPrefill();
+                        if (prefill) onGenerateFullQuote(prefill);
+                      }}
+                      className="flex-1 gap-2"
+                    >
+                      <Zap className="h-4 w-4" />
+                      Generează ofertă
+                    </Button>
+                  )}
+                </div>
+                {onGenerateComparativeQuote &&
+                  result.status !== 'ambiguous' &&
+                  isComparativeAvailable(result.extraction.product_type!) && (
+                  <Button
+                    onClick={() => onGenerateComparativeQuote(result.extraction)}
+                    variant="outline"
+                    className="w-full gap-2 border-primary/30 text-primary hover:bg-primary/5"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    Generează ofertă comparativă (3 variante)
                   </Button>
                 )}
               </div>

@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { clientName, products, subtotal, discount, discountAmount, total, notes } = await req.json();
+    const { clientName, products, subtotal, discount, discountAmount, total, notes, isComparative } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -39,6 +39,14 @@ serve(async (req) => {
       })
       .join("\n\n");
 
+    const comparativeInstructions = isComparative
+      ? `\nACESTĂ OFERTĂ ESTE COMPARATIVĂ — conține 3 variante pentru același produs.
+Menționează în introducere că ai pregătit 3 opțiuni (economică, recomandată, premium) pentru a permite clientului să aleagă varianta optimă.
+Listează fiecare variantă ca bloc separat cu specificațiile și prețul.
+Subliniază că varianta recomandată oferă cel mai bun raport calitate/preț.
+NU adăuga informații inventate despre diferențele între variante.`
+      : '';
+
     const systemPrompt = `Ești un asistent comercial profesionist pentru o tipografie numită 4Culori din România. 
 Generezi drafturi de email-uri de ofertă comercială în limba română.
 Tonul trebuie să fie profesionist dar prietenos, concis și clar.
@@ -54,12 +62,12 @@ Email-ul trebuie să conțină:
 Prețurile sunt în EUR, fără TVA (menționează "+ TVA" unde e cazul).
 NU include "Subject:" sau "Subiect:" în corpul emailului.
 NU menționa costuri interne, DTP, setup, manoperă, mentenanță sau markup. Arată DOAR prețul final de vânzare.
-Listează fiecare produs ca un bloc separat cu specificațiile sale tehnice.`;
+Listează fiecare produs ca un bloc separat cu specificațiile sale tehnice.${comparativeInstructions}`;
 
     const userPrompt = `Generează un draft de email comercial cu următoarele detalii:
 
 Client: ${clientName || "nestipulat"}
-
+${isComparative ? "\nTip ofertă: COMPARATIVĂ (3 variante)\n" : ""}
 Produse:
 ${productsSummary || "Niciun produs specificat"}
 
