@@ -172,7 +172,7 @@ export function FlyerCalculator({ onAddToOffer }: CalculatorProps) {
     if (!onAddToOffer || !result) return;
 
     const formatLabel = format === 'custom' ? `Custom (${customPcsPerSheet}/SRA3)` : format;
-    const weightLabel = PAPER_WEIGHTS.find(p => p.value === paperWeight)?.label || paperWeight;
+    const weightLabel = PAPER_WEIGHTS.find(p => p.value === paperWeight)?.label || `${paperWeight} g/mp`;
     const laminationLabel = LAMINATION_OPTIONS.find(l => l.value === lamination)?.label || '';
 
     let details = `${formatLabel}, Color Copy ${weightLabel}, ${printMode}`;
