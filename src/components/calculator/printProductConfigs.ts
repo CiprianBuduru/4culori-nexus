@@ -20,6 +20,15 @@ export interface PrintLamination {
   costPerSheet: number;
 }
 
+/** Commercial defaults suggested to sales operators for quick quoting */
+export interface CommercialDefaults {
+  format: string;
+  gsm: number;
+  colorMode: string;
+  lamination: string;
+  labels: Record<string, string>; // field → human-readable label for the suggested value
+}
+
 export interface PrintProductConfig {
   id: string;
   name: string;
@@ -40,6 +49,8 @@ export interface PrintProductConfig {
   dtpHours: number;
   /** true = config is complete & calculator is fully functional */
   ready: boolean;
+  /** Commercial defaults for AI Sales Assistant quick-quote flow */
+  commercialDefaults: CommercialDefaults;
 }
 
 // ── Shared option sets ──────────────────────
@@ -106,6 +117,13 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     finishingNotes: 'Tăiere inclusă',
     dtpHours: 0.5,
     ready: true,
+    commercialDefaults: {
+      format: 'A5',
+      gsm: 120,
+      colorMode: '4+4',
+      lamination: 'none',
+      labels: { format: 'A5', gsm: '120 g/mp', colorMode: '4+4 (color, 2 fețe)', lamination: 'Fără plastifiere' },
+    },
   },
 
   // 2 ─ Cărți de vizită
@@ -130,6 +148,13 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     finishingNotes: 'Tăiere inclusă',
     dtpHours: 0.2,
     ready: true,
+    commercialDefaults: {
+      format: '9x5',
+      gsm: 350,
+      colorMode: '4+4',
+      lamination: 'matte_1',
+      labels: { format: '9 × 5 cm', gsm: '350 g/mp', colorMode: '4+4 (color, 2 fețe)', lamination: 'Mată 1 față' },
+    },
   },
 
   // 3 ─ Pliant (placeholder)
@@ -155,6 +180,13 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     finishingNotes: 'Tăiere + fălțuire inclusă (placeholder – de validat)',
     dtpHours: 0.5,
     ready: false,
+    commercialDefaults: {
+      format: 'A4-tri',
+      gsm: 160,
+      colorMode: '4+4',
+      lamination: 'none',
+      labels: { format: 'A4 tri-fold', gsm: '160 g/mp', colorMode: '4+4 (color, 2 fețe)', lamination: 'Fără plastifiere' },
+    },
   },
 
   // 4 ─ Broșură (placeholder)
@@ -179,6 +211,13 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     finishingNotes: 'Capsare + tăiere inclusă (placeholder – de validat)',
     dtpHours: 0.5,
     ready: false,
+    commercialDefaults: {
+      format: 'A5',
+      gsm: 120,
+      colorMode: '4+4',
+      lamination: 'none',
+      labels: { format: 'A5 (capsată)', gsm: '120 g/mp', colorMode: '4+4 (color, 2 fețe)', lamination: 'Fără plastifiere' },
+    },
   },
 
   // 5 ─ Afiș (placeholder)
@@ -204,6 +243,13 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     finishingNotes: 'Tăiere inclusă (placeholder – de validat)',
     dtpHours: 0.5,
     ready: false,
+    commercialDefaults: {
+      format: 'A3',
+      gsm: 200,
+      colorMode: '4+0',
+      lamination: 'none',
+      labels: { format: 'A3', gsm: '200 g/mp', colorMode: '4+0 (color, 1 față)', lamination: 'Fără plastifiere' },
+    },
   },
 ];
 

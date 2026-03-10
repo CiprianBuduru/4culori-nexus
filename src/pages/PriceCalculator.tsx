@@ -1,4 +1,4 @@
-// Price Calculator v3.0 – AI Sales Mode
+// Price Calculator v4.0 – AI Sales Assistant
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -54,6 +54,10 @@ export default function PriceCalculator() {
   
   const [isSaving, setIsSaving] = useState(false);
   const [calculatorPrefill, setCalculatorPrefill] = useState<PrintCalculatorPrefill | null>(null);
+
+  // AI Sales Assistant auto-flow state
+  const [autoAddToOffer, setAutoAddToOffer] = useState(false);
+  const [autoOpenEmail, setAutoOpenEmail] = useState(false);
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -139,7 +143,7 @@ export default function PriceCalculator() {
       personalizationCost: 0,
       totalPrice: item.totalPrice,
     };
-    setCalculations([...calculations, newCalculation]);
+    setCalculations(prev => [...prev, newCalculation]);
     toast.success(`Adăugat în ofertă: ${item.name} (${item.details})`);
   };
 
@@ -176,6 +180,8 @@ export default function PriceCalculator() {
     setClientName('');
     setSelectedClientId('');
     setClientEmail('');
+    setAutoAddToOffer(false);
+    setAutoOpenEmail(false);
   };
 
   const getRecipeById = (recipeId: string) => {
@@ -284,6 +290,25 @@ export default function PriceCalculator() {
     }
   };
 
+  /** AI Sales Assistant: full auto-quote flow */
+  const handleGenerateFullQuote = (prefill: PrintCalculatorPrefill) => {
+    setCalculatorPrefill(prefill);
+    setAutoAddToOffer(true);
+  };
+
+  /** Called when PrintCalculator auto-adds item to offer */
+  const handleAutoAddComplete = () => {
+    setAutoAddToOffer(false);
+    // Trigger email generation after a short delay so calculations state updates
+    setTimeout(() => {
+      setAutoOpenEmail(true);
+    }, 300);
+  };
+
+  const handleAutoOpenEmailComplete = () => {
+    setAutoOpenEmail(false);
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -304,14 +329,19 @@ export default function PriceCalculator() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left Column - AI Sales Flow: Brief → Calculator → Products */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Step 1: AI Brief Analyzer */}
-            <BriefAnalyzer onApplyToCalculator={setCalculatorPrefill} />
+            {/* Step 1: AI Sales Assistant */}
+            <BriefAnalyzer
+              onApplyToCalculator={setCalculatorPrefill}
+              onGenerateFullQuote={handleGenerateFullQuote}
+            />
 
             {/* Step 2: Universal Print Calculator */}
             <PrintCalculator
               onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')}
               prefill={calculatorPrefill}
               onPrefillApplied={() => setCalculatorPrefill(null)}
+              autoAdd={autoAddToOffer}
+              onAutoAddComplete={handleAutoAddComplete}
             />
 
             {/* Manual Recipe Selector */}
@@ -462,8 +492,6 @@ export default function PriceCalculator() {
                   Generează Ofertă PDF
                 </Button>
 
-                {/* Email sending moved to EmailDraftPanel below */}
-
                 <Button 
                   variant="secondary"
                   className="w-full gap-2" 
@@ -490,6 +518,8 @@ export default function PriceCalculator() {
                   total={total}
                   disabled={calculations.length === 0}
                   onSendEmail={handleSendEmail}
+                  autoOpenAndGenerate={autoOpenEmail}
+                  onAutoOpenComplete={handleAutoOpenEmailComplete}
                 />
 
                 {calculations.length > 0 && (

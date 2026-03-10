@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -45,6 +45,9 @@ interface EmailDraftPanelProps {
   total: number;
   disabled?: boolean;
   onSendEmail?: (draft: string, subject: string) => Promise<void>;
+  /** When true, auto-open drawer and generate draft */
+  autoOpenAndGenerate?: boolean;
+  onAutoOpenComplete?: () => void;
 }
 
 export function EmailDraftPanel({
@@ -57,6 +60,8 @@ export function EmailDraftPanel({
   total,
   disabled,
   onSendEmail,
+  autoOpenAndGenerate,
+  onAutoOpenComplete,
 }: EmailDraftPanelProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
@@ -65,6 +70,14 @@ export function EmailDraftPanel({
   const [isSending, setIsSending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('text');
+
+  // Auto-open and generate when triggered by AI Sales flow
+  useEffect(() => {
+    if (autoOpenAndGenerate && products.length > 0) {
+      handleGenerate();
+      onAutoOpenComplete?.();
+    }
+  }, [autoOpenAndGenerate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const offerNumber = `OF-${Date.now()}`;
 

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   Sparkles, Loader2, AlertCircle, Lightbulb, CheckCircle2, AlertTriangle,
-  ArrowRight, HelpCircle,
+  ArrowRight, HelpCircle, Zap, Settings2,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -16,15 +16,19 @@ import {
   FIELD_LABELS,
   PRODUCT_NAMES,
 } from '@/types/briefAnalysis';
+import { PRINT_PRODUCTS, type CommercialDefaults } from './printProductConfigs';
 
 interface BriefAnalyzerProps {
   onApplyToCalculator: (prefill: PrintCalculatorPrefill) => void;
+  /** Full AI Sales flow: prefill + auto-add + generate email + open drawer */
+  onGenerateFullQuote?: (prefill: PrintCalculatorPrefill) => void;
 }
 
-export function BriefAnalyzer({ onApplyToCalculator }: BriefAnalyzerProps) {
+export function BriefAnalyzer({ onApplyToCalculator, onGenerateFullQuote }: BriefAnalyzerProps) {
   const [brief, setBrief] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<BriefAnalysisResult | null>(null);
+  const [isAutoQuoting, setIsAutoQuoting] = useState(false);
 
   const analyzeBrief = async () => {
     if (!brief.trim()) {
@@ -63,16 +67,16 @@ export function BriefAnalyzer({ onApplyToCalculator }: BriefAnalyzerProps) {
     }
   };
 
-  const handleApply = (productType?: string) => {
-    if (!result) return;
+  const buildPrefill = (productType?: string): PrintCalculatorPrefill | null => {
+    if (!result) return null;
     const ext = result.extraction;
     const selectedProduct = productType || ext.product_type;
     if (!selectedProduct) {
       toast.error('Selectați un tip de produs');
-      return;
+      return null;
     }
 
-    const prefill: PrintCalculatorPrefill = {
+    return {
       productId: selectedProduct,
       format: ext.is_custom_format ? 'custom' : ext.format,
       customPcsPerSheet: ext.custom_pcs_per_sheet,
@@ -81,9 +85,124 @@ export function BriefAnalyzer({ onApplyToCalculator }: BriefAnalyzerProps) {
       lamination: ext.lamination,
       quantity: ext.quantity,
     };
+  };
+
+  const handleApply = (productType?: string) => {
+    const prefill = buildPrefill(productType);
+    if (!prefill) return;
+    onApplyToCalculator(prefill);
+    toast.success(`Parametrii aplicați în calculator – ${PRODUCT_NAMES[prefill.productId] || prefill.productId}`);
+  };
+
+  /** Apply commercial defaults to fill missing fields, then trigger full quote */
+  const handleApplyDefaults = () => {
+    if (!result) return;
+    const ext = result.extraction;
+    const productType = ext.product_type;
+    if (!productType) return;
+
+    const config = PRINT_PRODUCTS.find(p => p.id === productType);
+    if (!config) return;
+
+    const defaults = config.commercialDefaults;
+    const prefill: PrintCalculatorPrefill = {
+      productId: productType,
+      format: ext.is_custom_format ? 'custom' : (ext.format || defaults.format),
+      customPcsPerSheet: ext.custom_pcs_per_sheet,
+      paperWeight: ext.gsm || defaults.gsm,
+      colorMode: ext.color_mode || defaults.colorMode,
+      lamination: ext.lamination || defaults.lamination,
+      quantity: ext.quantity || config.defaultQuantity,
+    };
 
     onApplyToCalculator(prefill);
-    toast.success(`Parametrii aplicați în calculator – ${PRODUCT_NAMES[selectedProduct] || selectedProduct}`);
+    toast.success('Sugestiile standard au fost aplicate');
+  };
+
+  /** Full auto-quote: analyze → prefill → add → email → drawer */
+  const handleGenerateQuote = async () => {
+    if (!brief.trim()) {
+      toast.error('Introduceți un brief pentru analiză');
+      return;
+    }
+    if (!onGenerateFullQuote) return;
+
+    setIsAutoQuoting(true);
+    setResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-print-brief', {
+        body: { brief },
+      });
+
+      if (error) throw error;
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      const analysisResult = data as BriefAnalysisResult;
+      setResult(analysisResult);
+
+      if (analysisResult.status === 'complete' && analysisResult.extraction.product_type) {
+        // Complete brief → full auto flow
+        const ext = analysisResult.extraction;
+        const config = PRINT_PRODUCTS.find(p => p.id === ext.product_type);
+        const defaults = config?.commercialDefaults;
+
+        const prefill: PrintCalculatorPrefill = {
+          productId: ext.product_type!,
+          format: ext.is_custom_format ? 'custom' : (ext.format || defaults?.format),
+          customPcsPerSheet: ext.custom_pcs_per_sheet,
+          paperWeight: ext.gsm || defaults?.gsm,
+          colorMode: ext.color_mode || defaults?.colorMode,
+          lamination: ext.lamination || defaults?.lamination,
+          quantity: ext.quantity,
+        };
+
+        onGenerateFullQuote(prefill);
+        toast.success('Brief complet – ofertă generată automat!');
+      } else if (analysisResult.status === 'partial') {
+        toast.info('Brief parțial – completați câmpurile lipsă sau aplicați sugestiile standard');
+      } else {
+        toast.warning('Brief ambiguu – selectați tipul de produs');
+      }
+    } catch (error) {
+      console.error('Error in auto-quote:', error);
+      toast.error('Eroare la generarea ofertei');
+    } finally {
+      setIsAutoQuoting(false);
+    }
+  };
+
+  /** After applying defaults on partial brief, trigger full quote */
+  const handleApplyDefaultsAndQuote = () => {
+    if (!result || !onGenerateFullQuote) return;
+    const ext = result.extraction;
+    const productType = ext.product_type;
+    if (!productType) return;
+
+    const config = PRINT_PRODUCTS.find(p => p.id === productType);
+    if (!config) return;
+
+    const defaults = config.commercialDefaults;
+    const prefill: PrintCalculatorPrefill = {
+      productId: productType,
+      format: ext.is_custom_format ? 'custom' : (ext.format || defaults.format),
+      customPcsPerSheet: ext.custom_pcs_per_sheet,
+      paperWeight: ext.gsm || defaults.gsm,
+      colorMode: ext.color_mode || defaults.colorMode,
+      lamination: ext.lamination || defaults.lamination,
+      quantity: ext.quantity || config.defaultQuantity,
+    };
+
+    onGenerateFullQuote(prefill);
+    toast.success('Sugestiile aplicate – ofertă generată automat!');
+  };
+
+  const getCommercialDefaults = (productType: string): CommercialDefaults | null => {
+    const config = PRINT_PRODUCTS.find(p => p.id === productType);
+    return config?.commercialDefaults || null;
   };
 
   const statusConfig = {
@@ -95,7 +214,7 @@ export function BriefAnalyzer({ onApplyToCalculator }: BriefAnalyzerProps) {
     },
     partial: {
       icon: AlertTriangle,
-      label: 'Lipsesc informații',
+      label: 'Brief incomplet',
       color: 'text-amber-600',
       bg: 'bg-amber-500/10 border-amber-500/20',
     },
@@ -112,35 +231,56 @@ export function BriefAnalyzer({ onApplyToCalculator }: BriefAnalyzerProps) {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Sparkles className="h-5 w-5 text-brand-blue" />
-          Brief Client — Analiză AI
+          AI Sales Assistant
+          <Badge variant="secondary" className="text-xs">Tipărituri</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Input */}
         <div className="space-y-2">
           <Textarea
-            placeholder='Introduceți brief-ul comenzii aici... (ex: "500 flyere A5 color față-verso pe 130g, cu laminare mată")'
+            placeholder='Introduceți brief-ul comenzii aici... (ex: "2000 flyere A5 color față-verso pe 130g" sau "500 cărți de vizită cu laminare mată")'
             value={brief}
             onChange={(e) => setBrief(e.target.value)}
             className="min-h-[100px] resize-none"
           />
-          <Button
-            onClick={analyzeBrief}
-            disabled={isAnalyzing || !brief.trim()}
-            className="w-full gap-2"
-          >
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Analizez brief-ul...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Analizează Brief
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={analyzeBrief}
+              disabled={isAnalyzing || isAutoQuoting || !brief.trim()}
+              variant="outline"
+              className="flex-1 gap-2"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Analizez...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Analizează Brief
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={handleGenerateQuote}
+              disabled={isAnalyzing || isAutoQuoting || !brief.trim()}
+              className="flex-1 gap-2"
+            >
+              {isAutoQuoting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generez ofertă...
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4" />
+                  Generează ofertă din brief
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Results */}
@@ -203,6 +343,61 @@ export function BriefAnalyzer({ onApplyToCalculator }: BriefAnalyzerProps) {
               )}
             </div>
 
+            {/* Commercial defaults suggestions for partial briefs */}
+            {result.status === 'partial' && result.extraction.product_type && (() => {
+              const defaults = getCommercialDefaults(result.extraction.product_type!);
+              if (!defaults) return null;
+              const ext = result.extraction;
+              const missingWithDefaults: { field: string; label: string; suggestedValue: string }[] = [];
+              
+              if (!ext.format && !ext.is_custom_format) missingWithDefaults.push({ field: 'format', label: 'Format', suggestedValue: defaults.labels.format });
+              if (!ext.gsm) missingWithDefaults.push({ field: 'gsm', label: 'Gramaj', suggestedValue: defaults.labels.gsm });
+              if (!ext.color_mode) missingWithDefaults.push({ field: 'colorMode', label: 'Tipar', suggestedValue: defaults.labels.colorMode });
+              if (!ext.lamination) missingWithDefaults.push({ field: 'lamination', label: 'Plastifiere', suggestedValue: defaults.labels.lamination });
+
+              if (missingWithDefaults.length === 0) return null;
+
+              return (
+                <div className="bg-primary/5 rounded-lg p-4 space-y-3 border border-primary/20">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Settings2 className="h-4 w-4 text-primary" />
+                    Sugestii comerciale standard
+                  </div>
+                  <div className="space-y-1.5">
+                    {missingWithDefaults.map(({ field, label, suggestedValue }) => (
+                      <div key={field} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{label}</span>
+                        <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
+                          {suggestedValue}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={handleApplyDefaults}
+                    >
+                      <ArrowRight className="h-3 w-3" />
+                      Aplică sugestiile standard
+                    </Button>
+                    {onGenerateFullQuote && (
+                      <Button
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={handleApplyDefaultsAndQuote}
+                      >
+                        <Zap className="h-3 w-3" />
+                        Aplică + Generează ofertă
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Warnings */}
             {result.validation.warnings.length > 0 && (
               <div className="space-y-1">
@@ -215,8 +410,8 @@ export function BriefAnalyzer({ onApplyToCalculator }: BriefAnalyzerProps) {
               </div>
             )}
 
-            {/* Missing fields */}
-            {result.status === 'partial' && result.validation.missingFields.length > 0 && (
+            {/* Missing fields (when no commercial defaults or product unknown) */}
+            {result.status === 'partial' && result.validation.missingFields.length > 0 && !result.extraction.product_type && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
                 <AlertCircle className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                 <div>
@@ -272,16 +467,30 @@ export function BriefAnalyzer({ onApplyToCalculator }: BriefAnalyzerProps) {
 
             <Separator />
 
-            {/* Apply button */}
+            {/* Apply button (manual flow) */}
             {result.extraction.product_type && (
-              <Button
-                onClick={() => handleApply()}
-                className="w-full gap-2"
-                size="lg"
-              >
-                <ArrowRight className="h-4 w-4" />
-                Aplică în calculator — {PRODUCT_NAMES[result.extraction.product_type]}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleApply()}
+                  variant="outline"
+                  className="flex-1 gap-2"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  Aplică în calculator
+                </Button>
+                {onGenerateFullQuote && result.status !== 'ambiguous' && (
+                  <Button
+                    onClick={() => {
+                      const prefill = buildPrefill();
+                      if (prefill) onGenerateFullQuote(prefill);
+                    }}
+                    className="flex-1 gap-2"
+                  >
+                    <Zap className="h-4 w-4" />
+                    Generează ofertă
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         )}
