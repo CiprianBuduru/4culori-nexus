@@ -293,15 +293,27 @@ export default function PriceCalculator() {
   const discountAmount = subtotal * (discount / 100);
   const total = subtotal - discountAmount;
 
+  // Comparative mode detection
+  const isComparativeMode = !!comparativeState || calculations.some(c => c.recipeId.startsWith('comparative-'));
+
   // Build products list for email draft (client-facing only)
-  const offerProducts = calculations.map(calc => ({
-    name: calc.recipeName,
-    quantity: calc.quantity,
-    unitPrice: calc.quantity > 0 ? calc.totalPrice / calc.quantity : 0,
-    totalPrice: calc.totalPrice,
-    details: calc.category,
-    configSnapshot: calc.configSnapshot,
-  }));
+  const offerProducts = comparativeState
+    ? comparativeState.variants.map(v => ({
+        name: `${v.productName} — ${v.label}`,
+        quantity: v.quantity,
+        unitPrice: v.unitPrice,
+        totalPrice: v.totalPrice,
+        details: v.description,
+        configSnapshot: v.configSnapshot,
+      }))
+    : calculations.map(calc => ({
+        name: calc.recipeName,
+        quantity: calc.quantity,
+        unitPrice: calc.quantity > 0 ? calc.totalPrice / calc.quantity : 0,
+        totalPrice: calc.totalPrice,
+        details: calc.category,
+        configSnapshot: calc.configSnapshot,
+      }));
 
   const clearAll = () => {
     setCalculations([]);
