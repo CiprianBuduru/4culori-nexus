@@ -26,6 +26,9 @@ interface CalculatorProps {
   }) => void;
   prefill?: PrintCalculatorPrefill | null;
   onPrefillApplied?: () => void;
+  /** When true, automatically adds the current calculation to offer after prefill is applied */
+  autoAdd?: boolean;
+  onAutoAddComplete?: () => void;
 }
 
 export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied }: CalculatorProps) {
