@@ -18,20 +18,23 @@ serve(async (req) => {
     const productsSummary = (products || [])
       .map((p: any) => {
         const lines: string[] = [`${p.name}`];
+        lines.push(`  \u2022 Tiraj: ${p.quantity} buc`);
         const snap = p.configSnapshot;
         if (snap) {
-          lines.push(`  • Tiraj: ${p.quantity} buc`);
-          if (snap.gsm) lines.push(`  • Hârtie: ${snap.gsm} g/mp`);
-          if (snap.colorModeLabel || snap.colorMode) lines.push(`  • Tipar: ${snap.colorModeLabel || snap.colorMode}`);
-          if (snap.laminationLabel || snap.lamination) lines.push(`  • Plastifiere: ${snap.laminationLabel || (snap.lamination === 'none' ? 'Fără plastifiere' : snap.lamination)}`);
-          if (snap.folds != null) lines.push(`  • Fălțuire: ${snap.folds} ${snap.folds === 1 ? 'fălțuire' : 'fălțuiri'}`);
-          if (snap.glue != null) lines.push(`  • Lipitură prisma: ${snap.glue ? 'Da' : 'Nu'}`);
-        } else {
-          lines.push(`  • Tiraj: ${p.quantity} buc`);
-          if (p.details) lines.push(`  • ${p.details}`);
+          if (snap.formatLabel) lines.push(`  \u2022 Format: ${snap.formatLabel}`);
+          if (snap.gsm) lines.push(`  \u2022 H\u00E2rtie: Color Copy ${snap.gsm} g/mp`);
+          if (snap.colorModeLabel || snap.colorMode) lines.push(`  \u2022 Tipar: ${snap.colorModeLabel || snap.colorMode}`);
+          if (snap.laminationLabel || snap.lamination) {
+            const lam = snap.laminationLabel || (snap.lamination === 'none' ? 'F\u0103r\u0103 plastifiere' : snap.lamination);
+            lines.push(`  \u2022 Plastifiere: ${lam}`);
+          }
+          if (snap.folds != null && snap.folds > 0) lines.push(`  \u2022 F\u0103l\u021Buire: ${snap.folds} ${snap.folds === 1 ? 'f\u0103l\u021Buire' : 'f\u0103l\u021Buiri'}`);
+          if (snap.glue != null) lines.push(`  \u2022 Lipitur\u0103 prisma: ${snap.glue ? 'Da' : 'Nu'}`);
+        } else if (p.details) {
+          lines.push(`  \u2022 ${p.details}`);
         }
-        lines.push(`  • Preț unitar: ${p.unitPrice.toFixed(2)} € + TVA`);
-        lines.push(`  • Total: ${p.totalPrice.toFixed(2)} € + TVA`);
+        lines.push(`  \u2022 Pre\u021B unitar: ${p.unitPrice.toFixed(2)} \u20AC + TVA`);
+        lines.push(`  \u2022 Total: ${p.totalPrice.toFixed(2)} \u20AC + TVA`);
         return lines.join("\n");
       })
       .join("\n\n");
