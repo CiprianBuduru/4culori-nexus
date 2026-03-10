@@ -190,8 +190,21 @@ export function EmailDraftPanel({
         }
         specItems.push(`<li>Pre\u021B unitar: ${(p.unitPrice ?? 0).toFixed(2)} \u20AC + TVA</li>`);
         specItems.push(`<li>Total: <strong>${(p.totalPrice ?? 0).toFixed(2)} \u20AC + TVA</strong></li>`);
+
+        // Detect variant tier from name
+        const isEconomica = (p.name ?? '').includes('Varianta economică');
+        const isRecomandata = (p.name ?? '').includes('Varianta recomandată');
+        const isPremium = (p.name ?? '').includes('Varianta premium');
+        const isVariant = isEconomica || isRecomandata || isPremium;
+        const variantBorder = isRecomandata ? '2px solid #0071bc' : isEconomica ? '2px solid #10b981' : isPremium ? '2px solid #d97706' : '1px solid #e5e7eb';
+        const variantBg = isRecomandata ? '#eef6fc' : '#f9fafb';
+        const variantBadge = isVariant
+          ? `<div style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:bold;color:white;background:${isRecomandata ? '#0071bc' : isEconomica ? '#10b981' : '#d97706'};margin-bottom:6px;">${isEconomica ? 'ECONOMICĂ' : isRecomandata ? '★ RECOMANDATĂ' : 'PREMIUM'}</div>`
+          : '';
+
         return `
-          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin-bottom:12px;">
+          <div style="background:${variantBg};border:${variantBorder};border-radius:8px;padding:14px 16px;margin-bottom:12px;">
+            ${variantBadge}
             <h3 style="margin:0 0 8px 0;font-size:15px;color:#0071bc;">${p.name ?? ''}</h3>
             <ul style="margin:0;padding:0 0 0 18px;font-size:13px;line-height:1.8;color:#444;">
               ${specItems.join('')}
