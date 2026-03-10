@@ -27,6 +27,8 @@ interface SendOfferEmailRequest {
   discountAmount: number;
   total: number;
   validUntil: string;
+  subject?: string;
+  bodyText?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
