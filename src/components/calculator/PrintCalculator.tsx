@@ -36,10 +36,6 @@ interface CalculatorProps {
   autoAdd?: boolean;
   onAutoAddComplete?: () => void;
 }
-  /** When true, automatically adds the current calculation to offer after prefill is applied */
-  autoAdd?: boolean;
-  onAutoAddComplete?: () => void;
-}
 
 export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoAdd, onAutoAddComplete }: CalculatorProps) {
   // ── Product selection ──
