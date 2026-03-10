@@ -175,16 +175,30 @@ export function EmailDraftPanel({
       })
       .join('');
 
-    const productsRows = safeProducts
-      .map(
-        (p) => `
-      <tr>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;">${p.name ?? ''}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${p.quantity ?? 0}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${(p.unitPrice ?? 0).toFixed(2)} €</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${(p.totalPrice ?? 0).toFixed(2)} €</td>
-      </tr>`
-      )
+    const productBlocks = safeProducts
+      .map((p) => {
+        const snap = p.configSnapshot;
+        const specs: string[] = [];
+        specs.push(`<li>Tiraj: ${p.quantity ?? 0} buc</li>`);
+        if (snap) {
+          if (snap.gsm) specs.push(`<li>Hârtie: ${snap.gsm} g/mp</li>`);
+          if (snap.colorModeLabel || snap.colorMode) specs.push(`<li>Tipar: ${snap.colorModeLabel || snap.colorMode}</li>`);
+          if (snap.laminationLabel || snap.lamination) specs.push(`<li>Plastifiere: ${snap.laminationLabel || (snap.lamination === 'none' ? 'Fără plastifiere' : snap.lamination)}</li>`);
+          if (snap.folds != null) specs.push(`<li>Fălțuire: ${snap.folds} ${snap.folds === 1 ? 'fălțuire' : 'fălțuiri'}</li>`);
+          if (snap.glue != null) specs.push(`<li>Lipitură prisma: ${snap.glue ? 'Da' : 'Nu'}</li>`);
+        } else if (p.details) {
+          specs.push(`<li>${p.details}</li>`);
+        }
+        specs.push(`<li>Preț unitar: ${(p.unitPrice ?? 0).toFixed(2)} € + TVA</li>`);
+        specs.push(`<li>Total: <strong>${(p.totalPrice ?? 0).toFixed(2)} € + TVA</strong></li>`);
+        return `
+          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin-bottom:12px;">
+            <h3 style="margin:0 0 8px 0;font-size:15px;color:#0071bc;">${p.name ?? ''}</h3>
+            <ul style="margin:0;padding:0 0 0 18px;font-size:13px;line-height:1.8;color:#444;">
+              ${specs.join('')}
+            </ul>
+          </div>`;
+      })
       .join('');
 
     return `
@@ -195,37 +209,31 @@ export function EmailDraftPanel({
         </div>
         <div style="padding:20px;">
           ${paragraphs}
-          <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-            <thead>
-              <tr style="background:#f5f5f5;">
-                <th style="padding:8px 12px;text-align:left;">Produs</th>
-                <th style="padding:8px 12px;text-align:center;">Cant.</th>
-                <th style="padding:8px 12px;text-align:right;">Preț unit.</th>
-                <th style="padding:8px 12px;text-align:right;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${productsRows}
-              <tr>
-                <td colspan="3" style="padding:8px 12px;text-align:right;"><strong>Subtotal:</strong></td>
-                <td style="padding:8px 12px;text-align:right;"><strong>${safeSubtotal.toFixed(2)} € + TVA</strong></td>
-              </tr>
-              ${
-                safeDiscount > 0
-                  ? `<tr>
-                <td colspan="3" style="padding:8px 12px;text-align:right;color:#ff7f50;">Discount (${safeDiscount}%):</td>
-                <td style="padding:8px 12px;text-align:right;color:#ff7f50;">-${safeDiscountAmount.toFixed(2)} €</td>
-              </tr>`
-                  : ''
-              }
-            </tbody>
-            <tfoot>
-              <tr style="background:#0071bc;color:white;font-weight:bold;">
-                <td colspan="3" style="padding:10px 12px;text-align:right;">TOTAL:</td>
-                <td style="padding:10px 12px;text-align:right;">${safeTotal.toFixed(2)} € + TVA</td>
-              </tr>
-            </tfoot>
-          </table>
+          ${productBlocks}
+          <div style="margin:16px 0;font-size:13px;">
+            <table style="width:100%;border-collapse:collapse;">
+              <tbody>
+                <tr>
+                  <td style="padding:8px 12px;text-align:right;"><strong>Subtotal:</strong></td>
+                  <td style="padding:8px 12px;text-align:right;width:120px;"><strong>${safeSubtotal.toFixed(2)} € + TVA</strong></td>
+                </tr>
+                ${
+                  safeDiscount > 0
+                    ? `<tr>
+                  <td style="padding:8px 12px;text-align:right;color:#ff7f50;">Discount (${safeDiscount}%):</td>
+                  <td style="padding:8px 12px;text-align:right;color:#ff7f50;">-${safeDiscountAmount.toFixed(2)} €</td>
+                </tr>`
+                    : ''
+                }
+              </tbody>
+              <tfoot>
+                <tr style="background:#0071bc;color:white;font-weight:bold;">
+                  <td style="padding:10px 12px;text-align:right;">TOTAL:</td>
+                  <td style="padding:10px 12px;text-align:right;">${safeTotal.toFixed(2)} € + TVA</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
         <div style="text-align:center;padding:12px;color:#666;font-size:11px;border-top:1px solid #eee;">
           4Culori • Tipografie & Personalizări • www.4culori.ro
