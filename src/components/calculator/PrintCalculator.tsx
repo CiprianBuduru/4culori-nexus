@@ -14,6 +14,7 @@ import {
   PRINT_ENGINE,
   type PrintProductConfig,
 } from './printProductConfigs';
+import { type PrintCalculatorPrefill } from '@/types/briefAnalysis';
 
 interface CalculatorProps {
   onAddToOffer?: (item: {
@@ -23,9 +24,11 @@ interface CalculatorProps {
     totalPrice: number;
     details: string;
   }) => void;
+  prefill?: PrintCalculatorPrefill | null;
+  onPrefillApplied?: () => void;
 }
 
-export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
+export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied }: CalculatorProps) {
   // ── Product selection ──
   const [productId, setProductId] = useState(PRINT_PRODUCTS[0].id);
   const product = useMemo(
@@ -70,6 +73,52 @@ export function PrintCalculator({ onAddToOffer }: CalculatorProps) {
   useEffect(() => {
     resetToProduct(product);
   }, [product.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Apply prefill from AI Brief Analyzer
+  useEffect(() => {
+    if (!prefill) return;
+
+    // Select the product
+    setProductId(prefill.productId);
+    const targetProduct = PRINT_PRODUCTS.find(p => p.id === prefill.productId) ?? PRINT_PRODUCTS[0];
+
+    // Apply individual fields (only if provided)
+    if (prefill.format) {
+      setFormat(prefill.format);
+    } else {
+      setFormat(targetProduct.formats[0]?.value ?? '');
+    }
+
+    if (prefill.format === 'custom' && prefill.customPcsPerSheet) {
+      setCustomPcsPerSheet(prefill.customPcsPerSheet);
+    }
+
+    if (prefill.paperWeight && targetProduct.allowedGsm.includes(prefill.paperWeight)) {
+      setPaperWeight(prefill.paperWeight);
+    } else {
+      setPaperWeight(targetProduct.defaultGsm);
+    }
+
+    if (prefill.colorMode && targetProduct.colorModes.some(c => c.value === prefill.colorMode)) {
+      setColorMode(prefill.colorMode);
+    } else {
+      setColorMode(targetProduct.defaultColorMode);
+    }
+
+    if (prefill.lamination && targetProduct.laminations.some(l => l.value === prefill.lamination)) {
+      setLamination(prefill.lamination);
+    } else {
+      setLamination(targetProduct.defaultLamination);
+    }
+
+    if (prefill.quantity && prefill.quantity >= targetProduct.minQuantity) {
+      setQuantity(prefill.quantity);
+    } else if (prefill.quantity) {
+      setQuantity(targetProduct.defaultQuantity);
+    }
+
+    onPrefillApplied?.();
+  }, [prefill]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function resetToProduct(p: PrintProductConfig) {
     const firstFormat = p.formats[0]?.value ?? '';

@@ -14,6 +14,7 @@ import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorIt
 import { BriefAnalyzer } from '@/components/calculator/BriefAnalyzer';
 import { PrintCalculator } from '@/components/calculator/PrintCalculator';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
+import { type PrintCalculatorPrefill } from '@/types/briefAnalysis';
 import { toast } from 'sonner';
 import { generateOfferPdf } from '@/lib/generateOfferPdf';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,6 +52,7 @@ export default function PriceCalculator() {
   const [clientEmail, setClientEmail] = useState('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [calculatorPrefill, setCalculatorPrefill] = useState<PrintCalculatorPrefill | null>(null);
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -308,10 +310,14 @@ export default function PriceCalculator() {
           <div className="lg:col-span-2 space-y-4">
             {/* Dedicated Calculators */}
             {/* Tipărituri Calculator */}
-            <PrintCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')} />
+            <PrintCalculator
+              onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')}
+              prefill={calculatorPrefill}
+              onPrefillApplied={() => setCalculatorPrefill(null)}
+            />
 
             {/* AI Brief Analyzer */}
-            <BriefAnalyzer onAddSuggestion={handleAddAISuggestion} />
+            <BriefAnalyzer onApplyToCalculator={setCalculatorPrefill} />
 
             {/* Manual Recipe Selector */}
             <RecipeSelector onSelectRecipe={handleSelectRecipe} />
