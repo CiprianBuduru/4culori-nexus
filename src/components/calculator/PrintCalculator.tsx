@@ -265,11 +265,8 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
 
   // ── Quantity handler ──
   const handleQuantityChange = (val: string) => {
-    let num = parseInt(val) || product.minQuantity;
-    if (num < product.minQuantity) num = product.minQuantity;
-    num = Math.round(num / product.quantityStep) * product.quantityStep;
-    if (num < product.minQuantity) num = product.minQuantity;
-    setQuantity(num);
+    const num = parseInt(val) || 1;
+    setQuantity(Math.max(1, num));
   };
 
   // ── Add to offer ──
