@@ -205,34 +205,46 @@ export type Database = {
       }
       materials: {
         Row: {
+          active: boolean
+          brand: string | null
           category: string | null
           created_at: string
           description: string | null
+          format: string | null
           id: string
           name: string
           unit: string
           unit_price: number
           updated_at: string
+          weight_gsm: number | null
         }
         Insert: {
+          active?: boolean
+          brand?: string | null
           category?: string | null
           created_at?: string
           description?: string | null
+          format?: string | null
           id?: string
           name: string
           unit?: string
           unit_price?: number
           updated_at?: string
+          weight_gsm?: number | null
         }
         Update: {
+          active?: boolean
+          brand?: string | null
           category?: string | null
           created_at?: string
           description?: string | null
+          format?: string | null
           id?: string
           name?: string
           unit?: string
           unit_price?: number
           updated_at?: string
+          weight_gsm?: number | null
         }
         Relationships: []
       }

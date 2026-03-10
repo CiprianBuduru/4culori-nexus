@@ -29,12 +29,18 @@ const FORMATS = [
   { value: 'custom', label: 'Format personalizat', pcsPerSheet: 0 },
 ];
 
-// Paper weights (Color Copy only)
+// Paper weights (Color Copy SRA3 – full range from DB)
 const PAPER_WEIGHTS = [
-  { value: '90g', label: '90 g/mp', materialName: 'Hârtie 90g' },
-  { value: '120g', label: '120 g/mp', materialName: 'Hârtie 120g' },
-  { value: '160g', label: '160 g/mp', materialName: 'Hârtie 160g' },
-  { value: '200g', label: '200 g/mp', materialName: 'Hârtie 200g' },
+  { value: 80, label: '80 g/mp' },
+  { value: 90, label: '90 g/mp' },
+  { value: 100, label: '100 g/mp' },
+  { value: 120, label: '120 g/mp' },
+  { value: 160, label: '160 g/mp' },
+  { value: 200, label: '200 g/mp' },
+  { value: 250, label: '250 g/mp' },
+  { value: 300, label: '300 g/mp' },
+  { value: 350, label: '350 g/mp' },
+  { value: 400, label: '400 g/mp' },
 ];
 
 // Printing cost per SRA3
@@ -67,28 +73,28 @@ const QUANTITY_STEP = 50;
 export function FlyerCalculator({ onAddToOffer }: CalculatorProps) {
   const [format, setFormat] = useState('A5');
   const [customPcsPerSheet, setCustomPcsPerSheet] = useState(4);
-  const [paperWeight, setPaperWeight] = useState('120g');
+  const [paperWeight, setPaperWeight] = useState<number>(120);
   const [printMode, setPrintMode] = useState<'4+0' | '4+4'>('4+0');
   const [lamination, setLamination] = useState('none');
   const [quantity, setQuantity] = useState(100);
 
-  // Paper prices from DB
-  const [paperPrices, setPaperPrices] = useState<Record<string, number>>({});
+  // Paper prices from DB (keyed by weight_gsm)
+  const [paperPrices, setPaperPrices] = useState<Record<number, number>>({});
   const [loadingPrices, setLoadingPrices] = useState(true);
 
   useEffect(() => {
     const fetchPaperPrices = async () => {
-      const names = PAPER_WEIGHTS.map(p => p.materialName);
       const { data } = await supabase
         .from('materials')
-        .select('name, unit_price')
-        .in('name', names);
+        .select('unit_price, weight_gsm')
+        .eq('brand', 'Color Copy')
+        .eq('format', 'SRA3')
+        .eq('active', true);
 
       if (data) {
-        const prices: Record<string, number> = {};
-        data.forEach(m => {
-          const weight = PAPER_WEIGHTS.find(p => p.materialName === m.name);
-          if (weight) prices[weight.value] = Number(m.unit_price);
+        const prices: Record<number, number> = {};
+        data.forEach((m: any) => {
+          if (m.weight_gsm) prices[m.weight_gsm] = Number(m.unit_price);
         });
         setPaperPrices(prices);
       }
@@ -166,7 +172,7 @@ export function FlyerCalculator({ onAddToOffer }: CalculatorProps) {
     if (!onAddToOffer || !result) return;
 
     const formatLabel = format === 'custom' ? `Custom (${customPcsPerSheet}/SRA3)` : format;
-    const weightLabel = PAPER_WEIGHTS.find(p => p.value === paperWeight)?.label || paperWeight;
+    const weightLabel = PAPER_WEIGHTS.find(p => p.value === paperWeight)?.label || `${paperWeight} g/mp`;
     const laminationLabel = LAMINATION_OPTIONS.find(l => l.value === lamination)?.label || '';
 
     let details = `${formatLabel}, Color Copy ${weightLabel}, ${printMode}`;
@@ -251,7 +257,7 @@ export function FlyerCalculator({ onAddToOffer }: CalculatorProps) {
                 {p.label}
                 {paperPrices[p.value] !== undefined && (
                   <span className="ml-1 text-muted-foreground">
-                    ({paperPrices[p.value].toFixed(2)} €)
+                    ({paperPrices[p.value].toFixed(4)} €)
                   </span>
                 )}
               </Button>
