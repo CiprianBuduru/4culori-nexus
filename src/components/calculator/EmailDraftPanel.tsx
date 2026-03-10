@@ -209,37 +209,31 @@ export function EmailDraftPanel({
         </div>
         <div style="padding:20px;">
           ${paragraphs}
-          <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-            <thead>
-              <tr style="background:#f5f5f5;">
-                <th style="padding:8px 12px;text-align:left;">Produs</th>
-                <th style="padding:8px 12px;text-align:center;">Cant.</th>
-                <th style="padding:8px 12px;text-align:right;">Preț unit.</th>
-                <th style="padding:8px 12px;text-align:right;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${productsRows}
-              <tr>
-                <td colspan="3" style="padding:8px 12px;text-align:right;"><strong>Subtotal:</strong></td>
-                <td style="padding:8px 12px;text-align:right;"><strong>${safeSubtotal.toFixed(2)} € + TVA</strong></td>
-              </tr>
-              ${
-                safeDiscount > 0
-                  ? `<tr>
-                <td colspan="3" style="padding:8px 12px;text-align:right;color:#ff7f50;">Discount (${safeDiscount}%):</td>
-                <td style="padding:8px 12px;text-align:right;color:#ff7f50;">-${safeDiscountAmount.toFixed(2)} €</td>
-              </tr>`
-                  : ''
-              }
-            </tbody>
-            <tfoot>
-              <tr style="background:#0071bc;color:white;font-weight:bold;">
-                <td colspan="3" style="padding:10px 12px;text-align:right;">TOTAL:</td>
-                <td style="padding:10px 12px;text-align:right;">${safeTotal.toFixed(2)} € + TVA</td>
-              </tr>
-            </tfoot>
-          </table>
+          ${productBlocks}
+          <div style="margin:16px 0;font-size:13px;">
+            <table style="width:100%;border-collapse:collapse;">
+              <tbody>
+                <tr>
+                  <td style="padding:8px 12px;text-align:right;"><strong>Subtotal:</strong></td>
+                  <td style="padding:8px 12px;text-align:right;width:120px;"><strong>${safeSubtotal.toFixed(2)} € + TVA</strong></td>
+                </tr>
+                ${
+                  safeDiscount > 0
+                    ? `<tr>
+                  <td style="padding:8px 12px;text-align:right;color:#ff7f50;">Discount (${safeDiscount}%):</td>
+                  <td style="padding:8px 12px;text-align:right;color:#ff7f50;">-${safeDiscountAmount.toFixed(2)} €</td>
+                </tr>`
+                    : ''
+                }
+              </tbody>
+              <tfoot>
+                <tr style="background:#0071bc;color:white;font-weight:bold;">
+                  <td style="padding:10px 12px;text-align:right;">TOTAL:</td>
+                  <td style="padding:10px 12px;text-align:right;">${safeTotal.toFixed(2)} € + TVA</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
         <div style="text-align:center;padding:12px;color:#666;font-size:11px;border-top:1px solid #eee;">
           4Culori • Tipografie & Personalizări • www.4culori.ro

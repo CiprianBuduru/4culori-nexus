@@ -16,8 +16,25 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const productsSummary = (products || [])
-      .map((p: any) => `- ${p.name}: ${p.quantity} buc × ${p.unitPrice.toFixed(2)} € = ${p.totalPrice.toFixed(2)} € (${p.details || ""})`)
-      .join("\n");
+      .map((p: any) => {
+        const lines: string[] = [`${p.name}`];
+        const snap = p.configSnapshot;
+        if (snap) {
+          lines.push(`  • Tiraj: ${p.quantity} buc`);
+          if (snap.gsm) lines.push(`  • Hârtie: ${snap.gsm} g/mp`);
+          if (snap.colorModeLabel || snap.colorMode) lines.push(`  • Tipar: ${snap.colorModeLabel || snap.colorMode}`);
+          if (snap.laminationLabel || snap.lamination) lines.push(`  • Plastifiere: ${snap.laminationLabel || (snap.lamination === 'none' ? 'Fără plastifiere' : snap.lamination)}`);
+          if (snap.folds != null) lines.push(`  • Fălțuire: ${snap.folds} ${snap.folds === 1 ? 'fălțuire' : 'fălțuiri'}`);
+          if (snap.glue != null) lines.push(`  • Lipitură prisma: ${snap.glue ? 'Da' : 'Nu'}`);
+        } else {
+          lines.push(`  • Tiraj: ${p.quantity} buc`);
+          if (p.details) lines.push(`  • ${p.details}`);
+        }
+        lines.push(`  • Preț unitar: ${p.unitPrice.toFixed(2)} € + TVA`);
+        lines.push(`  • Total: ${p.totalPrice.toFixed(2)} € + TVA`);
+        return lines.join("\n");
+      })
+      .join("\n\n");
 
     const systemPrompt = `Ești un asistent comercial profesionist pentru o tipografie numită 4Culori din România. 
 Generezi drafturi de email-uri de ofertă comercială în limba română.
@@ -26,13 +43,15 @@ NU inventa informații suplimentare despre produse sau prețuri.
 Folosește DOAR informațiile furnizate.
 Email-ul trebuie să conțină:
 1. Salut personalizat (dacă este disponibil numele clientului)
-2. Scurt rezumat al produselor solicitate
+2. Rezumat al produselor solicitate cu specificațiile tehnice furnizate (hârtie, tipar, plastifiere, fălțuire, etc.)
 3. Menționează că oferta detaliată este atașată / va fi trimisă separat
 4. Menționează valabilitatea ofertei (30 zile)
 5. Call to action politicos
 6. Semnătură 4Culori
 Prețurile sunt în EUR, fără TVA (menționează "+ TVA" unde e cazul).
-NU include "Subject:" sau "Subiect:" în corpul emailului.`;
+NU include "Subject:" sau "Subiect:" în corpul emailului.
+NU menționa costuri interne, DTP, setup, manoperă, mentenanță sau markup. Arată DOAR prețul final de vânzare.
+Listează fiecare produs ca un bloc separat cu specificațiile sale tehnice.`;
 
     const userPrompt = `Generează un draft de email comercial cu următoarele detalii:
 
