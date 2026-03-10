@@ -109,6 +109,26 @@ export default function PriceCalculator() {
     fetchClients();
   }, []);
 
+  // Fetch paper prices for comparative engine
+  useEffect(() => {
+    const fetchPaperPrices = async () => {
+      const { data } = await supabase
+        .from('materials')
+        .select('unit_price, weight_gsm')
+        .eq('brand', 'Color Copy')
+        .eq('format', 'SRA3')
+        .eq('active', true);
+      if (data) {
+        const prices: Record<number, number> = {};
+        data.forEach((m: any) => {
+          if (m.weight_gsm) prices[m.weight_gsm] = Number(m.unit_price);
+        });
+        setPaperPrices(prices);
+      }
+    };
+    fetchPaperPrices();
+  }, []);
+
   const handleClientSelect = (value: string) => {
     if (value === 'custom') {
       setSelectedClientId('');
