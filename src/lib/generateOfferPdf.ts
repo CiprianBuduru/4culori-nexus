@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { RecipeCalculation, categoryLabels, RecipeCategory } from '@/types/recipes';
+import { RecipeCalculation, categoryLabels, RecipeCategory, type PrintConfigSnapshot } from '@/types/recipes';
 
 interface OfferData {
   calculations: RecipeCalculation[];
