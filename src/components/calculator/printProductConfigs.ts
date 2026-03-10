@@ -104,6 +104,7 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     quantityStep: 50,
     defaultQuantity: 100,
     finishingNotes: 'Tăiere inclusă',
+    dtpHours: 0.5,
     ready: true,
   },
 
