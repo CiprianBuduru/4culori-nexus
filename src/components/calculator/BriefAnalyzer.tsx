@@ -28,7 +28,7 @@ interface BriefAnalyzerProps {
   onGenerateComparativeQuote?: (extraction: BriefExtraction) => void;
 }
 
-export function BriefAnalyzer({ onApplyToCalculator, onGenerateFullQuote }: BriefAnalyzerProps) {
+export function BriefAnalyzer({ onApplyToCalculator, onGenerateFullQuote, onGenerateComparativeQuote }: BriefAnalyzerProps) {
   const [brief, setBrief] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<BriefAnalysisResult | null>(null);
