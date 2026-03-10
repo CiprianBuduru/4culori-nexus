@@ -12,12 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RecipeSelector } from '@/components/calculator/RecipeSelector';
 import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorItem';
 import { BriefAnalyzer } from '@/components/calculator/BriefAnalyzer';
-import { DTFCalculator } from '@/components/calculator/DTFCalculator';
-import { LargeFormatCalculator } from '@/components/calculator/LargeFormatCalculator';
-import { TransferCalculator } from '@/components/calculator/TransferCalculator';
-import { TypographyCalculator } from '@/components/calculator/TypographyCalculator';
 import { FlyerCalculator } from '@/components/calculator/FlyerCalculator';
-import { BoxCalculator } from '@/components/calculator/BoxCalculator';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
 import { toast } from 'sonner';
 import { generateOfferPdf } from '@/lib/generateOfferPdf';
@@ -313,31 +308,12 @@ export default function PriceCalculator() {
           <div className="lg:col-span-2 space-y-4">
             {/* Dedicated Calculators */}
             <Tabs defaultValue="flyer" className="w-full">
-              <TabsList className="grid w-full grid-cols-6">
+              <TabsList className="w-full">
                 <TabsTrigger value="flyer" className="text-xs">Flyer</TabsTrigger>
-                <TabsTrigger value="boxes" className="text-xs">Cutii</TabsTrigger>
-                <TabsTrigger value="large-format" className="text-xs">Print Mare</TabsTrigger>
-                <TabsTrigger value="transfer" className="text-xs">Transfer</TabsTrigger>
-                <TabsTrigger value="dtf" className="text-xs">DTF</TabsTrigger>
-                <TabsTrigger value="typography" className="text-xs">Tipografie</TabsTrigger>
+                {/* New calculators will be added here as tabs */}
               </TabsList>
               <TabsContent value="flyer" className="mt-4">
                 <FlyerCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')} />
-              </TabsContent>
-              <TabsContent value="boxes" className="mt-4">
-                <BoxCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'boxes')} />
-              </TabsContent>
-              <TabsContent value="large-format" className="mt-4">
-                <LargeFormatCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'large-print')} />
-              </TabsContent>
-              <TabsContent value="transfer" className="mt-4">
-                <TransferCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'personalized')} />
-              </TabsContent>
-              <TabsContent value="dtf" className="mt-4">
-                <DTFCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'personalized')} />
-              </TabsContent>
-              <TabsContent value="typography" className="mt-4">
-                <TypographyCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')} />
               </TabsContent>
             </Tabs>
 
