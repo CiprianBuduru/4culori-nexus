@@ -506,6 +506,18 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
               <span className="text-muted-foreground">Setup ({result.dtpHours}h × {PRINT_ENGINE.SETUP_RATE} €)</span>
               <span>{result.setupCost.toFixed(2)} €</span>
             </div>
+            {result.foldingCost > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Fălțuire ({result.folds} fălțuiri × {quantity} buc × {PRINT_ENGINE.FOLD_COST_PER_FOLD} €)</span>
+                <span>{result.foldingCost.toFixed(2)} €</span>
+              </div>
+            )}
+            {result.glueCost > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Lipire prisma ({quantity} buc × {PRINT_ENGINE.GLUE_COST_PER_PIECE} €)</span>
+                <span>{result.glueCost.toFixed(2)} €</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Manoperă (2%)</span>
               <span>{result.labor.toFixed(2)} €</span>
