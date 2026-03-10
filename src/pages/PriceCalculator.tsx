@@ -1,4 +1,4 @@
-// Price Calculator v2.0
+// Price Calculator v3.0 – AI Sales Mode
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { RecipeSelector } from '@/components/calculator/RecipeSelector';
 import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorItem';
 import { BriefAnalyzer } from '@/components/calculator/BriefAnalyzer';
 import { PrintCalculator } from '@/components/calculator/PrintCalculator';
+import { EmailDraftPanel } from '@/components/calculator/EmailDraftPanel';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
 import { type PrintCalculatorPrefill } from '@/types/briefAnalysis';
 import { toast } from 'sonner';
@@ -111,7 +112,7 @@ export default function PriceCalculator() {
       id: crypto.randomUUID(),
       recipeId: suggestion.recipeId,
       recipeName: suggestion.recipeName,
-      category: 'printed' as RecipeCategory, // Default category for DB recipes
+      category: 'printed' as RecipeCategory,
       quantity: suggestion.quantity,
       materialCost: 0,
       personalizationCost: 0,
@@ -139,7 +140,7 @@ export default function PriceCalculator() {
       totalPrice: item.totalPrice,
     };
     setCalculations([...calculations, newCalculation]);
-    toast.success(`Adăugat: ${item.name} (${item.details})`);
+    toast.success(`Adăugat în ofertă: ${item.name} (${item.details})`);
   };
 
   const handleUpdateCalculation = (updated: RecipeCalculation) => {
@@ -159,6 +160,15 @@ export default function PriceCalculator() {
   const subtotal = calculations.reduce((sum, c) => sum + c.totalPrice, 0);
   const discountAmount = subtotal * (discount / 100);
   const total = subtotal - discountAmount;
+
+  // Build products list for email draft
+  const offerProducts = calculations.map(calc => ({
+    name: calc.recipeName,
+    quantity: calc.quantity,
+    unitPrice: calc.quantity > 0 ? calc.totalPrice / calc.quantity : 0,
+    totalPrice: calc.totalPrice,
+    details: calc.category,
+  }));
 
   const clearAll = () => {
     setCalculations([]);
@@ -250,11 +260,9 @@ export default function PriceCalculator() {
     setIsSaving(true);
     
     try {
-      // Generate offer number
       const timestamp = Date.now();
       const offerNumber = `OFR-${timestamp}`;
       
-      // Build brief from calculations
       const briefItems = calculations.map(calc => 
         `${calc.recipeName} x${calc.quantity} = ${calc.totalPrice.toFixed(2)} €`
       ).join('\n');
@@ -306,18 +314,17 @@ export default function PriceCalculator() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left Column - Calculators, AI Analyzer, Recipe Selector & Items */}
+          {/* Left Column - AI Sales Flow: Brief → Calculator → Products */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Dedicated Calculators */}
-            {/* Tipărituri Calculator */}
+            {/* Step 1: AI Brief Analyzer */}
+            <BriefAnalyzer onApplyToCalculator={setCalculatorPrefill} />
+
+            {/* Step 2: Universal Print Calculator */}
             <PrintCalculator
               onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')}
               prefill={calculatorPrefill}
               onPrefillApplied={() => setCalculatorPrefill(null)}
             />
-
-            {/* AI Brief Analyzer */}
-            <BriefAnalyzer onApplyToCalculator={setCalculatorPrefill} />
 
             {/* Manual Recipe Selector */}
             <RecipeSelector onSelectRecipe={handleSelectRecipe} />
@@ -352,157 +359,170 @@ export default function PriceCalculator() {
             )}
           </div>
 
-          {/* Right Column - Summary */}
-          <Card className="h-fit sticky top-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="h-5 w-5 text-brand-orange" />
-                Sumar Ofertă
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Category breakdown */}
-              <div className="space-y-2">
-                {Object.entries(groupedTotals).map(([category, categoryTotal]) => (
-                  <div key={category} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {categoryLabels[category as RecipeCategory]}
-                    </span>
-                    <span>{categoryTotal.toFixed(2)} €</span>
-                  </div>
-                ))}
-                {calculations.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-2">
-                    Niciun produs adăugat
-                  </p>
-                )}
-              </div>
+          {/* Right Column - Summary + Email Draft */}
+          <div className="space-y-4">
+            <Card className="h-fit sticky top-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-brand-orange" />
+                  Sumar Ofertă
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Category breakdown */}
+                <div className="space-y-2">
+                  {Object.entries(groupedTotals).map(([category, categoryTotal]) => (
+                    <div key={category} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {categoryLabels[category as RecipeCategory]}
+                      </span>
+                      <span>{categoryTotal.toFixed(2)} €</span>
+                    </div>
+                  ))}
+                  {calculations.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-2">
+                      Niciun produs adăugat
+                    </p>
+                  )}
+                </div>
 
-              <Separator />
+                <Separator />
 
-              {/* Client Selection */}
-              <div className="space-y-2">
-                <Label className="text-xs flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  Client
-                </Label>
-                <Select value={selectedClientId || 'custom'} onValueChange={handleClientSelect}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Selectează client..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background z-50">
-                    <SelectItem value="custom">
-                      <span className="text-muted-foreground">Introdu manual...</span>
-                    </SelectItem>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}{client.company && ` (${client.company})`}
+                {/* Client Selection */}
+                <div className="space-y-2">
+                  <Label className="text-xs flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    Client
+                  </Label>
+                  <Select value={selectedClientId || 'custom'} onValueChange={handleClientSelect}>
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder="Selectează client..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      <SelectItem value="custom">
+                        <span className="text-muted-foreground">Introdu manual...</span>
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              {!selectedClientId && (
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}{client.company && ` (${client.company})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                {!selectedClientId && (
+                    <Input
+                      type="text"
+                      placeholder="Nume client personalizat..."
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                      maxLength={100}
+                    />
+                  )}
+                </div>
+
+                {/* Client Email */}
+                <div className="space-y-2">
+                  <Label className="text-xs flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    Email client
+                  </Label>
                   <Input
-                    type="text"
-                    placeholder="Nume client personalizat..."
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
+                    type="email"
+                    placeholder="email@exemplu.ro"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
                     maxLength={100}
                   />
-                )}
-              </div>
+                </div>
 
-              {/* Client Email */}
-              <div className="space-y-2">
-                <Label className="text-xs flex items-center gap-1">
-                  <Mail className="h-3 w-3" />
-                  Email client
-                </Label>
-                <Input
-                  type="email"
-                  placeholder="email@exemplu.ro"
-                  value={clientEmail}
-                  onChange={(e) => setClientEmail(e.target.value)}
-                  maxLength={100}
-                />
-              </div>
+                <div className="flex justify-between font-medium">
+                  <span>Subtotal</span>
+                  <span>{subtotal.toFixed(2)} €</span>
+                </div>
 
-              <div className="flex justify-between font-medium">
-                <span>Subtotal</span>
-                <span>{subtotal.toFixed(2)} €</span>
-              </div>
+                {/* Discount */}
+                <div className="space-y-2">
+                  <Label className="text-xs">Discount (%)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={discount}
+                    onChange={(e) => setDiscount(Math.min(100, Math.max(0, Number(e.target.value))))}
+                  />
+                  {discount > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Reducere: -{discountAmount.toFixed(2)} €
+                    </p>
+                  )}
+                </div>
 
-              {/* Discount */}
-              <div className="space-y-2">
-                <Label className="text-xs">Discount (%)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={discount}
-                  onChange={(e) => setDiscount(Math.min(100, Math.max(0, Number(e.target.value))))}
-                />
-                {discount > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Reducere: -{discountAmount.toFixed(2)} €
+                <Separator />
+
+                <div className="flex justify-between text-xl font-bold">
+                  <span>Total</span>
+                  <span className="text-brand-green">{total.toFixed(2)} €</span>
+                </div>
+
+                <Button 
+                  className="w-full gradient-brand text-white gap-2" 
+                  size="lg"
+                  disabled={calculations.length === 0}
+                  onClick={handleGeneratePdf}
+                >
+                  <FileText className="h-4 w-4" />
+                  Generează Ofertă PDF
+                </Button>
+
+                <Button 
+                  variant="outline"
+                  className="w-full gap-2" 
+                  size="lg"
+                  disabled={calculations.length === 0 || !clientEmail.trim() || isSendingEmail}
+                  onClick={handleSendEmail}
+                >
+                  {isSendingEmail ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Mail className="h-4 w-4" />
+                  )}
+                  Trimite pe Email
+                </Button>
+
+                <Button 
+                  variant="secondary"
+                  className="w-full gap-2" 
+                  size="lg"
+                  disabled={calculations.length === 0 || isSaving}
+                  onClick={handleSaveOffer}
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Salvează Oferta în DB
+                </Button>
+
+                {calculations.length > 0 && (
+                  <p className="text-xs text-center text-muted-foreground">
+                    {calculations.length} produs(e) • {calculations.reduce((sum, c) => sum + c.quantity, 0)} bucăți total
                   </p>
                 )}
-              </div>
+              </CardContent>
+            </Card>
 
-              <Separator />
-
-              <div className="flex justify-between text-xl font-bold">
-                <span>Total</span>
-                <span className="text-brand-green">{total.toFixed(2)} €</span>
-              </div>
-
-              <Button 
-                className="w-full gradient-brand text-white gap-2" 
-                size="lg"
-                disabled={calculations.length === 0}
-                onClick={handleGeneratePdf}
-              >
-                <FileText className="h-4 w-4" />
-                Generează Ofertă PDF
-              </Button>
-
-              <Button 
-                variant="outline"
-                className="w-full gap-2" 
-                size="lg"
-                disabled={calculations.length === 0 || !clientEmail.trim() || isSendingEmail}
-                onClick={handleSendEmail}
-              >
-                {isSendingEmail ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Mail className="h-4 w-4" />
-                )}
-                Trimite pe Email
-              </Button>
-
-              <Button 
-                variant="secondary"
-                className="w-full gap-2" 
-                size="lg"
-                disabled={calculations.length === 0 || isSaving}
-                onClick={handleSaveOffer}
-              >
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                Salvează Oferta în DB
-              </Button>
-
-              {calculations.length > 0 && (
-                <p className="text-xs text-center text-muted-foreground">
-                  {calculations.length} produs(e) • {calculations.reduce((sum, c) => sum + c.quantity, 0)} bucăți total
-                </p>
-              )}
-            </CardContent>
-          </Card>
+            {/* Email Draft Panel */}
+            <EmailDraftPanel
+              clientName={clientName}
+              products={offerProducts}
+              subtotal={subtotal}
+              discount={discount}
+              discountAmount={discountAmount}
+              total={total}
+              disabled={calculations.length === 0}
+            />
+          </div>
         </div>
       </div>
     </MainLayout>
