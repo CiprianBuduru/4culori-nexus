@@ -3,11 +3,29 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Mail, Loader2, Sparkles, Copy, Check, Send, Eye, FileText, User, Hash } from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from '@/components/ui/sheet';
+import {
+  Mail,
+  Loader2,
+  Sparkles,
+  Copy,
+  Check,
+  Send,
+  Eye,
+  FileText,
+  User,
+  Hash,
+  X,
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -40,6 +58,7 @@ export function EmailDraftPanel({
   disabled,
   onSendEmail,
 }: EmailDraftPanelProps) {
+  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [subject, setSubject] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -51,6 +70,7 @@ export function EmailDraftPanel({
 
   const handleGenerate = async () => {
     setIsGenerating(true);
+    setOpen(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-offer-email-draft', {
         body: {
@@ -66,7 +86,7 @@ export function EmailDraftPanel({
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      setDraft(data.draft);
+      setDraft(data.draft ?? '');
       setSubject(`Ofertă de preț – ${clientName || 'Client'} – 4Culori`);
       toast.success('Draft email generat cu succes');
     } catch (error: any) {
@@ -95,11 +115,14 @@ export function EmailDraftPanel({
   };
 
   const handleSend = async () => {
-    if (!clientEmail.trim()) {
+    const safeEmail = (clientEmail ?? '').trim();
+    const safeDraft = (draft ?? '').trim();
+
+    if (!safeEmail) {
       toast.error('Introdu adresa de email a clientului');
       return;
     }
-    if (!draft.trim()) {
+    if (!safeDraft) {
       toast.error('Generează mai întâi un draft de email');
       return;
     }
@@ -109,7 +132,8 @@ export function EmailDraftPanel({
       if (onSendEmail) {
         await onSendEmail(draft, subject);
       }
-      toast.success(`Email trimis la ${clientEmail}`);
+      toast.success(`Email trimis la ${safeEmail}`);
+      setOpen(false);
     } catch (error: any) {
       console.error('Error sending email:', error);
       toast.error(error.message || 'Eroare la trimiterea email-ului');
@@ -194,21 +218,19 @@ export function EmailDraftPanel({
     `;
   };
 
+  const safeClientEmail = clientEmail || 'email@client';
+  const safeClientName = clientName || '—';
+
   return (
-    <Card className="border-primary/20">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Sparkles className="h-4 w-4 text-primary" />
-          Draft Email Ofertă
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <>
+      {/* Trigger buttons in the page */}
+      <div className="flex flex-col gap-2">
         <Button
           onClick={handleGenerate}
           disabled={disabled || isGenerating}
           variant="outline"
           className="w-full gap-2"
-          size="sm"
+          size="lg"
         >
           {isGenerating ? (
             <>
@@ -217,127 +239,189 @@ export function EmailDraftPanel({
             </>
           ) : (
             <>
-              <Mail className="h-4 w-4" />
+              <Sparkles className="h-4 w-4" />
               Generează draft email
             </>
           )}
         </Button>
 
         {draft && (
-          <div className="space-y-3">
-            {/* Metadata */}
-            <div className="space-y-2 rounded-md bg-muted/50 p-3 text-sm">
-              <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setOpen(true)}
+            variant="outline"
+            className="w-full gap-2"
+            size="sm"
+          >
+            <Eye className="h-4 w-4" />
+            Deschide preview email
+          </Button>
+        )}
+      </div>
+
+      {/* Large right-side drawer */}
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-2xl flex flex-col p-0 gap-0"
+        >
+          {/* Header */}
+          <SheetHeader className="px-6 pt-6 pb-4 border-b bg-muted/30 flex-shrink-0">
+            <SheetTitle className="flex items-center gap-2 text-lg">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Draft Email Ofertă
+            </SheetTitle>
+            <div className="space-y-1.5 mt-3">
+              <div className="flex items-center gap-2 text-sm">
                 <User className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-muted-foreground">Destinatar:</span>
-                <span className="font-medium">{clientName || '—'}</span>
-                {clientEmail ? (
-                  <Badge variant="secondary" className="text-xs">{clientEmail}</Badge>
-                ) : (
-                  <Badge variant="destructive" className="text-xs">Lipsă email</Badge>
-                )}
+                <span className="font-medium">{safeClientName}</span>
+                <Badge variant="secondary" className="text-xs">
+                  {safeClientEmail}
+                </Badge>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-sm">
                 <Hash className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-muted-foreground">Ofertă:</span>
                 <span className="font-medium">{offerNumber}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-sm">
                 <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-muted-foreground">PDF atașat:</span>
-                <Badge variant="outline" className="text-xs">Oferta_{offerNumber}.pdf</Badge>
+                <Badge variant="outline" className="text-xs">
+                  Oferta_{offerNumber}.pdf
+                </Badge>
               </div>
             </div>
+          </SheetHeader>
 
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
             {/* Subject */}
-            <div className="space-y-1">
-              <Label className="text-xs">Subiect email</Label>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Subiect email</Label>
               <Input
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Subiect..."
-                className="text-sm"
               />
             </div>
 
             <Separator />
 
-            {/* Tabs: Text / Preview */}
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            {/* Tabs */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
               <TabsList className="w-full">
-                <TabsTrigger value="text" className="flex-1 gap-1.5 text-xs">
-                  <Mail className="h-3.5 w-3.5" />
+                <TabsTrigger value="text" className="flex-1 gap-1.5">
+                  <Mail className="h-4 w-4" />
                   Text email
                 </TabsTrigger>
-                <TabsTrigger value="preview" className="flex-1 gap-1.5 text-xs">
-                  <Eye className="h-3.5 w-3.5" />
+                <TabsTrigger value="preview" className="flex-1 gap-1.5">
+                  <Eye className="h-4 w-4" />
                   Preview email
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="text" className="mt-2">
-                <Textarea
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  className="min-h-[220px] text-sm"
-                  placeholder="Draft-ul emailului va apărea aici..."
-                />
-                <div className="flex gap-2 mt-2">
-                  <Button onClick={handleCopy} variant="outline" size="sm" className="gap-1.5">
-                    {copied ? (
-                      <>
-                        <Check className="h-3.5 w-3.5" />
-                        Copiat
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3.5 w-3.5" />
-                        Copiază
-                      </>
-                    )}
-                  </Button>
-                  <p className="text-xs text-muted-foreground self-center">
-                    Editează textul înainte de trimitere
-                  </p>
-                </div>
+              <TabsContent value="text" className="mt-4">
+                {draft ? (
+                  <Textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    className="min-h-[400px] text-sm leading-relaxed font-mono"
+                    placeholder="Draft-ul emailului va apărea aici..."
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                    <Mail className="h-10 w-10 mb-3 opacity-40" />
+                    <p className="text-sm">Niciun draft generat încă.</p>
+                    <p className="text-xs mt-1">Apasă „Generează draft email" pentru a crea un draft.</p>
+                  </div>
+                )}
               </TabsContent>
 
-              <TabsContent value="preview" className="mt-2">
-                <div
-                  className="border rounded-md overflow-hidden bg-white"
-                  dangerouslySetInnerHTML={{ __html: renderPreviewHtml() }}
-                />
+              <TabsContent value="preview" className="mt-4">
+                {draft ? (
+                  <div
+                    className="border rounded-lg overflow-hidden bg-white shadow-sm"
+                    dangerouslySetInnerHTML={{ __html: renderPreviewHtml() }}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                    <Eye className="h-10 w-10 mb-3 opacity-40" />
+                    <p className="text-sm">Generează un draft pentru a vedea previzualizarea.</p>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
 
-            <Separator />
-
-            {/* Send */}
-            <Button
-              onClick={handleSend}
-              disabled={!clientEmail.trim() || !draft.trim() || isSending}
-              className="w-full gap-2"
-              size="sm"
-            >
-              {isSending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Trimit...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Trimite pe Email
-                </>
-              )}
-            </Button>
+            {isGenerating && (
+              <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span className="text-sm">Se generează draft-ul email...</span>
+              </div>
+            )}
 
             <p className="text-xs text-center text-muted-foreground">
               Revizuiește draft-ul și previzualizarea înainte de trimitere
             </p>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* Footer */}
+          <SheetFooter className="px-6 py-4 border-t bg-muted/30 flex-shrink-0">
+            <div className="flex flex-wrap items-center gap-2 w-full">
+              <Button
+                onClick={handleCopy}
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={!draft}
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-3.5 w-3.5" />
+                    Copiat
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5" />
+                    Copiază
+                  </>
+                )}
+              </Button>
+
+              <div className="flex-1" />
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setOpen(false)}
+                className="gap-1.5"
+              >
+                <X className="h-3.5 w-3.5" />
+                Închide
+              </Button>
+
+              <Button
+                onClick={handleSend}
+                disabled={!(clientEmail ?? '').trim() || !(draft ?? '').trim() || isSending}
+                size="sm"
+                className="gap-1.5"
+              >
+                {isSending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Trimit...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    Trimite pe Email
+                  </>
+                )}
+              </Button>
+            </div>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
