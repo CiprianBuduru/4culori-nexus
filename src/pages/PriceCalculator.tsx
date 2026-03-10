@@ -288,9 +288,9 @@ export default function PriceCalculator() {
     return defaultRecipes.find(r => r.id === recipeId);
   };
 
-  const handleGeneratePdf = () => {
+  const handleGeneratePdf = async () => {
     try {
-      const offerNumber = generateOfferPdf({
+      const offerNumber = await generateOfferPdf({
         calculations,
         subtotal,
         discount,
