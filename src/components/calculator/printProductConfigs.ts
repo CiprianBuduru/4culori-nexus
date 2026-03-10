@@ -178,8 +178,6 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     defaultColorMode: '4+4',
     laminations: pickLaminations(['none', 'gloss_1', 'gloss_2', 'matte_1', 'matte_2', 'soft_1', 'soft_2']),
     defaultLamination: 'none',
-    minQuantity: 50,
-    quantityStep: 50,
     defaultQuantity: 100,
     finishingNotes: 'Tăiere + fălțuire inclusă. Prismele includ lipire.',
     dtpHours: 0.5,
