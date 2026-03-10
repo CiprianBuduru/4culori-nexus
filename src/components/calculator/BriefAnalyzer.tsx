@@ -12,10 +12,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   type BriefAnalysisResult,
+  type BriefExtraction,
   type PrintCalculatorPrefill,
   FIELD_LABELS,
   PRODUCT_NAMES,
 } from '@/types/briefAnalysis';
+import { isComparativeAvailable } from '@/lib/comparativeQuote';
 import { PRINT_PRODUCTS, type CommercialDefaults } from './printProductConfigs';
 
 interface BriefAnalyzerProps {
