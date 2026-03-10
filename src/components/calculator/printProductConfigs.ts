@@ -180,6 +180,13 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     finishingNotes: 'Tăiere + fălțuire inclusă (placeholder – de validat)',
     dtpHours: 0.5,
     ready: false,
+    commercialDefaults: {
+      format: 'A4-tri',
+      gsm: 160,
+      colorMode: '4+4',
+      lamination: 'none',
+      labels: { format: 'A4 tri-fold', gsm: '160 g/mp', colorMode: '4+4 (color, 2 fețe)', lamination: 'Fără plastifiere' },
+    },
   },
 
   // 4 ─ Broșură (placeholder)
