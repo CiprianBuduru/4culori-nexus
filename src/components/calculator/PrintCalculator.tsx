@@ -123,6 +123,33 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
     onPrefillApplied?.();
   }, [prefill]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-add to offer when autoAdd is true and result is ready
+  useEffect(() => {
+    if (!autoAdd || !result || !onAddToOffer || !hasPaperPrice) return;
+
+    const formatLabel =
+      format === 'custom'
+        ? `Custom (${customPcsPerSheet}/SRA3)`
+        : product.formats.find((f) => f.value === format)?.label ?? format;
+    const weightLabel = `${paperWeight} g/mp`;
+    const laminationLabel =
+      product.laminations.find((l) => l.value === lamination)?.label ?? '';
+
+    let details = `${formatLabel}, Color Copy ${weightLabel}, ${colorMode}`;
+    if (lamination !== 'none') details += `, ${laminationLabel}`;
+    details += `, ${result.sheetsWithWaste} coli SRA3`;
+
+    onAddToOffer({
+      name: `${product.name} ${formatLabel}`,
+      quantity,
+      unitPrice: result.unitPrice,
+      totalPrice: result.productionPrice,
+      details,
+    });
+
+    onAutoAddComplete?.();
+  }, [autoAdd, result, hasPaperPrice]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function resetToProduct(p: PrintProductConfig) {
     const firstFormat = p.formats[0]?.value ?? '';
     setFormat(firstFormat);
