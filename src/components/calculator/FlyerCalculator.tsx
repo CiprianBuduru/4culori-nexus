@@ -257,7 +257,7 @@ export function FlyerCalculator({ onAddToOffer }: CalculatorProps) {
                 {p.label}
                 {paperPrices[p.value] !== undefined && (
                   <span className="ml-1 text-muted-foreground">
-                    ({paperPrices[p.value].toFixed(2)} €)
+                    ({paperPrices[p.value].toFixed(4)} €)
                   </span>
                 )}
               </Button>
