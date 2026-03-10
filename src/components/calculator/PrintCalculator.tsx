@@ -202,7 +202,6 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
     paperPricePerSheet,
     colorCostPerSheet,
     laminationCostPerSheet,
-    product.minQuantity,
     product.dtpHours,
     folds,
     glue,
