@@ -92,6 +92,8 @@ export const PRINT_ENGINE = {
   LABOR_PCT: 0.02,
   MAINTENANCE_PCT: 0.05,
   PRODUCTION_MARKUP: 1.40,
+  FOLD_COST_PER_FOLD: 0.01,  // EUR per fold per piece
+  GLUE_COST_PER_PIECE: 0.03, // EUR per glued piece (prism)
 } as const;
 
 // ── Product definitions ─────────────────────
