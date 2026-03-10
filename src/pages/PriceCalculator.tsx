@@ -527,8 +527,7 @@ export default function PriceCalculator() {
       productionCost: variant.internalCost,
       markupMultiplier: 1.40,
       configSnapshot: variant.configSnapshot,
-      comparativeVariantTier: variant.tier,
-    } as RecipeCalculation));
+    }));
     setCalculations(prev => [...prev, ...newCalcs]);
     setComparativeState(null);
     toast.success('Ofertă comparativă completă adăugată (3 variante)');
