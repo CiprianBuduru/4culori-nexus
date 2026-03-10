@@ -148,6 +148,13 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     finishingNotes: 'Tăiere inclusă',
     dtpHours: 0.2,
     ready: true,
+    commercialDefaults: {
+      format: '9x5',
+      gsm: 350,
+      colorMode: '4+4',
+      lamination: 'matte_1',
+      labels: { format: '9 × 5 cm', gsm: '350 g/mp', colorMode: '4+4 (color, 2 fețe)', lamination: 'Mată 1 față' },
+    },
   },
 
   // 3 ─ Pliant (placeholder)
