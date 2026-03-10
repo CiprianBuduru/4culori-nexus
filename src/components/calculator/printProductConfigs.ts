@@ -20,6 +20,15 @@ export interface PrintLamination {
   costPerSheet: number;
 }
 
+/** Commercial defaults suggested to sales operators for quick quoting */
+export interface CommercialDefaults {
+  format: string;
+  gsm: number;
+  colorMode: string;
+  lamination: string;
+  labels: Record<string, string>; // field → human-readable label for the suggested value
+}
+
 export interface PrintProductConfig {
   id: string;
   name: string;
@@ -40,6 +49,8 @@ export interface PrintProductConfig {
   dtpHours: number;
   /** true = config is complete & calculator is fully functional */
   ready: boolean;
+  /** Commercial defaults for AI Sales Assistant quick-quote flow */
+  commercialDefaults: CommercialDefaults;
 }
 
 // ── Shared option sets ──────────────────────
