@@ -58,6 +58,7 @@ const handler = async (req: Request): Promise<Response> => {
     const {
       clientEmail, clientName, offerNumber, products,
       subtotal, discount, discountAmount, total, validUntil,
+      subject: customSubject, bodyText,
     }: SendOfferEmailRequest = await req.json();
 
     console.log(`Sending offer ${offerNumber} to ${clientEmail}`);
