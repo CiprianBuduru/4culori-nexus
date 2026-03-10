@@ -312,14 +312,18 @@ export default function PriceCalculator() {
           {/* Left Column - Calculators, AI Analyzer, Recipe Selector & Items */}
           <div className="lg:col-span-2 space-y-4">
             {/* Dedicated Calculators */}
-            <Tabs defaultValue="boxes" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+            <Tabs defaultValue="flyer" className="w-full">
+              <TabsList className="grid w-full grid-cols-6">
+                <TabsTrigger value="flyer" className="text-xs">Flyer</TabsTrigger>
                 <TabsTrigger value="boxes" className="text-xs">Cutii</TabsTrigger>
                 <TabsTrigger value="large-format" className="text-xs">Print Mare</TabsTrigger>
                 <TabsTrigger value="transfer" className="text-xs">Transfer</TabsTrigger>
                 <TabsTrigger value="dtf" className="text-xs">DTF</TabsTrigger>
                 <TabsTrigger value="typography" className="text-xs">Tipografie</TabsTrigger>
               </TabsList>
+              <TabsContent value="flyer" className="mt-4">
+                <FlyerCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')} />
+              </TabsContent>
               <TabsContent value="boxes" className="mt-4">
                 <BoxCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'boxes')} />
               </TabsContent>
