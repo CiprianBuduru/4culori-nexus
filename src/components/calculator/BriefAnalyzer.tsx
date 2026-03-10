@@ -22,6 +22,8 @@ interface BriefAnalyzerProps {
   onApplyToCalculator: (prefill: PrintCalculatorPrefill) => void;
   /** Full AI Sales flow: prefill + auto-add + generate email + open drawer */
   onGenerateFullQuote?: (prefill: PrintCalculatorPrefill) => void;
+  /** Comparative quote flow */
+  onGenerateComparativeQuote?: (extraction: BriefExtraction) => void;
 }
 
 export function BriefAnalyzer({ onApplyToCalculator, onGenerateFullQuote }: BriefAnalyzerProps) {
