@@ -168,13 +168,13 @@ export function EmailDraftPanel({
               ${productsRows}
               <tr>
                 <td colspan="3" style="padding:8px 12px;text-align:right;"><strong>Subtotal:</strong></td>
-                <td style="padding:8px 12px;text-align:right;"><strong>${subtotal.toFixed(2)} € + TVA</strong></td>
+                <td style="padding:8px 12px;text-align:right;"><strong>${safeSubtotal.toFixed(2)} € + TVA</strong></td>
               </tr>
               ${
-                discount > 0
+                safeDiscount > 0
                   ? `<tr>
-                <td colspan="3" style="padding:8px 12px;text-align:right;color:#ff7f50;">Discount (${discount}%):</td>
-                <td style="padding:8px 12px;text-align:right;color:#ff7f50;">-${discountAmount.toFixed(2)} €</td>
+                <td colspan="3" style="padding:8px 12px;text-align:right;color:#ff7f50;">Discount (${safeDiscount}%):</td>
+                <td style="padding:8px 12px;text-align:right;color:#ff7f50;">-${safeDiscountAmount.toFixed(2)} €</td>
               </tr>`
                   : ''
               }
@@ -182,7 +182,7 @@ export function EmailDraftPanel({
             <tfoot>
               <tr style="background:#0071bc;color:white;font-weight:bold;">
                 <td colspan="3" style="padding:10px 12px;text-align:right;">TOTAL:</td>
-                <td style="padding:10px 12px;text-align:right;">${total.toFixed(2)} € + TVA</td>
+                <td style="padding:10px 12px;text-align:right;">${safeTotal.toFixed(2)} € + TVA</td>
               </tr>
             </tfoot>
           </table>
