@@ -211,6 +211,13 @@ export const PRINT_PRODUCTS: PrintProductConfig[] = [
     finishingNotes: 'Capsare + tăiere inclusă (placeholder – de validat)',
     dtpHours: 0.5,
     ready: false,
+    commercialDefaults: {
+      format: 'A5',
+      gsm: 120,
+      colorMode: '4+4',
+      lamination: 'none',
+      labels: { format: 'A5 (capsată)', gsm: '120 g/mp', colorMode: '4+4 (color, 2 fețe)', lamination: 'Fără plastifiere' },
+    },
   },
 
   // 5 ─ Afiș (placeholder)
