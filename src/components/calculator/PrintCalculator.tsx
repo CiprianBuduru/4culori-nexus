@@ -16,17 +16,23 @@ import {
 } from './printProductConfigs';
 import { type PrintCalculatorPrefill } from '@/types/briefAnalysis';
 
+import { type PrintConfigSnapshot } from '@/types/recipes';
+
+interface PrintOfferItem {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  details: string;
+  productionCost: number;
+  markupMultiplier: number;
+  configSnapshot: PrintConfigSnapshot;
+}
+
 interface CalculatorProps {
-  onAddToOffer?: (item: {
-    name: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-    details: string;
-  }) => void;
+  onAddToOffer?: (item: PrintOfferItem) => void;
   prefill?: PrintCalculatorPrefill | null;
   onPrefillApplied?: () => void;
-  /** When true, automatically adds the current calculation to offer after prefill is applied */
   autoAdd?: boolean;
   onAutoAddComplete?: () => void;
 }
@@ -190,31 +196,58 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
     product.dtpHours,
   ]);
 
-  // Auto-add to offer when autoAdd is true and result is ready
-  useEffect(() => {
-    if (!autoAdd || !result || !onAddToOffer || !hasPaperPrice) return;
+  /** Build the full offer item with config snapshot */
+  const buildOfferItem = (): PrintOfferItem | null => {
+    if (!result) return null;
 
     const formatLabel =
       format === 'custom'
         ? `Custom (${customPcsPerSheet}/SRA3)`
         : product.formats.find((f) => f.value === format)?.label ?? format;
+    const colorModeObj = product.colorModes.find((c) => c.value === colorMode);
+    const laminationObj = product.laminations.find((l) => l.value === lamination);
+    const laminationLabel = laminationObj?.label ?? '';
     const weightLabel = `${paperWeight} g/mp`;
-    const laminationLabel =
-      product.laminations.find((l) => l.value === lamination)?.label ?? '';
 
     let details = `${formatLabel}, Color Copy ${weightLabel}, ${colorMode}`;
     if (lamination !== 'none') details += `, ${laminationLabel}`;
     details += `, ${result.sheetsWithWaste} coli SRA3`;
 
-    onAddToOffer({
+    const configSnapshot: PrintConfigSnapshot = {
+      productType: product.id,
+      productName: product.name,
+      format: format,
+      formatLabel,
+      gsm: paperWeight,
+      colorMode,
+      colorModeLabel: colorModeObj?.label ?? colorMode,
+      lamination,
+      laminationLabel: laminationObj?.label ?? 'Fără plastifiere',
+      sheetsUsed: result.sheetsWithWaste,
+      dtpHours: product.dtpHours,
+    };
+
+    return {
       name: `${product.name} ${formatLabel}`,
       quantity,
       unitPrice: result.unitPrice,
       totalPrice: result.productionPrice,
       details,
-    });
+      productionCost: result.internalCost,
+      markupMultiplier: PRINT_ENGINE.PRODUCTION_MARKUP,
+      configSnapshot,
+    };
+  };
 
-    onAutoAddComplete?.();
+  // Auto-add to offer when autoAdd is true and result is ready
+  useEffect(() => {
+    if (!autoAdd || !result || !onAddToOffer || !hasPaperPrice) return;
+
+    const item = buildOfferItem();
+    if (item) {
+      onAddToOffer(item);
+      onAutoAddComplete?.();
+    }
   }, [autoAdd, result, hasPaperPrice]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Quantity handler ──
@@ -229,26 +262,8 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
   // ── Add to offer ──
   const handleAddToOffer = () => {
     if (!onAddToOffer || !result) return;
-
-    const formatLabel =
-      format === 'custom'
-        ? `Custom (${customPcsPerSheet}/SRA3)`
-        : product.formats.find((f) => f.value === format)?.label ?? format;
-    const weightLabel = `${paperWeight} g/mp`;
-    const laminationLabel =
-      product.laminations.find((l) => l.value === lamination)?.label ?? '';
-
-    let details = `${formatLabel}, Color Copy ${weightLabel}, ${colorMode}`;
-    if (lamination !== 'none') details += `, ${laminationLabel}`;
-    details += `, ${result.sheetsWithWaste} coli SRA3`;
-
-    onAddToOffer({
-      name: `${product.name} ${formatLabel}`,
-      quantity,
-      unitPrice: result.unitPrice,
-      totalPrice: result.productionPrice,
-      details,
-    });
+    const item = buildOfferItem();
+    if (item) onAddToOffer(item);
   };
 
   // ── Allowed GSM buttons (only those with prices) ──

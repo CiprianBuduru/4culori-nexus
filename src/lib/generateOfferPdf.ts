@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { RecipeCalculation, categoryLabels, RecipeCategory } from '@/types/recipes';
+import { RecipeCalculation, categoryLabels, RecipeCategory, type PrintConfigSnapshot } from '@/types/recipes';
 
 interface OfferData {
   calculations: RecipeCalculation[];
@@ -122,7 +122,7 @@ export function generateOfferPdf(data: OfferData) {
       const unitPrice = calc.quantity > 0 ? calc.totalPrice / calc.quantity : 0;
 
       // Check if we need a new page
-      if (yPos > 260) {
+      if (yPos > 240) {
         doc.addPage();
         yPos = 20;
       }
@@ -140,8 +140,28 @@ export function generateOfferPdf(data: OfferData) {
       doc.text(`${unitPrice.toFixed(2)} €`, tableStart + colWidths[0] + colWidths[1], yPos);
       doc.text(`${calc.totalPrice.toFixed(2)} €`, tableStart + colWidths[0] + colWidths[1] + colWidths[2], yPos);
 
-      // Dimensions if available
-      if (calc.dimensions && (calc.dimensions.width || calc.dimensions.height)) {
+      // Show config snapshot characteristics (client-facing, no DTP/internal)
+      if (calc.configSnapshot) {
+        const snap = calc.configSnapshot;
+        yPos += 5;
+        doc.setFontSize(7);
+        doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+        
+        const specParts: string[] = [];
+        if (snap.formatLabel) specParts.push(`Format: ${snap.formatLabel}`);
+        if (snap.gsm) specParts.push(`Hârtie: ${snap.gsm} g/mp`);
+        if (snap.colorModeLabel) specParts.push(`Tipar: ${snap.colorModeLabel}`);
+        if (snap.laminationLabel && snap.lamination !== 'none') specParts.push(`Plastifiere: ${snap.laminationLabel}`);
+        
+        if (specParts.length > 0) {
+          doc.text(`  ${specParts.join(' • ')}`, tableStart + 2, yPos);
+          yPos += 4;
+        }
+        
+        doc.setTextColor(darkText[0], darkText[1], darkText[2]);
+      }
+      // Legacy dimensions display
+      else if (calc.dimensions && (calc.dimensions.width || calc.dimensions.height)) {
         yPos += 5;
         doc.setFontSize(7);
         doc.setTextColor(textGray[0], textGray[1], textGray[2]);

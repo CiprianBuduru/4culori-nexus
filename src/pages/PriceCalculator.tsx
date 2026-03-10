@@ -1,24 +1,36 @@
-// Price Calculator v4.0 – AI Sales Assistant
+// Price Calculator v5.0 – AI Sales Assistant + Config Snapshots + Cost Separation
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calculator, RotateCcw, FileText, Users, Mail, Loader2, Save } from 'lucide-react';
+import { Calculator, RotateCcw, FileText, Users, Mail, Loader2, Save, Trash2, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 import { RecipeSelector } from '@/components/calculator/RecipeSelector';
 import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorItem';
 import { BriefAnalyzer } from '@/components/calculator/BriefAnalyzer';
 import { PrintCalculator } from '@/components/calculator/PrintCalculator';
 import { EmailDraftPanel } from '@/components/calculator/EmailDraftPanel';
-import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
+import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes, type PrintConfigSnapshot } from '@/types/recipes';
 import { type PrintCalculatorPrefill } from '@/types/briefAnalysis';
 import { toast } from 'sonner';
 import { generateOfferPdf } from '@/lib/generateOfferPdf';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Client {
   id: string;
@@ -45,12 +57,16 @@ interface AISuggestion {
 }
 
 export default function PriceCalculator() {
+  const { accessLevel } = useAuth();
+  const isAdmin = accessLevel >= 3; // administrator or director can see internal costs
+
   const [calculations, setCalculations] = useState<RecipeCalculation[]>([]);
   const [discount, setDiscount] = useState(0);
   const [clientName, setClientName] = useState('');
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [clientEmail, setClientEmail] = useState('');
+  const [showInternalCosts, setShowInternalCosts] = useState(false);
   
   const [isSaving, setIsSaving] = useState(false);
   const [calculatorPrefill, setCalculatorPrefill] = useState<PrintCalculatorPrefill | null>(null);
@@ -58,6 +74,16 @@ export default function PriceCalculator() {
   // AI Sales Assistant auto-flow state
   const [autoAddToOffer, setAutoAddToOffer] = useState(false);
   const [autoOpenEmail, setAutoOpenEmail] = useState(false);
+
+  // Brief confirmation dialog state
+  const [pendingPrefill, setPendingPrefill] = useState<PrintCalculatorPrefill | null>(null);
+  const [pendingFullQuote, setPendingFullQuote] = useState(false);
+  const [showBriefConfirmDialog, setShowBriefConfirmDialog] = useState(false);
+
+  // Duplicate confirmation dialog
+  const [pendingDuplicateItem, setPendingDuplicateItem] = useState<any>(null);
+  const [duplicateMatchId, setDuplicateMatchId] = useState<string | null>(null);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -126,13 +152,51 @@ export default function PriceCalculator() {
     toast.success(`Adăugat: ${suggestion.recipeName} x${suggestion.quantity}`);
   };
 
+  /** Check for duplicate config and handle accordingly */
+  const findDuplicate = (configSnapshot?: PrintConfigSnapshot): RecipeCalculation | undefined => {
+    if (!configSnapshot) return undefined;
+    return calculations.find(c => {
+      if (!c.configSnapshot) return false;
+      return c.configSnapshot.productType === configSnapshot.productType &&
+             c.configSnapshot.format === configSnapshot.format &&
+             c.configSnapshot.gsm === configSnapshot.gsm &&
+             c.configSnapshot.colorMode === configSnapshot.colorMode &&
+             c.configSnapshot.lamination === configSnapshot.lamination;
+    });
+  };
+
   const handleAddCalculatorItem = (item: {
     name: string;
     quantity: number;
     unitPrice: number;
     totalPrice: number;
     details: string;
+    productionCost?: number;
+    markupMultiplier?: number;
+    configSnapshot?: PrintConfigSnapshot;
   }, category: RecipeCategory = 'personalized') => {
+    // Check for duplicates
+    const duplicate = findDuplicate(item.configSnapshot);
+    if (duplicate) {
+      setPendingDuplicateItem({ item, category });
+      setDuplicateMatchId(duplicate.id);
+      setShowDuplicateDialog(true);
+      return;
+    }
+
+    addItemToCalculations(item, category);
+  };
+
+  const addItemToCalculations = (item: {
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    details: string;
+    productionCost?: number;
+    markupMultiplier?: number;
+    configSnapshot?: PrintConfigSnapshot;
+  }, category: RecipeCategory) => {
     const newCalculation: RecipeCalculation = {
       id: crypto.randomUUID(),
       recipeId: `custom-${Date.now()}`,
@@ -142,9 +206,43 @@ export default function PriceCalculator() {
       materialCost: 0,
       personalizationCost: 0,
       totalPrice: item.totalPrice,
+      productionCost: item.productionCost,
+      markupMultiplier: item.markupMultiplier,
+      configSnapshot: item.configSnapshot,
     };
     setCalculations(prev => [...prev, newCalculation]);
     toast.success(`Adăugat în ofertă: ${item.name} (${item.details})`);
+  };
+
+  const handleMergeDuplicate = () => {
+    if (!pendingDuplicateItem || !duplicateMatchId) return;
+    const { item } = pendingDuplicateItem;
+
+    setCalculations(prev => prev.map(c => {
+      if (c.id !== duplicateMatchId) return c;
+      const newQty = c.quantity + item.quantity;
+      const newUnitPrice = item.unitPrice; // use latest unit price
+      return {
+        ...c,
+        quantity: newQty,
+        totalPrice: newQty * newUnitPrice,
+        productionCost: c.productionCost && item.productionCost
+          ? (c.productionCost / c.quantity) * newQty
+          : undefined,
+      };
+    }));
+    toast.success('Cantitate actualizată pe produsul existent');
+    setShowDuplicateDialog(false);
+    setPendingDuplicateItem(null);
+    setDuplicateMatchId(null);
+  };
+
+  const handleAddDuplicateAnyway = () => {
+    if (!pendingDuplicateItem) return;
+    addItemToCalculations(pendingDuplicateItem.item, pendingDuplicateItem.category);
+    setShowDuplicateDialog(false);
+    setPendingDuplicateItem(null);
+    setDuplicateMatchId(null);
   };
 
   const handleUpdateCalculation = (updated: RecipeCalculation) => {
@@ -162,16 +260,18 @@ export default function PriceCalculator() {
   }, {} as Record<RecipeCategory, number>);
 
   const subtotal = calculations.reduce((sum, c) => sum + c.totalPrice, 0);
+  const totalProductionCost = calculations.reduce((sum, c) => sum + (c.productionCost || 0), 0);
   const discountAmount = subtotal * (discount / 100);
   const total = subtotal - discountAmount;
 
-  // Build products list for email draft
+  // Build products list for email draft (client-facing only)
   const offerProducts = calculations.map(calc => ({
     name: calc.recipeName,
     quantity: calc.quantity,
     unitPrice: calc.quantity > 0 ? calc.totalPrice / calc.quantity : 0,
     totalPrice: calc.totalPrice,
     details: calc.category,
+    configSnapshot: calc.configSnapshot,
   }));
 
   const clearAll = () => {
@@ -290,6 +390,51 @@ export default function PriceCalculator() {
     }
   };
 
+  // ── Brief confirmation flow ──
+  const handlePrefillWithConfirmation = (prefill: PrintCalculatorPrefill) => {
+    if (calculations.length > 0) {
+      setPendingPrefill(prefill);
+      setPendingFullQuote(false);
+      setShowBriefConfirmDialog(true);
+    } else {
+      setCalculatorPrefill(prefill);
+    }
+  };
+
+  const handleFullQuoteWithConfirmation = (prefill: PrintCalculatorPrefill) => {
+    if (calculations.length > 0) {
+      setPendingPrefill(prefill);
+      setPendingFullQuote(true);
+      setShowBriefConfirmDialog(true);
+    } else {
+      handleGenerateFullQuote(prefill);
+    }
+  };
+
+  const handleBriefConfirmReplace = () => {
+    if (!pendingPrefill) return;
+    setCalculations([]);
+    setAutoOpenEmail(false);
+    if (pendingFullQuote) {
+      handleGenerateFullQuote(pendingPrefill);
+    } else {
+      setCalculatorPrefill(pendingPrefill);
+    }
+    setShowBriefConfirmDialog(false);
+    setPendingPrefill(null);
+  };
+
+  const handleBriefConfirmAdd = () => {
+    if (!pendingPrefill) return;
+    if (pendingFullQuote) {
+      handleGenerateFullQuote(pendingPrefill);
+    } else {
+      setCalculatorPrefill(pendingPrefill);
+    }
+    setShowBriefConfirmDialog(false);
+    setPendingPrefill(null);
+  };
+
   /** AI Sales Assistant: full auto-quote flow */
   const handleGenerateFullQuote = (prefill: PrintCalculatorPrefill) => {
     setCalculatorPrefill(prefill);
@@ -299,7 +444,6 @@ export default function PriceCalculator() {
   /** Called when PrintCalculator auto-adds item to offer */
   const handleAutoAddComplete = () => {
     setAutoAddToOffer(false);
-    // Trigger email generation after a short delay so calculations state updates
     setTimeout(() => {
       setAutoOpenEmail(true);
     }, 300);
@@ -320,10 +464,23 @@ export default function PriceCalculator() {
               Calculează prețuri pentru cutii, tipărituri, personalizări și printuri mari
             </p>
           </div>
-          <Button variant="outline" onClick={clearAll} className="gap-2">
-            <RotateCcw className="h-4 w-4" />
-            Resetează
-          </Button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button
+                variant={showInternalCosts ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setShowInternalCosts(!showInternalCosts)}
+                className="gap-2"
+              >
+                {showInternalCosts ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {showInternalCosts ? 'Ascunde costuri interne' : 'Costuri interne'}
+              </Button>
+            )}
+            <Button variant="outline" onClick={clearAll} className="gap-2">
+              <RotateCcw className="h-4 w-4" />
+              Resetează
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -331,8 +488,8 @@ export default function PriceCalculator() {
           <div className="lg:col-span-2 space-y-4">
             {/* Step 1: AI Sales Assistant */}
             <BriefAnalyzer
-              onApplyToCalculator={setCalculatorPrefill}
-              onGenerateFullQuote={handleGenerateFullQuote}
+              onApplyToCalculator={handlePrefillWithConfirmation}
+              onGenerateFullQuote={handleFullQuoteWithConfirmation}
             />
 
             {/* Step 2: Universal Print Calculator */}
@@ -347,11 +504,73 @@ export default function PriceCalculator() {
             {/* Manual Recipe Selector */}
             <RecipeSelector onSelectRecipe={handleSelectRecipe} />
 
-            {/* Added Items */}
+            {/* Added Items with config snapshots */}
             {calculations.length > 0 && (
               <div className="space-y-3">
                 <h3 className="font-semibold text-lg">Produse adăugate ({calculations.length})</h3>
-              {calculations.map((calc) => {
+                {calculations.map((calc) => {
+                  // Print calculator items (with config snapshot)
+                  if (calc.configSnapshot) {
+                    const snap = calc.configSnapshot;
+                    return (
+                      <Card key={calc.id} className="border bg-card">
+                        <CardContent className="pt-4 space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="font-semibold">{calc.recipeName}</h4>
+                              <div className="flex flex-wrap gap-1.5 mt-1">
+                                <Badge variant="outline" className="text-xs">Format: {snap.formatLabel}</Badge>
+                                <Badge variant="outline" className="text-xs">Hârtie: {snap.gsm} g/mp</Badge>
+                                <Badge variant="outline" className="text-xs">Tipar: {snap.colorModeLabel}</Badge>
+                                <Badge variant="outline" className="text-xs">{snap.laminationLabel}</Badge>
+                                <Badge variant="secondary" className="text-xs">Tiraj: {calc.quantity} buc</Badge>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveCalculation(calc.id)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          {/* Price display */}
+                          <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                            <div className="flex gap-4 text-sm">
+                              {isAdmin && showInternalCosts && calc.productionCost != null && (
+                                <>
+                                  <span className="text-muted-foreground">
+                                    Cost intern: <span className="font-medium text-amber-600">{calc.productionCost.toFixed(2)} €</span>
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    Markup: ×{calc.markupMultiplier?.toFixed(2)}
+                                  </span>
+                                </>
+                              )}
+                              <span className="text-muted-foreground">
+                                Preț/buc: {(calc.totalPrice / calc.quantity).toFixed(4)} €
+                              </span>
+                            </div>
+                            <span className="font-bold text-lg text-primary">
+                              {calc.totalPrice.toFixed(2)} €
+                            </span>
+                          </div>
+
+                          {/* Admin margin info */}
+                          {isAdmin && showInternalCosts && calc.productionCost != null && calc.productionCost > 0 && (
+                            <div className="bg-amber-500/10 rounded-md px-3 py-1.5 text-xs text-amber-700 dark:text-amber-400 flex justify-between">
+                              <span>Marjă: {((calc.totalPrice - calc.productionCost) / calc.totalPrice * 100).toFixed(1)}%</span>
+                              <span>Profit: {(calc.totalPrice - calc.productionCost).toFixed(2)} €</span>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
+                  // Legacy recipe items
                   const recipe = getRecipeById(calc.recipeId);
                   if (!recipe) return null;
                   return (
@@ -405,6 +624,33 @@ export default function PriceCalculator() {
                 </div>
 
                 <Separator />
+
+                {/* Admin: internal cost summary */}
+                {isAdmin && showInternalCosts && totalProductionCost > 0 && (
+                  <>
+                    <div className="bg-amber-500/10 rounded-lg p-3 space-y-1.5">
+                      <div className="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase tracking-wide">
+                        Costuri interne (Admin)
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Cost producție total</span>
+                        <span className="font-medium text-amber-600">{totalProductionCost.toFixed(2)} €</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Preț vânzare</span>
+                        <span className="font-medium">{subtotal.toFixed(2)} €</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-medium">
+                        <span className="text-muted-foreground">Marjă globală</span>
+                        <span className="text-green-600">
+                          {((subtotal - totalProductionCost) / subtotal * 100).toFixed(1)}%
+                          ({(subtotal - totalProductionCost).toFixed(2)} €)
+                        </span>
+                      </div>
+                    </div>
+                    <Separator />
+                  </>
+                )}
 
                 {/* Client Selection */}
                 <div className="space-y-2">
@@ -532,6 +778,58 @@ export default function PriceCalculator() {
           </div>
         </div>
       </div>
+
+      {/* Brief confirmation dialog */}
+      <AlertDialog open={showBriefConfirmDialog} onOpenChange={setShowBriefConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Ofertă existentă
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Oferta curentă conține {calculations.length} produs(e). Ce doriți să faceți cu noul brief?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={() => { setShowBriefConfirmDialog(false); setPendingPrefill(null); }}>
+              Anulează
+            </AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={handleBriefConfirmAdd}
+            >
+              Adaugă la oferta curentă
+            </Button>
+            <AlertDialogAction onClick={handleBriefConfirmReplace}>
+              Înlocuiește oferta curentă
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Duplicate product dialog */}
+      <AlertDialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Produs duplicat detectat</AlertDialogTitle>
+            <AlertDialogDescription>
+              Un produs cu aceeași configurație există deja în ofertă. Doriți să combinați cantitățile sau să adăugați separat?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={() => { setShowDuplicateDialog(false); setPendingDuplicateItem(null); }}>
+              Anulează
+            </AlertDialogCancel>
+            <Button variant="outline" onClick={handleAddDuplicateAnyway}>
+              Adaugă separat
+            </Button>
+            <AlertDialogAction onClick={handleMergeDuplicate}>
+              Combină cantitățile
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
