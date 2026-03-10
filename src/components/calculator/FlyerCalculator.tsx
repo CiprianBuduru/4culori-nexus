@@ -29,12 +29,18 @@ const FORMATS = [
   { value: 'custom', label: 'Format personalizat', pcsPerSheet: 0 },
 ];
 
-// Paper weights (Color Copy only)
+// Paper weights (Color Copy SRA3 – full range from DB)
 const PAPER_WEIGHTS = [
-  { value: '90g', label: '90 g/mp', materialName: 'Hârtie 90g' },
-  { value: '120g', label: '120 g/mp', materialName: 'Hârtie 120g' },
-  { value: '160g', label: '160 g/mp', materialName: 'Hârtie 160g' },
-  { value: '200g', label: '200 g/mp', materialName: 'Hârtie 200g' },
+  { value: 80, label: '80 g/mp' },
+  { value: 90, label: '90 g/mp' },
+  { value: 100, label: '100 g/mp' },
+  { value: 120, label: '120 g/mp' },
+  { value: 160, label: '160 g/mp' },
+  { value: 200, label: '200 g/mp' },
+  { value: 250, label: '250 g/mp' },
+  { value: 300, label: '300 g/mp' },
+  { value: 350, label: '350 g/mp' },
+  { value: 400, label: '400 g/mp' },
 ];
 
 // Printing cost per SRA3
