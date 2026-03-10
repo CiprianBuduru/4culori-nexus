@@ -13,6 +13,7 @@ import { RecipeSelector } from '@/components/calculator/RecipeSelector';
 import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorItem';
 import { BriefAnalyzer } from '@/components/calculator/BriefAnalyzer';
 import { FlyerCalculator } from '@/components/calculator/FlyerCalculator';
+import { BusinessCardCalculator } from '@/components/calculator/BusinessCardCalculator';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes } from '@/types/recipes';
 import { toast } from 'sonner';
 import { generateOfferPdf } from '@/lib/generateOfferPdf';
@@ -310,10 +311,13 @@ export default function PriceCalculator() {
             <Tabs defaultValue="flyer" className="w-full">
               <TabsList className="w-full">
                 <TabsTrigger value="flyer" className="text-xs">Flyer</TabsTrigger>
-                {/* New calculators will be added here as tabs */}
+                <TabsTrigger value="business-card" className="text-xs">Cărți de vizită</TabsTrigger>
               </TabsList>
               <TabsContent value="flyer" className="mt-4">
                 <FlyerCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')} />
+              </TabsContent>
+              <TabsContent value="business-card" className="mt-4">
+                <BusinessCardCalculator onAddToOffer={(item) => handleAddCalculatorItem(item, 'printed')} />
               </TabsContent>
             </Tabs>
 
