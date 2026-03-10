@@ -1,4 +1,4 @@
-// Price Calculator v5.0 – AI Sales Assistant + Config Snapshots + Cost Separation
+// Price Calculator v6.0 – Comparative Quote Mode + AI Sales Assistant
 import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -25,8 +25,11 @@ import { RecipeCalculatorItem } from '@/components/calculator/RecipeCalculatorIt
 import { BriefAnalyzer } from '@/components/calculator/BriefAnalyzer';
 import { PrintCalculator } from '@/components/calculator/PrintCalculator';
 import { EmailDraftPanel } from '@/components/calculator/EmailDraftPanel';
+import { ComparativeQuoteCards } from '@/components/calculator/ComparativeQuoteCards';
 import { Recipe, RecipeCalculation, categoryLabels, RecipeCategory, defaultRecipes, type PrintConfigSnapshot } from '@/types/recipes';
-import { type PrintCalculatorPrefill } from '@/types/briefAnalysis';
+import { type PrintCalculatorPrefill, type BriefExtraction } from '@/types/briefAnalysis';
+import { type ComparativeVariant, type ComparativeQuoteState } from '@/types/comparativeQuote';
+import { generateComparativeVariants } from '@/lib/comparativeQuote';
 import { toast } from 'sonner';
 import { generateOfferPdf } from '@/lib/generateOfferPdf';
 import { supabase } from '@/integrations/supabase/client';
