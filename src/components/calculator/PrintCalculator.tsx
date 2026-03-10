@@ -456,17 +456,14 @@ export function PrintCalculator({ onAddToOffer, prefill, onPrefillApplied, autoA
 
         {/* ── Quantity ── */}
         <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Cantitate (bucăți)</Label>
+          <Label className="text-xs text-muted-foreground">Cantitate (buc)</Label>
           <Input
             type="number"
-            min={product.minQuantity}
-            step={product.quantityStep}
+            min={1}
+            step={1}
             value={quantity}
             onChange={(e) => handleQuantityChange(e.target.value)}
           />
-          <p className="text-xs text-muted-foreground">
-            Minim {product.minQuantity} buc, multiplu de {product.quantityStep}
-          </p>
         </div>
 
         <Separator />
